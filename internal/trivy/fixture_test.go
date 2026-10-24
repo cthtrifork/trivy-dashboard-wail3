@@ -207,7 +207,7 @@ func TestImportOpenVEXAgainstFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	doc, err := os.ReadFile("testdata/traefik.openvex.json")
+	doc, err := os.ReadFile("testdata/traefik-vex.json")
 	if err != nil {
 		t.Fatal(err)
 	}
