@@ -167,3 +167,43 @@ esac
 		t.Fatal(err)
 	}
 }
+
+func TestQualifyRepo(t *testing.T) {
+	for in, want := range map[string]string{
+		"nginx":                       "docker.io/library/nginx",
+		"traefik":                     "docker.io/library/traefik",
+		"aquasec/trivy":               "docker.io/aquasec/trivy",
+		"docker.io/library/nginx":     "docker.io/library/nginx",
+		"ghcr.io/acme/app":            "ghcr.io/acme/app",
+		"quay.io/fedora/fedora":       "quay.io/fedora/fedora",
+		"localhost/app":               "localhost/app",
+		"localhost:5000/team/app":     "localhost:5000/team/app",
+		"registry.example.com:8443/a": "registry.example.com:8443/a",
+	} {
+		if got := qualifyRepo(in); got != want {
+			t.Errorf("qualifyRepo(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// recordingEngine captures what ListTags is asked for.
+type recordingEngine struct {
+	Engine
+	asked string
+}
+
+func (r *recordingEngine) ListTags(_ context.Context, repo string) ([]string, error) {
+	r.asked = repo
+	return []string{"1.0"}, nil
+}
+
+func TestListTagsAsksForAnExplicitRegistry(t *testing.T) {
+	rec := &recordingEngine{}
+	s := &Scanner{Engine: rec}
+	if _, err := s.ListTags(context.Background(), "traefik:3.7.13"); err != nil {
+		t.Fatal(err)
+	}
+	if rec.asked != "docker.io/library/traefik" { // tag stripped, registry made explicit
+		t.Errorf("engine was asked for %q", rec.asked)
+	}
+}
