@@ -61,6 +61,26 @@ $("scan-form").addEventListener("submit", async (e) => {
 });
 $("cancel-btn").addEventListener("click", () => call("Cancel"));
 
+// ---- self-update ----
+// The Go side decides whether this build may update itself (release builds only).
+call("UpdateInfo").then((u) => {
+  $("app-version").textContent = "Version " + u.version;
+  $("update-btn").disabled = !u.enabled;
+  if (!u.enabled) $("update-btn").title = u.reason;
+}, () => {});
+$("update-btn").addEventListener("click", async () => {
+  $("update-btn").disabled = true;
+  setStatus("Checking for updates…", { busy: true });
+  try {
+    await call("CheckForUpdates"); // opens the updater window; resolves once the update is staged or none is found
+    setStatus("Update check finished.");
+  } catch (err) {
+    setStatus(String(err.message || err), { err: true });
+  } finally {
+    $("update-btn").disabled = false;
+  }
+});
+
 // Development builds replay recorded scans: say so, and prefill the inputs with something that works.
 call("Mode").then((m) => {
   if (!m.fixtures) return;

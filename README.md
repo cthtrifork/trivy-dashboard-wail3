@@ -51,11 +51,15 @@ Locally-built images that aren't in a registry are not scanned.
 EPSS comes from `api.first.org`, KEV from CISA's JSON feed (cached on disk for 12h, stale cache used if offline). If a feed is unreachable the scan still works and the UI says which signal is missing.
 Override with `TRIVY_SCANNER_EPSS_URL` / `TRIVY_SCANNER_KEV_URL` (mirrors, air-gapped use) and `TRIVY_SCANNER_VEX_FILE` (VEX store location).
 
+## Updating
+Release builds can update themselves: **Options → Check for updates…** fetches the latest GitHub release, verifies the download against its `SHA256SUMS`, and swaps the binary on **Restart & Apply**. It only runs when you click, needs the install directory to be writable (use your package manager for packaged installs), and is disabled in development builds. Details, limits and the release-asset contract: [`docs/self-update.md`](docs/self-update.md).
+
 ## CI and releases (GitHub Actions)
 - **CI** (`.github/workflows/ci.yml`) – every PR and push to `main`: gofmt, `go mod tidy -diff` / `verify`, `go vet`, `go test -race`, a production-tag build that links GTK4/WebKitGTK, and a JS syntax check.
 - **Security** (`security.yml`) – `govulncheck` and a Trivy filesystem scan when Go files or dependencies change, plus weekly (new advisories appear without code changes).
-- **Release** (`release.yml`) – push a semver tag from `main` (`git tag v1.2.3 && git push origin v1.2.3`; `v1.2.3-rc.1` makes a pre-release). It re-runs vet/tests/govulncheck, builds a Linux amd64 binary, and publishes a GitHub release with a tarball, SHA-256 checksums, generated notes and a build-provenance attestation (`gh attestation verify <tarball> --repo <owner>/<repo>`). Run it manually for a dry run that builds but does not publish.
+- **Release** (`release.yml`) – push a semver tag from `main` (`git tag v1.2.3 && git push origin v1.2.3`; `v1.2.3-rc.1` makes a pre-release). It re-runs vet/tests/govulncheck, builds a Linux amd64 binary, and publishes a GitHub release with the raw binary, a tarball, `SHA256SUMS`, generated notes and a build-provenance attestation (`gh attestation verify <tarball> --repo <owner>/<repo>`). Run it manually for a dry run that builds but does not publish.
 - Dependabot keeps Go modules and the SHA-pinned actions current.
+- The release layout doubles as the in-app updater's interface (raw binary + fixed-name `SHA256SUMS`): [`docs/self-update.md`](docs/self-update.md).
 - Which ideas came from Wails' cross-platform build guide and `wails-build-action`, and what was left out: [`docs/ci.md`](docs/ci.md).
 
 The release binary is built on Ubuntu 24.04 and links dynamically, so it needs GTK4 and WebKitGTK 6 (and a glibc at least as new as Ubuntu 24.04's) on the machine that runs it, plus `podman`.

@@ -19,6 +19,7 @@ import (
 // from JavaScript as main.ScanService.<Method>.
 type ScanService struct {
 	mode    Mode
+	update  UpdateInfo
 	app     *application.App
 	scanner *trivy.Scanner
 	vex     *trivy.VEXStore
