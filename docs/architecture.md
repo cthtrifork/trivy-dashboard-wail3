@@ -48,7 +48,7 @@ Relative paths and `:` are rejected, because podman would silently treat `./cach
 
 The default image is pinned in [`internal/trivy/image/Dockerfile`](../internal/trivy/image/Dockerfile) (`FROM docker.io/aquasec/trivy:<version>`), embedded into the binary and read by `DefaultTrivyImage()`. Dependabot's `docker` ecosystem (`.github/dependabot.yml`) opens a PR when a newer tag exists, so the version is bumped like any dependency. It is a Dockerfile only because that is what Dependabot understands; it is never built.
 
-Override it with `TRIVY_SCANNER_TRIVY_IMAGE`: a full reference (`registry.local/mirror/trivy:0.77.0`, `...@sha256:...`) or just a version (`0.77.0` / `v0.77.0`, meaning `docker.io/aquasec/trivy:0.77.0`). Values that look like flags or contain whitespace are refused. `make headless-up TRIVY_IMAGE=0.77.0` passes it to the containerised deployment. Changing the version does not invalidate the cache: Trivy refreshes its DB when the schema requires.
+Override it per run in the UI: **Options → Trivy version or image** (empty = the default; the field is remembered by the browser/webview). It takes a full reference (`registry.local/mirror/trivy:0.77.0`, `...@sha256:...`) or just a version (`0.77.0` / `v0.77.0`, meaning `docker.io/aquasec/trivy:0.77.0`), and is sent with every scan and comparison as `trivyImage`. Values that look like flags or contain whitespace are refused before anything runs. Changing it makes the next scan re-check the vulnerability DB for that version.
 
 ### Vulnerability DB
 

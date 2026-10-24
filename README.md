@@ -1,7 +1,7 @@
 # Trivy Scanner (Wails v3)
 
 Desktop app: enter a container image reference, and Trivy runs inside a local
-Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/image/Dockerfile`](internal/trivy/image/Dockerfile) and kept current by Dependabot; set `TRIVY_SCANNER_TRIVY_IMAGE` to a version or image reference to override). Results show in two panels:
+Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/image/Dockerfile`](internal/trivy/image/Dockerfile) and kept current by Dependabot; choose another version or image under **Options → Trivy version or image**). Results show in two panels:
 
 - **Priorities** – the landing view: instead of 150 CVEs, a ranked shortlist (top 10 by default). Each finding gets a 0–100 score from a small explainable rule engine that combines
   CISA **KEV** (documented exploitation), **EPSS** (predicted 30-day exploitation probability), CVSS severity, attack vector/complexity/privileges/user interaction, and fix availability.

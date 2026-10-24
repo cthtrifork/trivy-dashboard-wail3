@@ -102,10 +102,10 @@ func TestCancelledDBCheckStopsTheScan(t *testing.T) {
 	_, s := newRec(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if err := s.ensureDB(ctx, func(string) {}); err == nil {
+	if err := s.ensureDB(ctx, "", func(string) {}); err == nil {
 		// the fixture engine ignores cancellation for DB jobs, so only a failing engine proves it
 		r := &recEngine{FixtureEngine: NewFixtureEngine(), dbFail: true}
-		if err := (&Scanner{Engine: r}).ensureDB(ctx, func(string) {}); err == nil {
+		if err := (&Scanner{Engine: r}).ensureDB(ctx, "", func(string) {}); err == nil {
 			t.Error("a cancelled context must stop the scan")
 		}
 	}
@@ -126,5 +126,52 @@ func TestRunArgsDBOnlyJobAndMirrorEnv(t *testing.T) {
 	}
 	if strings.Contains(strings.Join(args, " "), "mirror.example") {
 		t.Error("values travel in the environment, not argv")
+	}
+}
+
+func TestChangingTrivyImageRechecksDBAndIsUsedByEveryJob(t *testing.T) {
+	r, s := newRec(t)
+	for _, v := range []string{"", "", "0.99.0"} {
+		if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13", TrivyImage: v}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := r.dbJobs(); n != 2 {
+		t.Errorf("db checks = %d, want 2 (default once, then the new version)", n)
+	}
+	for _, j := range r.jobs {
+		want := DefaultTrivyImage()
+		if len(r.jobs) > 0 && strings.HasSuffix(j.TrivyImage, ":0.99.0") {
+			want = j.TrivyImage
+		}
+		if j.TrivyImage != want || j.TrivyImage == "" {
+			t.Errorf("job %v has TrivyImage %q", j.Flags, j.TrivyImage)
+		}
+	}
+	last := r.jobs[len(r.jobs)-1]
+	if last.TrivyImage != "docker.io/aquasec/trivy:0.99.0" {
+		t.Errorf("last job used %q", last.TrivyImage)
+	}
+}
+
+func TestCompareForwardsTrivyImage(t *testing.T) {
+	r, s := newRec(t)
+	if _, err := s.Compare(context.Background(), CompareRequest{Repo: "traefik", TagA: "3.7.13", TagB: "3.7.16", TrivyImage: "v0.99.0"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, j := range r.jobs {
+		if j.TrivyImage != "docker.io/aquasec/trivy:0.99.0" {
+			t.Errorf("job %v used %q", j.Flags, j.TrivyImage)
+		}
+	}
+}
+
+func TestInvalidTrivyImageIsRejectedBeforeAnyJob(t *testing.T) {
+	r, s := newRec(t)
+	if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13", TrivyImage: "--privileged"}); err == nil {
+		t.Fatal("want an error")
+	}
+	if len(r.jobs) != 0 {
+		t.Errorf("jobs ran: %v", r.jobs)
 	}
 }

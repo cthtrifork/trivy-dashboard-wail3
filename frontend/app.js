@@ -49,6 +49,7 @@ $("scan-form").addEventListener("submit", async (e) => {
       username: $("username").value,
       password: $("password").value,
       ignoreUnfixed: $("ignore-unfixed").checked,
+      trivyImage: $("trivy-image").value.trim(),
     });
     await render();
     setStatus(`Scan complete: ${result.vulnerabilities.length} vulnerabilities, ${result.components.length} components.`);
@@ -83,6 +84,7 @@ $("update-btn").addEventListener("click", async () => {
 
 // Development builds replay recorded scans: say so, and prefill the inputs with something that works.
 call("Mode").then((m) => {
+  if (m.trivyImage) $("trivy-image").placeholder = "Trivy version or image (default " + m.trivyImage.split("/").pop() + ")";
   if (!m.fixtures) return;
   $("mode-banner").textContent = m.detail;
   $("mode-banner").hidden = false;
@@ -668,6 +670,7 @@ $("cmp-form").addEventListener("submit", async (e) => {
   const req = {
     repo: $("cmp-repo").value, tagA: $("cmp-a").value, tagB: $("cmp-b").value,
     username: $("username").value, password: $("password").value, ignoreUnfixed: $("ignore-unfixed").checked,
+    trivyImage: $("trivy-image").value.trim(),
   };
   for (const k of ["repo", "a", "b"]) lsSet("cmp-" + k, $("cmp-" + k).value);
   $("log").textContent = "";
@@ -777,3 +780,7 @@ function renderCmpTable() {
   const table = el("table", {}, el("thead", {}, el("tr", {}, ...head.map((h) => el("th", { textContent: h, style: "cursor:default" })))), el("tbody", {}, ...rows));
   wrap.replaceChildren(table, rows.length ? "" : el("div", { className: "empty", textContent: "Nothing to show with these filters." }));
 }
+
+// The Trivy version is a preference, not a secret: remember it between runs.
+$("trivy-image").value = lsGet("trivy-image");
+$("trivy-image").addEventListener("change", () => lsSet("trivy-image", $("trivy-image").value.trim()));
