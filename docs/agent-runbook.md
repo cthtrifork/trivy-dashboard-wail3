@@ -45,6 +45,6 @@ For UI work, `scripts/screenshots.sh` drives the real frontend with Playwright (
 ## Picking up a session
 
 1. `git fetch origin main && git checkout -b claude/<topic> origin/main`
-2. Read `AGENTS.md`, then `docs/status.md` for open items.
+2. Read `AGENTS.md`.
 3. Make the change, run the checklist in `docs/principles.md`.
-4. Update `docs/status.md` (move items, add unverified ones), open the PR, stop.
+4. Open the PR, listing verified and unverified items in its body, then stop.
