@@ -1,0 +1,149 @@
+<script setup>
+import { computed, reactive, ref, shallowRef } from "vue";
+import { ScanService, SEVERITIES, sevStyle, opts, cmpForm, scanning, comparing, logText, setStatus, errText, lsSet, cancel } from "../store.js";
+import { pct } from "../lib/format.js";
+import Chip from "./Chip.vue";
+
+const CHG_COLOR = { added: "var(--CRITICAL)", removed: "#2fb344", unchanged: "var(--UNKNOWN)", upgraded: "var(--accent)", downgraded: "var(--HIGH)" };
+const CHG_SIGN = { added: "+", removed: "−", unchanged: "=", upgraded: "↑", downgraded: "↓" };
+const chgStyle = (c) => ({ "--c": CHG_COLOR[c] });
+
+const data = shallowRef(null);
+const view = ref("vulns");
+const show = reactive(new Set(["added", "removed"]));
+const filter = ref("");
+const tags = ref([]);
+const note = ref("");
+
+async function loadTags() {
+  note.value = "Loading tags…";
+  try {
+    tags.value = await ScanService.ListTags(cmpForm.repo);
+    note.value = `${tags.value.length} tags loaded (newest first, by name) — type to filter.`;
+  } catch (e) {
+    note.value = "Could not list tags — type them in. " + errText(e);
+  }
+}
+
+async function run() {
+  const req = {
+    repo: cmpForm.repo, tagA: cmpForm.a, tagB: cmpForm.b,
+    username: opts.username, password: opts.password, ignoreUnfixed: opts.ignoreUnfixed,
+    trivyImage: opts.trivyImage.trim(),
+  };
+  for (const k of ["repo", "a", "b"]) lsSet("cmp-" + k, cmpForm[k]);
+  logText.value = "";
+  comparing.value = scanning.value = true;
+  setStatus("Scanning both images…", { busy: true });
+  try {
+    data.value = await ScanService.Compare(req);
+    setStatus("Comparison complete.");
+  } catch (err) {
+    setStatus(errText(err), { err: true });
+  } finally {
+    comparing.value = scanning.value = false;
+  }
+}
+
+const sum = (m) => Object.values(m).reduce((x, y) => x + y, 0);
+const net = computed(() => (data.value ? sum(data.value.added) - sum(data.value.removed) : 0));
+const verdictColor = computed(() => (net.value < 0 ? "#2fb344" : net.value > 0 ? "var(--CRITICAL)" : "var(--mute)"));
+const kinds = computed(() => (view.value === "vulns" ? ["added", "removed", "unchanged"] : ["added", "removed", "upgraded", "downgraded"]));
+const counts = computed(() => {
+  const c = {};
+  for (const x of view.value === "vulns" ? data.value.vulns : data.value.packages) c[x.change] = (c[x.change] || 0) + 1;
+  return c;
+});
+const vulnRows = computed(() => {
+  const q = filter.value.toLowerCase();
+  return data.value.vulns.filter((x) => show.has(x.change) && (!q || [x.vuln.id, x.vuln.package, x.cause, x.vuln.title].join(" ").toLowerCase().includes(q)));
+});
+const pkgRows = computed(() => {
+  const q = filter.value.toLowerCase();
+  return data.value.packages.filter((x) => show.has(x.change) && (!q || x.name.toLowerCase().includes(q)));
+});
+const rowCount = computed(() => (view.value === "vulns" ? vulnRows.value : pkgRows.value).length);
+
+const arrow = (a, b) => (a && b ? `${a} → ${b}` : a || b || "—");
+const delta = (a, b) => {
+  const d = b - a;
+  return { cls: d === 0 ? "flat" : d < 0 ? "good" : "bad", text: d === 0 ? "±0" : (d > 0 ? "+" : "−") + Math.abs(d) };
+};
+const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
+</script>
+
+<template>
+  <form id="cmp-form" class="toolbar wrap" @submit.prevent="run">
+    <input id="cmp-repo" v-model="cmpForm.repo" placeholder="Image repository, e.g. docker.io/library/nginx" autocomplete="off" spellcheck="false" required>
+    <label class="chk">Base <input id="cmp-a" v-model="cmpForm.a" list="cmp-tags" placeholder="tag, e.g. 1.26" autocomplete="off" required></label>
+    <span class="kv">→</span>
+    <label class="chk">Target <input id="cmp-b" v-model="cmpForm.b" list="cmp-tags" placeholder="tag, e.g. 1.27" autocomplete="off" required></label>
+    <datalist id="cmp-tags"><option v-for="t in tags" :key="t" :value="t"></option></datalist>
+    <button class="ghost" id="cmp-load" type="button" @click="loadTags">Load tags</button>
+    <button id="cmp-go" type="submit" :disabled="comparing">Compare</button>
+    <button id="cmp-cancel" type="button" v-show="comparing" @click="cancel">Cancel</button>
+    <span id="cmp-note" class="kv">{{ note }}</span>
+  </form>
+  <div id="cmp-out" class="scroll">
+    <div v-if="!data" class="empty">Pick two tags of an image to see what changed: vulnerabilities added and removed, and package changes.</div>
+    <template v-else>
+      <div class="sides">
+        <div v-for="[title, s, other, isTarget] in [['Base', data.a, data.b, false], ['Target', data.b, data.a, true]]" :key="title" class="side">
+          <h4>{{ title }}: {{ s.ref }}</h4>
+          <div class="kv">{{ s.os || "unknown OS" }} · {{ s.packages }} packages · {{ s.total }} vulnerabilities{{ s.kev ? ` · ${s.kev} KEV` : "" }}</div>
+          <div v-for="sev in SEVERITIES" :key="sev" class="sevrow">
+            <span class="sev" :style="sevStyle(sev)">{{ sev }}</span>
+            <span class="n">{{ s.counts[sev] || 0 }}</span>
+            <span v-if="isTarget" :class="['delta', delta(other.counts[sev] || 0, s.counts[sev] || 0).cls]">{{ delta(other.counts[sev] || 0, s.counts[sev] || 0).text }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="verdict" :style="{ '--c': verdictColor }">{{ data.verdict }}</div>
+      <div class="cmp-controls">
+        <div class="seg">
+          <button type="button" :class="{ on: view === 'vulns' }" @click="view = 'vulns'">Vulnerabilities ({{ data.vulns.length }})</button>
+          <button type="button" :class="{ on: view === 'pkgs' }" @click="view = 'pkgs'">Packages ({{ data.packages.length }})</button>
+        </div>
+        <label v-for="k in kinds" :key="k" class="chk">
+          <input type="checkbox" :checked="show.has(k)" @change="toggle(k)">
+          <span class="chg" :style="chgStyle(k)">{{ CHG_SIGN[k] }}</span>{{ k }} ({{ counts[k] || 0 }})
+        </label>
+        <input v-model="filter" placeholder="Filter…" autocomplete="off">
+      </div>
+      <div class="table-wrap cmp-table" id="cmp-table">
+        <table>
+          <thead v-if="view === 'vulns'">
+            <tr><th v-for="h in ['', 'Severity', 'ID', 'Package', 'Version', 'Why', 'Signals']" :key="h" style="cursor:default">{{ h }}</th></tr>
+          </thead>
+          <thead v-else>
+            <tr><th v-for="h in ['', 'Package', 'Kind', 'Version', 'Vulnerabilities']" :key="h" style="cursor:default">{{ h }}</th></tr>
+          </thead>
+          <tbody v-if="view === 'vulns'">
+            <tr v-for="(x, i) in vulnRows" :key="i">
+              <td><span class="chg" :style="chgStyle(x.change)" :title="x.change">{{ CHG_SIGN[x.change] }}</span></td>
+              <td><span class="sev" :style="sevStyle(x.vuln.severity)">{{ x.vuln.severity }}</span></td>
+              <td class="mono">{{ x.vuln.id }}</td>
+              <td class="mono">{{ x.vuln.package }}</td>
+              <td class="mono">{{ arrow(x.versionA, x.versionB) }}</td>
+              <td>{{ x.cause }}</td>
+              <td>
+                <Chip v-if="x.vuln.kev" kind="hot">KEV</Chip>{{ " " }}
+                <Chip v-if="x.vuln.hasEpss && x.vuln.epss >= 0.1" kind="warm">EPSS {{ pct(x.vuln.epss) }}</Chip>
+              </td>
+            </tr>
+          </tbody>
+          <tbody v-else>
+            <tr v-for="(x, i) in pkgRows" :key="i">
+              <td><span class="chg" :style="chgStyle(x.change)" :title="x.change">{{ CHG_SIGN[x.change] }}</span></td>
+              <td class="mono">{{ x.name }}</td>
+              <td>{{ x.category === "OS" ? "OS" : x.type }}</td>
+              <td class="mono">{{ arrow(x.versionA, x.versionB) }}</td>
+              <td>{{ x.vulnsA }} → {{ x.vulnsB }} <span :class="['delta', delta(x.vulnsA, x.vulnsB).cls]">{{ delta(x.vulnsA, x.vulnsB).text }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="!rowCount" class="empty">Nothing to show with these filters.</div>
+      </div>
+    </template>
+  </div>
+</template>

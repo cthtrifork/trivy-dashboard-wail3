@@ -3,7 +3,7 @@
 ## Flow
 
 ```
-frontend (plain JS)  ──Wails bindings──►  ScanService (service.go)
+frontend (Vue 3)     ──Wails bindings──►  ScanService (service.go)
                                               │
                                    trivy.Scanner (internal/trivy/scanner.go)
                                    ├─ Engine ── PodmanEngine ──► podman run aquasec/trivy image …
@@ -13,6 +13,10 @@ frontend (plain JS)  ──Wails bindings──►  ScanService (service.go)
                                    ├─ compare.go ── diff two scans (vulns and packages)
                                    └─ vex.go ── VEXStore (JSON file) + OpenVEX export
 ```
+
+## Frontend
+
+`frontend/` is a Vue 3 + Vite app. `src/App.vue` is the shell (scan form, tabs, status); each tab is a component in `src/components/`. `src/store.js` holds the shared state (the scan result, saved VEX assessments, options) and the log/status plumbing. The UI calls the Go `ScanService` through generated bindings in `frontend/bindings` (`wails3 generate bindings`, run it via `make bindings`), and listens for `scan:log` events with `@wailsio/runtime`. `src/lib/graph.js` is the canvas dependency graph. `npm run build` writes `frontend/dist`, which `main.go` embeds.
 
 ## Build modes (tags)
 

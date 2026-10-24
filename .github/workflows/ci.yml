@@ -48,6 +48,15 @@ jobs:
           go version
           pkg-config --modversion gtk4 webkitgtk-6.0 libsoup-3.0
 
+      # The Go binary embeds frontend/dist, so the Vue app is built first. The runner's Node
+      # satisfies Vite's engines range (see frontend/package.json).
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          node --version
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+
       - name: Check formatting
         run: |
           unformatted="$(gofmt -l .)"
@@ -94,9 +103,3 @@ jobs:
           path: dist/trivy-scanner
           if-no-files-found: error
           retention-days: 7
-
-      - name: Check frontend JavaScript parses
-        run: |
-          for f in frontend/*.js; do
-            node --input-type=module --check < "$f" || { echo "syntax error in $f"; exit 1; }
-          done
