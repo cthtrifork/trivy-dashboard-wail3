@@ -8,8 +8,8 @@ PORT      ?= 8080
 VERSION   ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 # Rootless podman API socket; XDG_RUNTIME_DIR is unset in some non-login ssh sessions.
 RUNTIME   := $(or $(XDG_RUNTIME_DIR),/run/user/$(shell id -u))
-# CACHE: optional absolute server directory (or volume name) for Trivy's cache; default is the trivy-cache volume.
-CACHE     ?=
+# CACHE: directory on the server (the podman host) that holds Trivy's cache; overridable.
+CACHE     ?= /tmp/trivy
 SOCKET    ?= $(RUNTIME)/podman/podman.sock
 
 .DEFAULT_GOAL := help
@@ -64,10 +64,11 @@ headless-image: ## Build the image
 
 headless-up: headless-image ## (Re)create and start the container, listening on 127.0.0.1:$(PORT)
 	-$(PODMAN) rm -f $(NAME)
+	mkdir -p $(CACHE)
 	$(PODMAN) run -d --name $(NAME) --restart unless-stopped \
 		--network host --security-opt label=disable \
 		-e WAILS_SERVER_PORT=$(PORT) \
-		$(if $(CACHE),-e TRIVY_SCANNER_CACHE=$(CACHE)) \
+		-e TRIVY_SCANNER_CACHE=$(CACHE) \
 		-v "$(SOCKET):/run/podman/podman.sock" \
 		-v $(NAME)-data:/data \
 		$(IMAGE)
