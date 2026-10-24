@@ -4,11 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
+	"time"
 )
 
 // TrivyImage is the container image used to run the scanner.
@@ -63,7 +67,9 @@ func (p *PodmanEngine) Version(ctx context.Context) (string, error) {
 // returns stdout. A named volume caches the vulnerability DB between runs.
 // Credentials travel as environment variables, never on the command line.
 func (p *PodmanEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(string)) ([]byte, error) {
-	args := []string{"run", "--rm", "-v", "trivy-cache:/root/.cache/trivy"}
+	// A name we chose lets us stop the container ourselves if the scan is cancelled.
+	name := containerName()
+	args := []string{"run", "--rm", "--name", name, "-v", "trivy-cache:/root/.cache/trivy"}
 	env := os.Environ()
 	if job.Username != "" {
 		args = append(args, "-e", "TRIVY_USERNAME", "-e", "TRIVY_PASSWORD")
@@ -75,6 +81,11 @@ func (p *PodmanEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(stri
 
 	cmd := exec.CommandContext(ctx, p.bin(), args...)
 	cmd.Env = env
+	// CommandContext would SIGKILL the podman client. That gives podman no chance to stop the
+	// container, which would then keep running after the app has moved on (or quit). Stop the
+	// container first, then ask the client to exit, and only kill it if it will not.
+	cmd.Cancel = func() error { return p.stop(cmd, name) }
+	cmd.WaitDelay = 3 * time.Second
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
 	stderr, err := cmd.StderrPipe()
@@ -102,6 +113,27 @@ func (p *PodmanEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(stri
 		return nil, fmt.Errorf("%w: %s", err, strings.Join(tail, "\n"))
 	}
 	return stdout.Bytes(), nil
+}
+
+// containerName returns a unique, recognisable name for a scan container.
+func containerName() string {
+	b := make([]byte, 6)
+	_, _ = rand.Read(b)
+	return "trivy-scanner-" + hex.EncodeToString(b)
+}
+
+// stop removes the named container, then asks the podman client to exit. It is the
+// cancellation path for RunTrivy, so it must never block for long: the removal is bounded.
+func (p *PodmanEngine) stop(cmd *exec.Cmd, name string) error {
+	rmCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	// --force kills a running container, --time 0 skips the stop grace period, --ignore
+	// makes an already-gone container (the usual race with --rm) a no-op.
+	_ = exec.CommandContext(rmCtx, p.bin(), "rm", "--force", "--ignore", "--time", "0", name).Run()
+	if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+		return cmd.Process.Kill()
+	}
+	return nil
 }
 
 // ListTags runs `podman search --list-tags`.

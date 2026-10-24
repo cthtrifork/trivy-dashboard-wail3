@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -22,6 +23,9 @@ type ScanService struct {
 	app     *application.App
 	scanner *trivy.Scanner
 	vex     *trivy.VEXStore
+
+	// ctx is the application context from ServiceStartup, cancelled when shutdown begins.
+	ctx context.Context
 
 	mu      sync.Mutex
 	product map[string]string // image repo -> product purl from the latest scan
@@ -67,11 +71,60 @@ func NewScanService() *ScanService {
 	return svc
 }
 
-// ServiceStartup gives the service access to the app so it can emit events.
-func (s *ScanService) ServiceStartup(_ context.Context, _ application.ServiceOptions) error {
+// ServiceStartup runs during app.Run, before the event loop. It keeps the application context
+// (cancelled when shutdown begins) and gives the service the app so it can emit events. It stays
+// fast and cannot fail: a missing podman is reported to the UI, not by aborting startup.
+func (s *ScanService) ServiceStartup(ctx context.Context, _ application.ServiceOptions) error {
+	// Keep the application context: every scan derives from it, so quitting stops them
+	// instead of leaving their podman containers running.
+	s.ctx = ctx
 	s.app = application.Get()
-	s.scanner.Log = func(line string) { s.app.Event.Emit("scan:log", line) }
+	s.scanner.Log = func(line string) {
+		if ctx.Err() != nil {
+			return // shutting down: the window that would show it is going away
+		}
+		s.app.Event.Emit("scan:log", line)
+	}
+	s.logInfo("starting", "version", version, "demoMode", s.mode.Fixtures)
 	return nil
+}
+
+// shutdownGrace is how long ServiceShutdown waits for a running scan to clean up. Wails asks
+// for shutdown to stay under about a second, because the OS may kill a slow quitter.
+var shutdownGrace = time.Second
+
+// ServiceShutdown runs when the application quits, after the application context has been
+// cancelled. A scan in flight is already stopping; this waits (briefly) for its container to be
+// removed so closing the window never leaves a scan running in the background.
+func (s *ScanService) ServiceShutdown() error {
+	if s.scanner.Running() {
+		s.logInfo("quitting while a scan is running: stopping it")
+	}
+	if !s.scanner.CancelAndWait(shutdownGrace) {
+		err := fmt.Errorf("a scan did not stop within %v of quitting", shutdownGrace)
+		s.logInfo(err.Error())
+		return err
+	}
+	s.logInfo("stopped")
+	return nil
+}
+
+// appCtx is the context for work started by a binding. It falls back to Background when the
+// service has not been started by an application (tests).
+func (s *ScanService) appCtx() context.Context {
+	if s.ctx != nil {
+		return s.ctx
+	}
+	return context.Background()
+}
+
+// logInfo logs a lifecycle event with Wails' logger when there is one.
+func (s *ScanService) logInfo(msg string, args ...any) {
+	if s.app != nil && s.app.Logger != nil {
+		s.app.Logger.Info("scan service: "+msg, args...)
+		return
+	}
+	log.Print("scan service: " + msg)
 }
 
 // Mode reports whether scans are real or replayed demo data.
@@ -82,7 +135,7 @@ func (s *ScanService) PodmanVersion() (string, error) { return s.scanner.Version
 
 // Scan scans the image with trivy running in podman.
 func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
-	res, err := s.scanner.Scan(context.Background(), req)
+	res, err := s.scanner.Scan(s.appCtx(), req)
 	if err == nil {
 		s.mu.Lock()
 		s.product[trivy.ImageRepo(res.Image)] = res.ProductPURL
@@ -145,12 +198,12 @@ func (s *ScanService) VEXSave(image, author, role string) (string, error) {
 
 // Compare scans two tags of an image and returns what changed between them.
 func (s *ScanService) Compare(req trivy.CompareRequest) (*trivy.CompareResult, error) {
-	return s.scanner.Compare(context.Background(), req)
+	return s.scanner.Compare(s.appCtx(), req)
 }
 
 // ListTags returns the tags a registry offers for an image repository.
 func (s *ScanService) ListTags(repo string) ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(s.appCtx(), time.Minute)
 	defer cancel()
 	return s.scanner.ListTags(ctx, repo)
 }
