@@ -27,6 +27,8 @@ Podman container (`docker.io/aquasec/trivy`). Results show in two panels:
 Every normal run, `wails3 dev` included, uses the real podman. Nothing is faked unless you ask for it.
 Quitting (closing the window) stops a running scan and removes its container, following Wails' lifecycle guide: [`docs/lifecycle.md`](docs/lifecycle.md).
 
+Running on a headless server that only has podman (no Go), reached from your browser over an SSH tunnel: [`docs/headless.md`](docs/headless.md).
+
 ### Fake data (tests and screenshots only)
 Recorded Trivy output for two real Traefik releases lives in [`internal/trivy/fixtures`](internal/trivy/fixtures/README.md).
 The Go tests replay it directly. To run the app itself on it, set a flag, in any **development** build (one without `-tags production`):
