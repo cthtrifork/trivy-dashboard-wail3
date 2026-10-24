@@ -110,6 +110,9 @@ type Scanner struct {
 	// Enricher adds EPSS/KEV data; nil disables enrichment.
 	Enricher *Enricher
 
+	dbMu    sync.Mutex
+	dbFresh time.Time // when the vulnerability DB was last confirmed up to date
+
 	mu     sync.Mutex
 	cancel context.CancelFunc
 	done   chan struct{} // closed when the running job has fully finished
@@ -212,6 +215,33 @@ func (s *Scanner) begin(parent context.Context) (context.Context, func(), error)
 	}, nil
 }
 
+// dbRefresh is how long a confirmed vulnerability DB is trusted before Trivy is asked to check
+// for a newer one. Trivy itself only downloads when the DB is past its NextUpdate, so a check is
+// cheap, but each one costs a container start and (when stale) a download.
+const dbRefresh = time.Hour
+
+// ensureDB makes sure the cached vulnerability DB is current, once per dbRefresh, so that the scans
+// themselves can run with --skip-db-update. That means the DB is checked once per session instead
+// of once per scan (a comparison is four scans), and a scan with an existing cache still works
+// offline: a failed refresh only logs a warning. It returns an error only if ctx was cancelled.
+func (s *Scanner) ensureDB(ctx context.Context, log func(string)) error {
+	s.dbMu.Lock()
+	defer s.dbMu.Unlock()
+	if !s.dbFresh.IsZero() && time.Since(s.dbFresh) < dbRefresh {
+		return nil
+	}
+	s.logf("Checking the vulnerability database (cached between scans)…")
+	if _, err := s.engine().RunTrivy(ctx, TrivyJob{Flags: []string{"--download-db-only"}}, log); err != nil {
+		if ctx.Err() != nil {
+			return errors.New("cancelled")
+		}
+		s.logf("Could not update the vulnerability database (%v); using the cached copy if there is one.", err)
+		return nil
+	}
+	s.dbFresh = time.Now()
+	return nil
+}
+
 // Scan runs a vulnerability scan and an SBOM generation for the image.
 func (s *Scanner) Scan(parent context.Context, req ScanRequest) (*ScanResult, error) {
 	if _, err := validImage(req.Image); err != nil {
@@ -233,9 +263,12 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	job := TrivyJob{Image: image, Username: req.Username, Password: req.Password}
 	logLine := func(l string) { s.logf("%s", l) }
 
+	if err := s.ensureDB(ctx, logLine); err != nil {
+		return nil, err
+	}
 	s.logf("Scanning %s for vulnerabilities…", image)
 	// --list-all-pkgs puts every installed package in the report, not just the vulnerable ones.
-	job.Flags = []string{"--format", "json", "--scanners", "vuln", "--list-all-pkgs"}
+	job.Flags = []string{"--skip-db-update", "--format", "json", "--scanners", "vuln", "--list-all-pkgs"}
 	if req.IgnoreUnfixed {
 		job.Flags = append(job.Flags, "--ignore-unfixed")
 	}
@@ -245,7 +278,7 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	}
 
 	s.logf("Generating SBOM…")
-	job.Flags = []string{"--format", "cyclonedx"}
+	job.Flags = []string{"--skip-db-update", "--format", "cyclonedx"}
 	sbomJSON, err := s.engine().RunTrivy(ctx, job, logLine)
 	if err != nil {
 		return nil, fmt.Errorf("SBOM generation failed: %w", err)

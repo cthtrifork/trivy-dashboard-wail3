@@ -44,6 +44,10 @@ The scanner always gets an explicit `--cache-dir /root/.cache/trivy`, backed by 
 
 Relative paths and `:` are rejected, because podman would silently treat `./cache` as a volume name. The host directory is the default only when podman is local: if the app itself runs in a container, its own paths mean nothing to the podman host, so the volume is used there. Upgrading from the volume default re-downloads the Trivy DB once. Set `TRIVY_SCANNER_CACHE=trivy-cache` to keep using the old volume.
 
+### Vulnerability DB
+
+Before the first scan of a session, and then at most once an hour, the scanner runs `trivy image --download-db-only` (no image, no registry credentials) against the cache. Trivy only downloads when its DB is past `NextUpdate`, so this is cheap when the cache is fresh. The scans themselves then run with `--skip-db-update`, so a Compare (four scans) checks once instead of four times. If the check fails (offline, rate limited) it logs a warning and the scans use whatever is cached; with an empty cache the scan fails with Trivy's own error. A failed check is retried on the next scan. `TRIVY_DB_REPOSITORY` and `TRIVY_JAVA_DB_REPOSITORY`, when set in the app's environment, are forwarded to Trivy for mirrors. The Java DB is not pre-fetched: Trivy downloads it into the same cache only when an image contains JARs.
+
 ## Server mode security
 
 Wails rejects requests with a non-loopback `Host` header when bound to loopback (DNS-rebinding guard). Binding `0.0.0.0` is treated as a deliberate network deployment and is unguarded, hence principle 10. Events travel over a WebSocket at `/wails/events`.

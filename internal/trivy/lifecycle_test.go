@@ -110,8 +110,8 @@ func TestEveryContainerGetsItsOwnName(t *testing.T) {
 			}
 		}
 	}
-	if len(names) != 4 { // two scans x (vulnerability report + SBOM)
-		t.Errorf("want 4 distinct container names, got %v", names)
+	if len(names) != 5 { // one DB check + two scans x (vulnerability report + SBOM)
+		t.Errorf("want 5 distinct container names, got %v", names)
 	}
 }
 
