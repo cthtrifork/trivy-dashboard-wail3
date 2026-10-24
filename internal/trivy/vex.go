@@ -253,3 +253,165 @@ func ExportOpenVEX(entries []VEXEntry, product, author, role string) ([]byte, er
 	}
 	return json.MarshalIndent(doc, "", "  ")
 }
+
+// ImportReport summarises what ImportOpenVEX did with a pasted document.
+type ImportReport struct {
+	Imported int      `json:"imported"` // findings that received an assessment
+	Skipped  int      `json:"skipped"`  // statements that matched nothing or were invalid
+	Warnings []string `json:"warnings"`
+}
+
+// ParseOpenVEX turns an OpenVEX document (v0.2.0, and older string-valued
+// vulnerabilities) into assessments for the given findings. A statement with
+// subcomponents applies to findings whose PURL (or name@version) matches one;
+// a statement without applies to every finding with that vulnerability id.
+// When several statements hit one finding the newest timestamp wins.
+func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportReport, error) {
+	var doc struct {
+		Context    string `json:"@context"`
+		Statements []struct {
+			Vulnerability json.RawMessage `json:"vulnerability"`
+			Timestamp     string          `json:"timestamp"`
+			Products      []struct {
+				ID            string `json:"@id"`
+				Subcomponents []struct {
+					ID string `json:"@id"`
+				} `json:"subcomponents"`
+			} `json:"products"`
+			Status          string `json:"status"`
+			Justification   string `json:"justification"`
+			ImpactStatement string `json:"impact_statement"`
+			ActionStatement string `json:"action_statement"`
+		} `json:"statements"`
+	}
+	rep := ImportReport{Warnings: []string{}}
+	if err := json.Unmarshal(data, &doc); err != nil {
+		return nil, rep, fmt.Errorf("not valid JSON: %w", err)
+	}
+	if !strings.Contains(doc.Context, "openvex") {
+		return nil, rep, errors.New("not an OpenVEX document (missing openvex @context)")
+	}
+	if len(doc.Statements) == 0 {
+		return nil, rep, errors.New("document has no statements")
+	}
+
+	byKey := map[string]VEXEntry{}
+	for i, st := range doc.Statements {
+		var id string
+		var obj struct {
+			Name    string   `json:"name"`
+			Aliases []string `json:"aliases"`
+		}
+		if json.Unmarshal(st.Vulnerability, &id) != nil {
+			_ = json.Unmarshal(st.Vulnerability, &obj)
+			id = obj.Name
+		}
+		ids := append([]string{id}, obj.Aliases...)
+		var subs []string
+		for _, p := range st.Products {
+			for _, sc := range p.Subcomponents {
+				subs = append(subs, sc.ID)
+			}
+		}
+		matched := false
+		for _, v := range findings {
+			if !containsFold(ids, v.ID) {
+				continue
+			}
+			if len(subs) > 0 && !anyPURLMatches(subs, v) {
+				continue
+			}
+			e := VEXEntry{
+				Vulnerability: v.ID, Package: v.Package, Version: v.Installed, PURL: v.PURL,
+				Status: st.Status, Justification: st.Justification, Impact: st.ImpactStatement, Action: st.ActionStatement,
+				Updated: st.Timestamp,
+			}
+			if err := e.Validate(); err != nil {
+				rep.Warnings = append(rep.Warnings, fmt.Sprintf("statement %d (%s): %v", i+1, v.ID, err))
+				matched = true // reported, not "unmatched"
+				break
+			}
+			e.Key = v.Key
+			if e.Updated == "" {
+				e.Updated = time.Now().UTC().Format(time.RFC3339)
+			}
+			if old, ok := byKey[e.Key]; !ok || e.Updated >= old.Updated {
+				byKey[e.Key] = e
+			}
+			matched = true
+		}
+		if !matched {
+			rep.Skipped++
+			rep.Warnings = append(rep.Warnings, fmt.Sprintf("statement %d (%s): no matching finding in this scan", i+1, id))
+		}
+	}
+	out := make([]VEXEntry, 0, len(byKey))
+	for _, e := range byKey {
+		out = append(out, e)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
+	rep.Imported = len(out)
+	return out, rep, nil
+}
+
+func containsFold(list []string, s string) bool {
+	for _, x := range list {
+		if x != "" && strings.EqualFold(x, s) {
+			return true
+		}
+	}
+	return false
+}
+
+// SetMany stores already-validated entries, keeping their Updated stamps.
+func (s *VEXStore) SetMany(image string, entries []VEXEntry) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	f, err := s.load()
+	if err != nil {
+		return err
+	}
+	repo := ImageRepo(image)
+	if f[repo] == nil {
+		f[repo] = map[string]VEXEntry{}
+	}
+	for _, e := range entries {
+		f[repo][e.Key] = e
+	}
+	return s.save(f)
+}
+
+// anyPURLMatches reports whether a statement's subcomponent ids cover a finding.
+// Hand-written and hub-published documents often give versionless PURLs
+// ("pkg:apk/alpine/zlib"), which apply to every version; qualifiers
+// (arch, distro) are ignored on both sides.
+func anyPURLMatches(subs []string, v Vulnerability) bool {
+	generic := "pkg:generic/" + url.PathEscape(v.Package) + "@" + url.PathEscape(v.Installed)
+	fname, fver := splitPURL(v.PURL)
+	for _, sub := range subs {
+		if sub == generic {
+			return true
+		}
+		name, ver := splitPURL(sub)
+		if v.PURL != "" && strings.EqualFold(name, fname) && (ver == "" || ver == fver) {
+			return true
+		}
+	}
+	return false
+}
+
+// splitPURL returns the unescaped "pkg:type/namespace/name" and the version.
+func splitPURL(p string) (name, version string) {
+	p, _, _ = strings.Cut(p, "#")
+	p, _, _ = strings.Cut(p, "?")
+	if i := strings.LastIndex(p, "@"); i > strings.LastIndex(p, "/") {
+		p, version = p[:i], p[i+1:]
+	}
+	if u, err := url.PathUnescape(p); err == nil {
+		p = u
+	}
+	if u, err := url.PathUnescape(version); err == nil {
+		version = u
+	}
+	return p, version
+}

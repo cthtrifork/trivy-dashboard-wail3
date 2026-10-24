@@ -5,6 +5,8 @@ package trivy
 import (
 	"context"
 	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -194,5 +196,56 @@ func TestFixtureSBOMFallback(t *testing.T) {
 	}
 	if got := set.sbomFor("3.6.0"); got != "traefik_3.7.13.sbom.json" { // nothing below: oldest
 		t.Errorf("3.6.0 -> %s", got)
+	}
+}
+
+// A real-world OpenVEX file (versionless subcomponent PURLs) is applied to the
+// recorded scan: zlib, musl + musl-utils, stdlib and (no subcomponents) all four
+// otel packages match; the docker/cli statement matches nothing and is skipped.
+func TestImportOpenVEXAgainstFixture(t *testing.T) {
+	res, err := fixtureScanner().Scan(context.Background(), ScanRequest{Image: "docker.io/library/traefik:3.7.13"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc, err := os.ReadFile("testdata/traefik.openvex.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, rep, err := ParseOpenVEX(doc, res.Vulnerabilities)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 8 || rep.Imported != 8 || rep.Skipped != 1 {
+		t.Fatalf("entries=%d report=%+v", len(entries), rep)
+	}
+	for _, e := range entries {
+		if e.Status != "not_affected" || e.Key == "" || e.PURL == "" || e.Updated == "" {
+			t.Errorf("bad entry %+v", e)
+		}
+	}
+	st := &VEXStore{Path: filepath.Join(t.TempDir(), "vex.json")}
+	if err := st.SetMany("docker.io/library/traefik:3.7.16", entries); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := st.List("docker.io/library/traefik:3.7.13"); len(got) != len(entries) {
+		t.Fatalf("stored %d, want %d", len(got), len(entries))
+	}
+	if _, _, err := ParseOpenVEX([]byte(`{"statements":[]}`), res.Vulnerabilities); err == nil {
+		t.Error("non-OpenVEX document should fail")
+	}
+}
+
+func TestPURLMatching(t *testing.T) {
+	v := Vulnerability{ID: "CVE-1", PURL: "pkg:apk/alpine/zlib@1.3.1-r2?arch=x86_64&distro=3.22.2"}
+	for sub, want := range map[string]bool{
+		"pkg:apk/alpine/zlib":          true,
+		"pkg:apk/alpine/zlib@1.3.1-r2": true,
+		"pkg:apk/alpine/zlib@1.2.0":    false,
+		"pkg:apk/alpine/zlib-dev":      false,
+		"pkg:golang/stdlib":            false,
+	} {
+		if got := anyPURLMatches([]string{sub}, v); got != want {
+			t.Errorf("%s: got %v", sub, got)
+		}
 	}
 }

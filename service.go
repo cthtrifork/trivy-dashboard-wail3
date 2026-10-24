@@ -29,7 +29,8 @@ type ScanService struct {
 	ctx context.Context
 
 	mu      sync.Mutex
-	product map[string]string // image repo -> product purl from the latest scan
+	product map[string]string                // image repo -> product purl from the latest scan
+	found   map[string][]trivy.Vulnerability // image repo -> findings from the latest scan, for VEX import
 }
 
 // Mode tells the UI whether scans are real. Fixtures is true in development
@@ -68,6 +69,7 @@ func NewScanService() *ScanService {
 		}},
 		vex:     &trivy.VEXStore{Path: vexPath},
 		product: map[string]string{},
+		found:   map[string][]trivy.Vulnerability{},
 	}
 	if mode.Fixtures {
 		svc.scanner.Enricher = nil // recorded scans stay offline and deterministic
@@ -143,6 +145,7 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 	if err == nil {
 		s.mu.Lock()
 		s.product[trivy.ImageRepo(res.Image)] = res.ProductPURL
+		s.found[trivy.ImageRepo(res.Image)] = res.Vulnerabilities
 		s.mu.Unlock()
 	}
 	return res, err
@@ -176,6 +179,25 @@ func (s *ScanService) VEXExport(image, author, role string) (string, error) {
 	}
 	doc, err := trivy.ExportOpenVEX(entries, product, author, role)
 	return string(doc), err
+}
+
+// VEXImport applies a pasted OpenVEX document to the findings of the latest
+// scan of the image and saves the matching assessments.
+func (s *ScanService) VEXImport(image, doc string) (trivy.ImportReport, error) {
+	s.mu.Lock()
+	findings := s.found[trivy.ImageRepo(image)]
+	s.mu.Unlock()
+	if len(findings) == 0 {
+		return trivy.ImportReport{}, errors.New("scan the image first: imported statements are matched against its findings")
+	}
+	entries, rep, err := trivy.ParseOpenVEX([]byte(doc), findings)
+	if err != nil {
+		return rep, err
+	}
+	if len(entries) == 0 {
+		return rep, errors.New("no statement in the document matched a finding of this scan")
+	}
+	return rep, s.vex.SetMany(image, entries)
 }
 
 // VEXSave exports the document through a native save dialog. It returns the
