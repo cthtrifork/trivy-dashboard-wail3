@@ -120,7 +120,7 @@ func (s *Scanner) ListTags(ctx context.Context, repo string) ([]string, error) {
 	if _, err := validImage(repo); err != nil {
 		return nil, err
 	}
-	raw, err := s.engine().ListTags(ctx, repo)
+	raw, err := s.engine().ListTags(ctx, qualifyRepo(repo))
 	if err != nil {
 		return nil, err
 	}
@@ -134,6 +134,22 @@ func (s *Scanner) ListTags(ctx context.Context, repo string) ([]string, error) {
 	}
 	sort.Slice(tags, func(i, j int) bool { return compareVersions(tags[i], tags[j]) > 0 })
 	return tags, nil
+}
+
+// qualifyRepo makes the registry explicit, defaulting to Docker Hub. `podman search`
+// with an unqualified name searches every registry in the host's
+// unqualified-search-registries, and on Fedora/RHEL that list starts with
+// registry.fedoraproject.org and registry.access.redhat.com, so "nginx" would list
+// tags from the wrong registry. Trivy resolves bare names to Docker Hub itself.
+func qualifyRepo(repo string) string {
+	first, _, hasPath := strings.Cut(repo, "/")
+	switch {
+	case !hasPath:
+		return "docker.io/library/" + repo
+	case strings.ContainsAny(first, ".:") || first == "localhost":
+		return repo // already names a registry (host, host:port or localhost)
+	}
+	return "docker.io/" + repo
 }
 
 // pkgKey identifies a package independent of its version.

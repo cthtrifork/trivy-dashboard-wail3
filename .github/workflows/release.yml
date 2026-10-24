@@ -110,9 +110,54 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # Never publish a binary that cannot start on Fedora. This installs only the runtime
+  # packages a Fedora user would, unpacks the exact tarball that would be published
+  # (built on Ubuntu), and starts it under a virtual display.
+  verify-fedora:
+    name: verify on Fedora
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container: fedora:latest
+    steps:
+      - name: Install runtime packages (what a user needs) and smoke-test tools
+        run: |
+          dnf -y install --setopt=install_weak_deps=False \
+            gtk4 webkitgtk6.0 libX11 git tar gzip \
+            xorg-x11-server-Xvfb xorg-x11-utils ImageMagick dbus-daemon mesa-dri-drivers dejavu-sans-fonts
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: dist
+
+      - name: Unpack the release tarball
+        run: |
+          cat /etc/os-release | grep -E '^(PRETTY_NAME|VERSION_ID)='
+          (cd dist && sha256sum -c ./*_checksums.txt)
+          mkdir -p "$RUNNER_TEMP/app"
+          tar -xzf dist/*_linux_amd64.tar.gz -C "$RUNNER_TEMP/app"
+          ls -l "$RUNNER_TEMP/app"
+
+      - name: Start the release binary and check it renders
+        run: scripts/smoke-gui.sh "$RUNNER_TEMP/app/${APP}" "$RUNNER_TEMP/fedora-release.png"
+
+      - name: Keep the screenshot
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fedora-release-gui
+          path: ${{ runner.temp }}/fedora-release.png
+          if-no-files-found: ignore
+          retention-days: 14
+
   publish:
     name: publish release
-    needs: build
+    needs: [build, verify-fedora]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     timeout-minutes: 10

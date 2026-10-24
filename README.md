@@ -19,6 +19,20 @@ Podman container (`docker.io/aquasec/trivy`). Results show in two panels:
 - Linux: GTK4 + WebKitGTK 6 dev packages (see Wails docs); macOS/Windows: native webview
 - `podman` on PATH (override with `PODMAN=/path/to/podman`) for real scans; not needed in demo mode
 
+### Running the Linux release
+The release binary is built on Ubuntu 24.04. It needs GTK 4, WebKitGTK 6 and X11/Wayland libraries at runtime, a glibc of at least 2.34 (it uses nothing newer, so every supported Fedora and Ubuntu qualifies), and `podman`.
+
+| Distribution | Install |
+|---|---|
+| Fedora | `sudo dnf install gtk4 webkitgtk6.0 podman` |
+| Ubuntu 24.04+, Debian 13+ | `sudo apt install libgtk-4-1 libwebkitgtk-6.0-4 podman` |
+
+To build from source on Fedora: `sudo dnf install gcc pkgconf-pkg-config gtk4-devel webkitgtk6.0-devel libX11-devel wayland-devel`.
+Scans use fully qualified image names (`docker.io/aquasec/trivy`), so Fedora's short-name registry prompts never apply, and *Load tags* qualifies bare names to Docker Hub for the same reason.
+
+CI proves this rather than assuming it: every pull request builds and tests natively on Fedora and starts the real GUI binary under a virtual display (`scripts/smoke-gui.sh`), and a release is only published after the exact
+tarball has been started on Fedora. `scripts/smoke-gui.sh <binary> [screenshot.png]` works on any distribution with Xvfb, `xwininfo` and ImageMagick.
+
 ## Run
     go run .                                  # or: wails3 dev. Real podman, real scans
     go build -tags production -trimpath .     # production build, always real podman
@@ -52,9 +66,9 @@ EPSS comes from `api.first.org`, KEV from CISA's JSON feed (cached on disk for 1
 Override with `TRIVY_SCANNER_EPSS_URL` / `TRIVY_SCANNER_KEV_URL` (mirrors, air-gapped use) and `TRIVY_SCANNER_VEX_FILE` (VEX store location).
 
 ## CI and releases (GitHub Actions)
-- **CI** (`.github/workflows/ci.yml`) – every PR and push to `main`: gofmt, `go mod tidy -diff` / `verify`, `go vet`, `go test -race`, a production-tag build that links GTK4/WebKitGTK, and a JS syntax check.
+- **CI** (`.github/workflows/ci.yml`) – every PR and push to `main`: a Fedora job (native build, tests and a GUI smoke test; Rawhide as a non-blocking early warning) plus gofmt, `go mod tidy -diff` / `verify`, `go vet`, `go test -race`, a production-tag build that links GTK4/WebKitGTK, and a JS syntax check.
 - **Security** (`security.yml`) – `govulncheck` and a Trivy filesystem scan when Go files or dependencies change, plus weekly (new advisories appear without code changes).
-- **Release** (`release.yml`) – push a semver tag from `main` (`git tag v1.2.3 && git push origin v1.2.3`; `v1.2.3-rc.1` makes a pre-release). It re-runs vet/tests/govulncheck, builds a Linux amd64 binary, and publishes a GitHub release with a tarball, SHA-256 checksums, generated notes and a build-provenance attestation (`gh attestation verify <tarball> --repo <owner>/<repo>`). Run it manually for a dry run that builds but does not publish.
+- **Release** (`release.yml`) – push a semver tag from `main` (`git tag v1.2.3 && git push origin v1.2.3`; `v1.2.3-rc.1` makes a pre-release). It re-runs vet/tests/govulncheck, builds a Linux amd64 binary, starts that exact binary on Fedora, and only then publishes a GitHub release with a tarball, SHA-256 checksums, generated notes and a build-provenance attestation (`gh attestation verify <tarball> --repo <owner>/<repo>`). Run it manually for a dry run that builds but does not publish.
 - Dependabot keeps Go modules and the SHA-pinned actions current.
 
 The release binary is built on Ubuntu 24.04 and links dynamically, so it needs GTK4 and WebKitGTK 6 (and a glibc at least as new as Ubuntu 24.04's) on the machine that runs it, plus `podman`.

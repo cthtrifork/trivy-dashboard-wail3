@@ -79,3 +79,66 @@ jobs:
           for f in frontend/*.js; do
             node --input-type=module --check < "$f" || { echo "syntax error in $f"; exit 1; }
           done
+
+  # The release binary is built on Ubuntu but must also run on Fedora, whose GTK4/WebKitGTK
+  # packages, glibc and `podman search` behaviour differ. This builds and tests natively on
+  # Fedora and then starts the real GUI binary under a virtual display (scripts/smoke-gui.sh).
+  fedora:
+    name: fedora (${{ matrix.tag }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # rawhide is an early warning for upcoming package changes, not a gate.
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false # a failure on one release must not hide the others
+      matrix:
+        include:
+          - { tag: latest, experimental: false }
+          - { tag: rawhide, experimental: true }
+    container: fedora:${{ matrix.tag }}
+    steps:
+      - name: Install build and smoke-test dependencies
+        run: |
+          dnf -y install --setopt=install_weak_deps=False \
+            gcc pkgconf-pkg-config gtk4-devel webkitgtk6.0-devel libX11-devel wayland-devel \
+            git tar gzip zstd \
+            xorg-x11-server-Xvfb xorg-x11-utils ImageMagick dbus-daemon mesa-dri-drivers dejavu-sans-fonts
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26'
+          check-latest: true
+          cache: true
+
+      - name: Versions
+        run: |
+          cat /etc/os-release | grep -E '^(PRETTY_NAME|VERSION_ID)='
+          go version
+          pkg-config --modversion gtk4 webkitgtk-6.0 libsoup-3.0
+
+      - name: Vet and test
+        run: |
+          go vet ./...
+          go vet -tags production ./...
+          go test -race -count=1 ./...
+
+      - name: Build (production tags)
+        run: |
+          mkdir -p dist
+          go build -tags production -trimpath -buildvcs=false -ldflags "-w -s" -o dist/trivy-scanner .
+
+      - name: Start the GUI binary and check it renders
+        run: scripts/smoke-gui.sh dist/trivy-scanner "$RUNNER_TEMP/fedora-${{ matrix.tag }}.png"
+
+      - name: Keep the screenshot
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fedora-${{ matrix.tag }}-gui
+          path: ${{ runner.temp }}/fedora-${{ matrix.tag }}.png
+          if-no-files-found: ignore
+          retention-days: 14
