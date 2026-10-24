@@ -27,3 +27,14 @@ Sources:
 - **Per-distro WebKit package and build tag** (the action picks `libwebkit2gtk-4.0` or `4.1` plus `-tags webkit2_41` by Ubuntu release). That is a Wails v2 / GTK3 concern. This app targets Wails v3's default GTK4 + WebKitGTK 6 backend only. A GTK3 build would be a separate asset and has not been asked for.
 - **arm64 cross-compilation** (`gcc-aarch64-linux-gnu`), **Windows and macOS** matrix entries, **code signing and notarisation**: only a Linux amd64 binary is published. Provenance is covered by a build attestation and SHA-256 checksums instead.
 - **The `wails build` CLI, obfuscation, Deno/Node build steps, `NODE_OPTIONS`**: the app is built with `go build` and its frontend is plain JavaScript with no build step.
+
+## Screenshots
+
+`screenshots.yml` keeps `docs/screenshots` in step with the UI.
+
+- **Trigger:** a pull request that touches `frontend/**` (or the screenshot scripts), or a manual run on a non-default branch.
+- **Who:** same-repository PRs only. Fork PRs get a read-only token and their code must not run with write access; Dependabot PRs likewise have a read-only token.
+- **What:** builds the headless app with the recorded fixtures (`scripts/screenshots.sh`, Playwright pinned to one version), then `scripts/sync-screenshots.sh` copies only images that changed visibly (more than 200 pixels beyond a 3% colour fuzz). Rendering is not bit-identical between runs (a dialog's rounded corners antialias differently), so a byte comparison would churn files.
+- **Result:** an `Update screenshots` commit pushed to the PR branch. If nothing changed visibly, nothing is committed.
+- **CI on the new commit:** a push made with `GITHUB_TOKEN` starts no workflows, which would leave the PR head without the required "CI / test" result. The workflow therefore runs `gh workflow run ci.yml --ref <branch>` itself, which is why `ci.yml` has a `workflow_dispatch` trigger. If someone pushes to the branch while the job runs, the push fails and the next push re-runs it.
+- **Reproducibility:** the screenshot script waits for the force-directed graph to come to rest instead of sleeping, pins the OpenVEX timestamps, disables animations, and the graph's tie-breaking random numbers are seeded (`frontend/graph.js`). Fonts on the runner may still differ from your machine, so prefer letting the workflow regenerate the images over committing locally generated ones.

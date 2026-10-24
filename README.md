@@ -47,6 +47,8 @@ so the flag is ignored there (with a logged warning), and CI and the release wor
 ### Screenshots
 `scripts/screenshots.sh` rebuilds the app in headless server mode, runs it with `TRIVY_SCANNER_FAKE_PODMAN=1` and a throwaway VEX store, drives the UI with Playwright and rewrites `docs/screenshots/`.
 It needs Go, Node 20+ and Playwright with Chromium (`npm install --no-save playwright && npx playwright install chromium`), and no GTK, podman or network.
+
+The **Screenshots** workflow (`.github/workflows/screenshots.yml`) does this for you: when a same-repository pull request changes `frontend/`, it regenerates the images and pushes an `Update screenshots` commit to the PR branch (only files that changed visibly, see `scripts/sync-screenshots.sh`), then starts CI on that commit. Details: [`docs/ci.md`](docs/ci.md#screenshots).
 The script also checks the data and that the dependency graph's layout stays finite, so a regression fails the run instead of producing a blank image.
 
 Notes: the Trivy cache (vulnerability DB) is a host directory (`~/.cache/trivy-scanner/trivy` on Linux) mounted at an explicit `--cache-dir`; with a remote podman it is the `trivy-cache` volume. Set `TRIVY_SCANNER_CACHE` to a volume name or an absolute directory to change it (see [`docs/architecture.md`](docs/architecture.md#trivy-cache)). Scans pass `--list-all-pkgs`, so reports list every installed package. The vulnerability DB is checked once per session (then hourly) and scans run with `--skip-db-update`, so repeat scans and comparisons start fast and keep working offline from the cache; `TRIVY_DB_REPOSITORY` / `TRIVY_JAVA_DB_REPOSITORY` select a mirror.
