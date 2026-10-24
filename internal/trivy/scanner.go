@@ -234,7 +234,8 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	logLine := func(l string) { s.logf("%s", l) }
 
 	s.logf("Scanning %s for vulnerabilities…", image)
-	job.Flags = []string{"--format", "json", "--scanners", "vuln"}
+	// --list-all-pkgs puts every installed package in the report, not just the vulnerable ones.
+	job.Flags = []string{"--format", "json", "--scanners", "vuln", "--list-all-pkgs"}
 	if req.IgnoreUnfixed {
 		job.Flags = append(job.Flags, "--ignore-unfixed")
 	}

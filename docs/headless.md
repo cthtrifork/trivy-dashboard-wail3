@@ -68,7 +68,7 @@ podman rm -f trivy-scanner
 # then repeat the `podman run` command above
 ```
 
-VEX assessments (`/data/vex.json`) and the EPSS/KEV cache live in the `trivy-scanner-data` volume and survive this. The Trivy vulnerability database lives in podman's `trivy-cache` volume.
+VEX assessments (`/data/vex.json`) and the EPSS/KEV cache live in the `trivy-scanner-data` volume and survive this. The Trivy vulnerability database lives in podman's `trivy-cache` volume on the server. To keep it in a host directory instead (for example to share it with other tools), create the directory and add `-e TRIVY_SCANNER_CACHE=/abs/path/on/the/server` to the `podman run` (`make headless-up CACHE=/abs/path`). The path is a server path, not a path inside the app container.
 
 ## Why it is set up this way
 

@@ -26,10 +26,22 @@ Build with `CGO_ENABLED=0` for server mode to avoid GTK.
 
 ## Podman engine
 
-- Runs `podman run --rm --name trivy-scanner-<random> -v trivy-cache:/root/.cache/trivy docker.io/aquasec/trivy:latest image …`; the named volume keeps the vulnerability DB between scans.
+- Runs `podman run --rm --name trivy-scanner-<random> -v trivy-cache:/root/.cache/trivy docker.io/aquasec/trivy:latest image --cache-dir /root/.cache/trivy …`; the cache survives between scans. The vulnerability scan also passes `--list-all-pkgs`.
 - Cancel: `podman rm --force --ignore --time 0 <name>`, then SIGTERM the client.
 - Tags: `podman search --list-tags <repo qualified to docker.io>`.
 - Env overrides: `PODMAN` (binary), `CONTAINER_HOST` (remote socket, used by the container deployment), `TRIVY_SCANNER_VEX_FILE`, `TRIVY_SCANNER_EPSS_URL`, `TRIVY_SCANNER_KEV_URL`, `XDG_CACHE_HOME`.
+
+## Trivy cache
+
+The scanner always gets an explicit `--cache-dir /root/.cache/trivy`, backed by a mount whose source is `TRIVY_SCANNER_CACHE`:
+
+| Value | Meaning | Works with |
+|---|---|---|
+| unset | podman named volume `trivy-cache` | local podman, podman machine (macOS/Windows), remote podman socket (the volume lives on the podman host) |
+| `my-volume` | another named volume | same |
+| `/abs/path` | a directory **on the machine running podman**, mounted with `label=disable` for SELinux | local podman; with a remote socket the path must already exist on the server (the app cannot create it) |
+
+Relative paths and `:` are rejected, because podman would silently treat `./cache` as a volume name. A host path is *not* the default because it breaks when the app itself runs in a container (its `/data/...` is not the host's), and macOS/Windows podman runs in a VM that sees only some host paths.
 
 ## Server mode security
 

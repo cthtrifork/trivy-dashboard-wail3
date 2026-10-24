@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -17,6 +18,19 @@ import (
 
 // TrivyImage is the container image used to run the scanner.
 const TrivyImage = "docker.io/aquasec/trivy:latest"
+
+const (
+	// cacheMount is where the Trivy cache sits inside the scanner container. It is passed to
+	// Trivy as --cache-dir so the location never depends on the image's HOME.
+	cacheMount = "/root/.cache/trivy"
+	// DefaultCacheSource is the podman named volume used unless TRIVY_SCANNER_CACHE says otherwise.
+	// A named volume lives wherever podman itself runs, so it works with a local podman, a podman
+	// machine VM, and a remote podman socket alike.
+	DefaultCacheSource = "trivy-cache"
+	// CacheEnv overrides the cache source: a volume name, or an absolute directory on the host
+	// that runs podman.
+	CacheEnv = "TRIVY_SCANNER_CACHE"
+)
 
 // TrivyJob is one `trivy image` invocation.
 type TrivyJob struct {
@@ -42,6 +56,62 @@ type Engine interface {
 type PodmanEngine struct {
 	// Bin is the podman binary; defaults to $PODMAN or "podman".
 	Bin string
+	// Cache is the Trivy cache source mounted into the scanner: a podman volume name or an
+	// absolute directory on the machine running podman. Defaults to $TRIVY_SCANNER_CACHE, then
+	// DefaultCacheSource.
+	Cache string
+}
+
+// cacheSource validates and returns the cache mount source.
+func (p *PodmanEngine) cacheSource() (string, error) {
+	src := p.Cache
+	if src == "" {
+		src = os.Getenv(CacheEnv)
+	}
+	if src == "" {
+		return DefaultCacheSource, nil
+	}
+	// podman reads "-v a:b" as a volume when a has no slash, and as a host path when it starts
+	// with one. Anything in between ("./cache") would silently become a volume, so refuse it.
+	if strings.ContainsAny(src, "/\\") && !filepath.IsAbs(src) {
+		return "", fmt.Errorf("%s=%q: use a volume name or an absolute path", CacheEnv, src)
+	}
+	if strings.ContainsRune(src, ':') && !filepath.IsAbs(src) {
+		return "", fmt.Errorf("%s=%q: ':' is not allowed in a volume name", CacheEnv, src)
+	}
+	return src, nil
+}
+
+// remote reports whether the podman client talks to another machine's podman, in which case a
+// host path is not ours to create.
+func remote() bool {
+	return os.Getenv("CONTAINER_HOST") != "" || os.Getenv("DOCKER_HOST") != ""
+}
+
+// runArgs builds the `podman run` arguments for a job (credentials excluded: see RunTrivy).
+func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
+	src, err := p.cacheSource()
+	if err != nil {
+		return nil, err
+	}
+	args := []string{"run", "--rm", "--name", name}
+	if filepath.IsAbs(src) {
+		// A host directory: make it when podman is local, and keep SELinux from blocking access
+		// to a directory we do not own the labels of.
+		if !remote() {
+			if err := os.MkdirAll(src, 0o755); err != nil {
+				return nil, fmt.Errorf("creating cache directory: %w", err)
+			}
+		}
+		args = append(args, "--security-opt", "label=disable")
+	}
+	args = append(args, "-v", src+":"+cacheMount)
+	if job.Username != "" {
+		args = append(args, "-e", "TRIVY_USERNAME", "-e", "TRIVY_PASSWORD")
+	}
+	args = append(args, TrivyImage, "image", "--cache-dir", cacheMount)
+	args = append(args, job.Flags...)
+	return append(args, job.Image), nil
 }
 
 func (p *PodmanEngine) bin() string {
@@ -64,20 +134,20 @@ func (p *PodmanEngine) Version(ctx context.Context) (string, error) {
 }
 
 // RunTrivy runs `trivy image <flags> <image>` in a throwaway container and
-// returns stdout. A named volume caches the vulnerability DB between runs.
+// returns stdout. The Trivy cache (vulnerability DB) is mounted from a volume or host directory
+// and selected with --cache-dir, so it survives between runs.
 // Credentials travel as environment variables, never on the command line.
 func (p *PodmanEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(string)) ([]byte, error) {
 	// A name we chose lets us stop the container ourselves if the scan is cancelled.
 	name := containerName()
-	args := []string{"run", "--rm", "--name", name, "-v", "trivy-cache:/root/.cache/trivy"}
+	args, err := p.runArgs(job, name)
+	if err != nil {
+		return nil, err
+	}
 	env := os.Environ()
 	if job.Username != "" {
-		args = append(args, "-e", "TRIVY_USERNAME", "-e", "TRIVY_PASSWORD")
 		env = append(env, "TRIVY_USERNAME="+job.Username, "TRIVY_PASSWORD="+job.Password)
 	}
-	args = append(args, TrivyImage, "image")
-	args = append(args, job.Flags...)
-	args = append(args, job.Image)
 
 	cmd := exec.CommandContext(ctx, p.bin(), args...)
 	cmd.Env = env
