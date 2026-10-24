@@ -22,6 +22,7 @@ export class Graph {
     this.hover = null;
     this.showLabels = "auto";
     this.raf = 0;
+    this.seed = 1;
 
     new ResizeObserver(() => this.resize()).observe(canvas.parentElement);
     canvas.addEventListener("pointerdown", (e) => this.down(e));
@@ -30,6 +31,15 @@ export class Graph {
     canvas.addEventListener("pointerleave", () => { if (!this.drag) this.setHover(null); });
     canvas.addEventListener("wheel", (e) => this.wheel(e), { passive: false });
     canvas.addEventListener("dblclick", () => this.fit());
+  }
+
+  // Small seeded generator (mulberry32) for nudging coincident nodes apart, so the same data
+  // always settles into the same layout: committed screenshots stay reproducible.
+  rand() {
+    let t = (this.seed = (this.seed + 0x6d2b79f5) | 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 
   // nodes: {id,label,sub,r,fill,ring,shape,depth,hl}; edges: [fromId,toId]
@@ -47,6 +57,7 @@ export class Graph {
     this.deg = this.nodes.map(() => 0);
     for (const [a, b] of this.edges) { this.adj[a].add(b); this.adj[b].add(a); this.deg[a]++; this.deg[b]++; }
     this.autoFit = true;
+    this.seed = 1;
     this.alpha = 1;
     this.kick();
   }
@@ -128,7 +139,7 @@ export class Graph {
         let dx = p.x - q.x, dy = p.y - q.y;
         let d2 = dx * dx + dy * dy;
         if (d2 > 90000) continue;
-        if (d2 < 1) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = 1; }
+        if (d2 < 1) { dx = this.rand() - 0.5; dy = this.rand() - 0.5; d2 = 1; }
         const d = Math.sqrt(d2);
         const f = (2600 / Math.max(d2, 400)) * a;
         const fx = (dx / d) * f, fy = (dy / d) * f;

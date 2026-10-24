@@ -1,0 +1,67 @@
+name: Screenshots
+
+# When a pull request changes the UI (frontend/**), regenerate docs/screenshots from the recorded
+# fixtures and push the result to the PR branch, so the screenshots in the README never go stale.
+# Same-repository PRs only (a fork's token is read-only). The workflow ignores pushes made by
+# github-actions[bot], which is what stops its own commit from triggering another run.
+on:
+  pull_request:
+    paths:
+      - frontend/**
+      - scripts/screenshots.*
+
+permissions:
+  contents: write # push the screenshot commit to the PR branch
+
+concurrency:
+  group: screenshots-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOTOOLCHAIN: local
+  # Pinned so the rendering does not change underneath committed images.
+  PLAYWRIGHT_VERSION: 1.63.0
+
+jobs:
+  screenshots:
+    name: screenshots
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true # needed to push the screenshot commit
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26' # go.mod requires 1.26.x (Wails v3)
+          check-latest: true
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock "playwright@${PLAYWRIGHT_VERSION}"
+          npx playwright install --with-deps chromium
+
+      - name: Generate screenshots
+        run: scripts/screenshots.sh
+
+      - name: Commit and push
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ -z "$(git status --porcelain -- docs/screenshots)" ]; then
+            echo "Screenshots are up to date." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          git commit -m "Update screenshots"
+          git push origin "HEAD:refs/heads/${HEAD_REF}"
+          echo "Pushed updated screenshots to \`${HEAD_REF}\`." | tee -a "$GITHUB_STEP_SUMMARY"
