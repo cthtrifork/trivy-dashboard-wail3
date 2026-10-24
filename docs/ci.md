@@ -30,11 +30,8 @@ Sources:
 
 ## Screenshots
 
-`screenshots.yml` keeps `docs/screenshots` in step with the UI.
+`screenshots.yml` keeps `docs/screenshots` in step with the UI: when a same-repository pull request changes `frontend/**` (or the screenshot scripts), it runs `scripts/screenshots.sh` on the recorded fixtures and, if any image changed, pushes an `Update screenshots` commit to the PR branch.
 
-- **Trigger:** a pull request that touches `frontend/**` (or the screenshot scripts), or a manual run on a non-default branch.
-- **Who:** same-repository PRs only. Fork PRs get a read-only token and their code must not run with write access; Dependabot PRs likewise have a read-only token.
-- **What:** builds the headless app with the recorded fixtures (`scripts/screenshots.sh`, Playwright pinned to one version), then `scripts/sync-screenshots.sh` copies only images that changed visibly (more than 200 pixels beyond a 3% colour fuzz). Rendering is not bit-identical between runs (a dialog's rounded corners antialias differently), so a byte comparison would churn files.
-- **Result:** an `Update screenshots` commit pushed to the PR branch. If nothing changed visibly, nothing is committed.
-- **CI on the new commit:** a push made with `GITHUB_TOKEN` starts no workflows, which would leave the PR head without the required "CI / test" result. The workflow therefore runs `gh workflow run ci.yml --ref <branch>` itself, which is why `ci.yml` has a `workflow_dispatch` trigger. If someone pushes to the branch while the job runs, the push fails and the next push re-runs it.
-- **Reproducibility:** the screenshot script waits for the force-directed graph to come to rest instead of sleeping, pins the OpenVEX timestamps, disables animations, and the graph's tie-breaking random numbers are seeded (`frontend/graph.js`). Fonts on the runner may still differ from your machine, so prefer letting the workflow regenerate the images over committing locally generated ones.
+- Fork PRs and Dependabot PRs are skipped (read-only token).
+- **No loop:** pushes made by `github-actions[bot]` are ignored (`github.actor` check). Without it the bot's commit re-triggers the workflow, and because rendering is never perfectly identical between runs, each run would commit again.
+- The script is made as reproducible as it reasonably can be: it waits for the force-directed graph to rest instead of sleeping, pins the OpenVEX timestamps, disables animations, and the graph's tie-breaking random numbers are seeded. Fonts on the runner can differ from your machine, so let the workflow regenerate the images rather than committing locally generated ones.

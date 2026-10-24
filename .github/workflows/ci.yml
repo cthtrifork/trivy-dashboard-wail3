@@ -6,8 +6,6 @@ on:
   pull_request:
   push:
     branches: [main]
-  # Lets the Screenshots workflow run CI on the commit it pushes (a GITHUB_TOKEN push triggers nothing).
-  workflow_dispatch:
 
 permissions:
   contents: read
