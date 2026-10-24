@@ -10,6 +10,8 @@ VERSION   ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo de
 RUNTIME   := $(or $(XDG_RUNTIME_DIR),/run/user/$(shell id -u))
 # CACHE: directory on the server (the podman host) that holds Trivy's cache; overridable.
 CACHE     ?= /tmp/trivy
+# TRIVY_IMAGE: optional Trivy version or image reference; default is the version pinned in internal/trivy/image/Dockerfile.
+TRIVY_IMAGE ?=
 SOCKET    ?= $(RUNTIME)/podman/podman.sock
 
 .DEFAULT_GOAL := help
@@ -69,6 +71,7 @@ headless-up: headless-image ## (Re)create and start the container, listening on 
 		--network host --security-opt label=disable \
 		-e WAILS_SERVER_PORT=$(PORT) \
 		-e TRIVY_SCANNER_CACHE=$(CACHE) \
+		$(if $(TRIVY_IMAGE),-e TRIVY_SCANNER_TRIVY_IMAGE=$(TRIVY_IMAGE)) \
 		-v "$(SOCKET):/run/podman/podman.sock" \
 		-v $(NAME)-data:/data \
 		$(IMAGE)

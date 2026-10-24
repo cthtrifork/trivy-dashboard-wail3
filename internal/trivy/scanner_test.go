@@ -59,7 +59,7 @@ func TestScan(t *testing.T) {
 		t.Fatalf("sbom: %+v", res.Components)
 	}
 	all := strings.Join(logs, "\n")
-	for _, want := range []string{"--ignore-unfixed", "-e TRIVY_USERNAME", TrivyImage, "nginx:1.27"} {
+	for _, want := range []string{"--ignore-unfixed", "-e TRIVY_USERNAME", DefaultTrivyImage(), "nginx:1.27"} {
 		if !strings.Contains(all, want) {
 			t.Errorf("podman args missing %q in:\n%s", want, all)
 		}
