@@ -56,12 +56,23 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      - name: Vet (production tags)
+        run: go vet -tags production ./...
+
       - name: Test
         run: go test -race -count=1 ./...
 
       # Proves the GUI binary still links against GTK4/WebKitGTK (cgo), exactly as the release build does.
       - name: Build (production tags)
         run: go build -tags production -trimpath -buildvcs=false -o /dev/null .
+
+      # Demo mode replays bundled fixtures. It must never exist in a production binary.
+      - name: Production build contains no demo mode
+        run: |
+          go build -tags production -trimpath -buildvcs=false -o "$RUNNER_TEMP/app" .
+          if grep -aq "TRIVY_SCANNER_REAL_PODMAN" "$RUNNER_TEMP/app"; then
+            echo "::error::demo-mode code is present in a -tags production binary"; exit 1
+          fi
 
       - name: Check frontend JavaScript parses
         run: |

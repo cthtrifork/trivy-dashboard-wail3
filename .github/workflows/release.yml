@@ -91,6 +91,10 @@ jobs:
           go build -tags production -trimpath -buildvcs=false \
             -ldflags "-w -s -X main.version=${VERSION}" \
             -o "dist/pkg/${APP}" .
+          # Demo mode replays bundled fixtures. It must never ship in a release.
+          if grep -aq "TRIVY_SCANNER_REAL_PODMAN" "dist/pkg/${APP}"; then
+            echo "::error::demo-mode code is present in the release binary"; exit 1
+          fi
           cp README.md dist/pkg/
           [ -f LICENSE ] && cp LICENSE dist/pkg/ || true
           archive="${APP}_${VERSION}_linux_amd64.tar.gz"

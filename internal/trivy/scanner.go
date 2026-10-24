@@ -1,22 +1,14 @@
 package trivy
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"os/exec"
 	"sort"
 	"strings"
 	"sync"
 )
-
-// TrivyImage is the container image used to run the scanner.
-const TrivyImage = "docker.io/aquasec/trivy:latest"
 
 // ScanRequest is what the UI sends to start a scan.
 type ScanRequest struct {
@@ -107,7 +99,10 @@ type DepNode struct {
 
 // Scanner runs trivy inside a podman container.
 type Scanner struct {
-	// Podman is the podman binary; defaults to $PODMAN or "podman".
+	// Engine runs Trivy. When nil, real podman is used (see Podman).
+	Engine Engine
+	// Podman is the podman binary used when Engine is nil; defaults to
+	// $PODMAN or "podman".
 	Podman string
 	// Log receives progress lines (trivy stderr and status messages).
 	Log func(string)
@@ -118,29 +113,23 @@ type Scanner struct {
 	cancel context.CancelFunc
 }
 
-func (s *Scanner) podman() string {
-	if s.Podman != "" {
-		return s.Podman
-	}
-	if p := os.Getenv("PODMAN"); p != "" {
-		return p
-	}
-	return "podman"
-}
-
 func (s *Scanner) logf(format string, a ...any) {
 	if s.Log != nil {
 		s.Log(fmt.Sprintf(format, a...))
 	}
 }
 
-// Version reports the podman version, proving podman is usable.
+// Version reports the container engine version, proving it is usable.
 func (s *Scanner) Version() (string, error) {
-	out, err := exec.Command(s.podman(), "--version").CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("podman not available: %w", err)
+	return s.engine().Version(context.Background())
+}
+
+// engine returns the configured Engine, defaulting to real podman.
+func (s *Scanner) engine() Engine {
+	if s.Engine != nil {
+		return s.Engine
 	}
-	return strings.TrimSpace(string(out)), nil
+	return &PodmanEngine{Bin: s.Podman}
 }
 
 // Cancel aborts a running scan, if any.
@@ -210,23 +199,22 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	if err != nil {
 		return nil, err
 	}
-	env := os.Environ()
-	if req.Username != "" {
-		env = append(env, "TRIVY_USERNAME="+req.Username, "TRIVY_PASSWORD="+req.Password)
-	}
+	job := TrivyJob{Image: image, Username: req.Username, Password: req.Password}
+	logLine := func(l string) { s.logf("%s", l) }
 
 	s.logf("Scanning %s for vulnerabilities…", image)
-	vulnArgs := []string{"--format", "json", "--scanners", "vuln"}
+	job.Flags = []string{"--format", "json", "--scanners", "vuln"}
 	if req.IgnoreUnfixed {
-		vulnArgs = append(vulnArgs, "--ignore-unfixed")
+		job.Flags = append(job.Flags, "--ignore-unfixed")
 	}
-	vulnJSON, err := s.runTrivy(ctx, env, req.Username != "", image, vulnArgs)
+	vulnJSON, err := s.engine().RunTrivy(ctx, job, logLine)
 	if err != nil {
 		return nil, fmt.Errorf("vulnerability scan failed: %w", err)
 	}
 
 	s.logf("Generating SBOM…")
-	sbomJSON, err := s.runTrivy(ctx, env, req.Username != "", image, []string{"--format", "cyclonedx"})
+	job.Flags = []string{"--format", "cyclonedx"}
+	sbomJSON, err := s.engine().RunTrivy(ctx, job, logLine)
 	if err != nil {
 		return nil, fmt.Errorf("SBOM generation failed: %w", err)
 	}
@@ -248,48 +236,6 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	}
 	s.logf("Done: %d vulnerabilities, %d components.", len(res.Vulnerabilities), len(res.Components))
 	return res, nil
-}
-
-// runTrivy runs `trivy image <flags> <image>` in a throwaway container and
-// returns stdout. A named volume caches the vulnerability DB between runs.
-func (s *Scanner) runTrivy(ctx context.Context, env []string, creds bool, image string, flags []string) ([]byte, error) {
-	args := []string{"run", "--rm", "-v", "trivy-cache:/root/.cache/trivy"}
-	if creds {
-		args = append(args, "-e", "TRIVY_USERNAME", "-e", "TRIVY_PASSWORD")
-	}
-	args = append(args, TrivyImage, "image")
-	args = append(args, flags...)
-	args = append(args, image)
-
-	cmd := exec.CommandContext(ctx, s.podman(), args...)
-	cmd.Env = env
-	var stdout bytes.Buffer
-	cmd.Stdout = &stdout
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return nil, err
-	}
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("starting podman: %w", err)
-	}
-
-	var tail []string
-	sc := bufio.NewScanner(io.Reader(stderr))
-	sc.Buffer(make([]byte, 64*1024), 1024*1024)
-	for sc.Scan() {
-		line := sc.Text()
-		s.logf("%s", line)
-		if tail = append(tail, line); len(tail) > 5 {
-			tail = tail[1:]
-		}
-	}
-	if err := cmd.Wait(); err != nil {
-		if ctx.Err() != nil {
-			return nil, errors.New("cancelled")
-		}
-		return nil, fmt.Errorf("%w: %s", err, strings.Join(tail, "\n"))
-	}
-	return stdout.Bytes(), nil
 }
 
 var severityRank = map[string]int{"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,7 @@ import (
 // ScanService is bound to the frontend. Its exported methods are callable
 // from JavaScript as main.ScanService.<Method>.
 type ScanService struct {
+	mode    Mode
 	app     *application.App
 	scanner *trivy.Scanner
 	vex     *trivy.VEXStore
@@ -25,7 +27,23 @@ type ScanService struct {
 	product map[string]string // image repo -> product purl from the latest scan
 }
 
+// Mode tells the UI whether scans are real. Fixtures is true in development
+// builds that replay recorded scans; the other fields are demo defaults for
+// the input boxes.
+type Mode struct {
+	Fixtures bool   `json:"fixtures"`
+	Detail   string `json:"detail"`
+	Image    string `json:"image"` // example image to scan
+	Repo     string `json:"repo"`  // example repository for Compare
+	TagA     string `json:"tagA"`
+	TagB     string `json:"tagB"`
+}
+
 func NewScanService() *ScanService {
+	engine, mode := newEngine()
+	if mode.Fixtures {
+		log.Print("trivy-scanner: " + mode.Detail)
+	}
 	cache, _ := os.UserCacheDir()
 	cfg, _ := os.UserConfigDir()
 	vexPath := os.Getenv("TRIVY_SCANNER_VEX_FILE")
@@ -33,7 +51,8 @@ func NewScanService() *ScanService {
 		vexPath = filepath.Join(cfg, "trivy-scanner", "vex.json")
 	}
 	return &ScanService{
-		scanner: &trivy.Scanner{Enricher: &trivy.Enricher{
+		mode: mode,
+		scanner: &trivy.Scanner{Engine: engine, Enricher: &trivy.Enricher{
 			CacheDir: filepath.Join(cache, "trivy-scanner"),
 			// Overridable for air-gapped mirrors and tests.
 			EPSSURL: os.Getenv("TRIVY_SCANNER_EPSS_URL"),
@@ -50,6 +69,9 @@ func (s *ScanService) ServiceStartup(_ context.Context, _ application.ServiceOpt
 	s.scanner.Log = func(line string) { s.app.Event.Emit("scan:log", line) }
 	return nil
 }
+
+// Mode reports whether scans are real or replayed demo data.
+func (s *ScanService) Mode() Mode { return s.mode }
 
 // PodmanVersion returns the podman version string or an error.
 func (s *ScanService) PodmanVersion() (string, error) { return s.scanner.Version() }

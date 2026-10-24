@@ -17,11 +17,20 @@ Podman container (`docker.io/aquasec/trivy`). Results show in two panels:
 ## Requirements
 - Go 1.26+ (required by Wails v3 beta.34), [Wails v3 CLI](https://v3.wails.io) (`go install github.com/wailsapp/wails/v3/cmd/wails3@latest`)
 - Linux: GTK4 + WebKitGTK 6 dev packages (see Wails docs); macOS/Windows: native webview
-- `podman` on PATH (override with `PODMAN=/path/to/podman`)
+- `podman` on PATH (override with `PODMAN=/path/to/podman`) for real scans; not needed in demo mode
 
 ## Run
-    go run .            # or: wails3 build && ./bin/...
+    go run .                                  # development build: demo mode, no podman needed
+    TRIVY_SCANNER_REAL_PODMAN=1 go run .      # development build, real podman
+    go build -tags production -trimpath .     # production build: always real podman
     go test ./internal/...
+
+### Demo mode (development builds)
+Any build **without** `-tags production` is a development build (`go run .`, plain `go build`, and `wails3 dev`, which omits that tag). Instead of running podman it replays
+recorded Trivy output for two real Traefik releases, so every panel works offline with no registry and no vulnerability DB. A yellow banner says so, and the inputs are prefilled
+(`traefik:3.7.13`, Compare `3.7.13` → `3.7.16`). Tags `3.7.13`, `3.7.16`, `3.7` and `latest` are accepted; any other image gets an error that lists what is recorded.
+Set `TRIVY_SCANNER_REAL_PODMAN=1` to use real podman in a development build. Production builds (`-tags production`, which the release workflow uses) contain neither the fixtures nor any code that could replay
+them, and CI fails if that ever changes. The recordings live in [`internal/trivy/fixtures`](internal/trivy/fixtures/README.md) and the tests replay them too.
 
 Notes: the Trivy DB is cached in the `trivy-cache` podman volume. Trivy pulls the
 target image itself from the registry; for private registries use *Options* to

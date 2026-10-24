@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -115,24 +114,20 @@ func tagRef(repo, tag string) (string, error) {
 	return repo + ":" + tag, nil
 }
 
-// ListTags asks podman for the tags a registry offers for repo.
+// ListTags returns the tags the engine can offer for repo, newest first.
 func (s *Scanner) ListTags(ctx context.Context, repo string) ([]string, error) {
 	repo = ImageRepo(repo)
 	if _, err := validImage(repo); err != nil {
 		return nil, err
 	}
-	out, err := exec.CommandContext(ctx, s.podman(), "search", "--list-tags", "--limit", "1000", "--format", "{{.Tag}}", repo).Output()
+	raw, err := s.engine().ListTags(ctx, repo)
 	if err != nil {
-		msg := err.Error()
-		if ee, ok := err.(*exec.ExitError); ok && len(ee.Stderr) > 0 {
-			msg = strings.TrimSpace(string(ee.Stderr))
-		}
-		return nil, fmt.Errorf("listing tags: %s", msg)
+		return nil, err
 	}
 	var tags []string
 	seen := map[string]bool{}
-	for _, t := range strings.Fields(string(out)) {
-		if t != "TAG" && !seen[t] {
+	for _, t := range raw {
+		if t != "" && t != "TAG" && !seen[t] {
 			seen[t] = true
 			tags = append(tags, t)
 		}

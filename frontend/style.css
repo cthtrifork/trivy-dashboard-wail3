@@ -126,3 +126,5 @@ dialog::backdrop{background:#0009}
 .lg{display:inline-block;width:10px;height:10px;border-radius:50%;background:#4a8f7a;margin-right:5px;vertical-align:-1px}
 .lg.sq{border-radius:2px;background:#6b7a99}
 .lg.ring{background:transparent;border:3px solid var(--HIGH);width:8px;height:8px}
+
+#mode-banner{padding:7px 16px;background:#f5b80026;border-bottom:1px solid var(--MEDIUM);font-size:12px}

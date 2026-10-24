@@ -77,4 +77,6 @@ jobs:
           scanners: vuln,secret
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+          # Recorded scan output of a third-party image: full of CVE ids by design, not our dependencies.
+          skip-dirs: internal/trivy/fixtures
           exit-code: '1'

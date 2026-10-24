@@ -61,6 +61,17 @@ $("scan-form").addEventListener("submit", async (e) => {
 });
 $("cancel-btn").addEventListener("click", () => call("Cancel"));
 
+// Development builds replay recorded scans: say so, and prefill the inputs with something that works.
+call("Mode").then((m) => {
+  if (!m.fixtures) return;
+  $("mode-banner").textContent = m.detail;
+  $("mode-banner").hidden = false;
+  if (!$("image").value) $("image").value = m.image;
+  if (!$("cmp-repo").value) $("cmp-repo").value = m.repo;
+  if (!$("cmp-a").value) $("cmp-a").value = m.tagA;
+  if (!$("cmp-b").value) $("cmp-b").value = m.tagB;
+}, () => {});
+
 call("PodmanVersion").then((v) => setStatus(v), (err) => setStatus(String(err.message || err), { err: true }));
 
 // ---- rendering ----
