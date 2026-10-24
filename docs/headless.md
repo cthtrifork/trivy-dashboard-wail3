@@ -44,6 +44,20 @@ ssh -L 8080:localhost:8080 user@server
 
 and open <http://localhost:8080>. Use another local port if 8080 is taken (`-L 9090:localhost:8080`).
 
+## Shortcut: make
+
+The same steps as a Makefile (needs `make`, `git` and podman on the server):
+
+```sh
+make headless          # enable the podman socket, build the image, (re)start the container, print the ssh command
+make headless-update   # git pull origin main, rebuild, restart
+make headless-status   # container state and whether it answers on localhost
+make headless-logs     # follow the logs
+make headless-down     # remove the container (data volume stays)
+```
+
+`PORT=9090 make headless-up` changes the listen port; `make help` lists every target.
+
 ## Updating to the latest `main`
 
 ```sh
