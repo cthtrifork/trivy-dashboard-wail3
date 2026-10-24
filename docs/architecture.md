@@ -26,10 +26,23 @@ Build with `CGO_ENABLED=0` for server mode to avoid GTK.
 
 ## Podman engine
 
-- Runs `podman run --rm --name trivy-scanner-<random> -v trivy-cache:/root/.cache/trivy docker.io/aquasec/trivy:latest image …`; the named volume keeps the vulnerability DB between scans.
+- Runs `podman run --rm --name trivy-scanner-<random> -v <cache source>:/root/.cache/trivy docker.io/aquasec/trivy:latest image --cache-dir /root/.cache/trivy …`; the cache survives between scans. The vulnerability scan also passes `--list-all-pkgs`.
 - Cancel: `podman rm --force --ignore --time 0 <name>`, then SIGTERM the client.
 - Tags: `podman search --list-tags <repo qualified to docker.io>`.
 - Env overrides: `PODMAN` (binary), `CONTAINER_HOST` (remote socket, used by the container deployment), `TRIVY_SCANNER_VEX_FILE`, `TRIVY_SCANNER_EPSS_URL`, `TRIVY_SCANNER_KEV_URL`, `XDG_CACHE_HOME`.
+
+## Trivy cache
+
+The scanner always gets an explicit `--cache-dir /root/.cache/trivy`, backed by a mount whose source is `TRIVY_SCANNER_CACHE`:
+
+| Value | Meaning | Works with |
+|---|---|---|
+| unset, local podman | `<user cache dir>/trivy-scanner/trivy` on the host (Linux `~/.cache/trivy-scanner/trivy`, macOS `~/Library/Caches/trivy-scanner/trivy`), created if missing, mounted with `label=disable` for SELinux | Linux, macOS (podman machine shares the home directory) |
+| unset, remote podman (`CONTAINER_HOST`/`DOCKER_HOST` set, as in the containerised headless deployment) or Windows | podman named volume `trivy-cache`, which lives wherever podman runs | any |
+| `my-volume` | another named volume | any |
+| `/abs/path` | a directory **on the machine running podman**; with a remote socket it must already exist (the app cannot create it) | local podman; remote with an existing path |
+
+Relative paths and `:` are rejected, because podman would silently treat `./cache` as a volume name. The host directory is the default only when podman is local: if the app itself runs in a container, its own paths mean nothing to the podman host, so the volume is used there. Upgrading from the volume default re-downloads the Trivy DB once. Set `TRIVY_SCANNER_CACHE=trivy-cache` to keep using the old volume.
 
 ## Server mode security
 

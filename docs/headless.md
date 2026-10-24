@@ -68,7 +68,7 @@ podman rm -f trivy-scanner
 # then repeat the `podman run` command above
 ```
 
-VEX assessments (`/data/vex.json`) and the EPSS/KEV cache live in the `trivy-scanner-data` volume and survive this. The Trivy vulnerability database lives in podman's `trivy-cache` volume.
+VEX assessments (`/data/vex.json`) and the EPSS/KEV cache live in the `trivy-scanner-data` volume and survive this. The Trivy vulnerability database lives in `/tmp/trivy` on the server when you use `make headless-up` (change it with `make headless-up CACHE=/abs/path`; the Makefile creates the directory). Note `/tmp` may be cleared on reboot, which only costs one database re-download. With the manual `podman run` commands above the app uses podman's `trivy-cache` volume; to use a server directory instead, create it and add `-e TRIVY_SCANNER_CACHE=/abs/path/on/the/server`. The path is a server path, not a path inside the app container.
 
 ## Why it is set up this way
 
@@ -99,7 +99,7 @@ CGO_ENABLED=0 go build -tags server,production -trimpath -o trivy-scanner .
 | `403` in the browser | You are not using `localhost`/`127.0.0.1` in the URL, or something rewrites the `Host` header. |
 | `Address already in use` | Something else listens on 8080 on the server: set `-e WAILS_SERVER_PORT=8081` and tunnel to that. |
 | Tunnel connects but the page does not load | `podman logs trivy-scanner`; confirm `--network host` was used. |
-| Slow first scan | Trivy downloads its vulnerability database once into the `trivy-cache` volume. |
+| Slow first scan | Trivy downloads its vulnerability database once into the cache (`/tmp/trivy` with `make`, else the `trivy-cache` volume). |
 
 ## What has been verified
 
