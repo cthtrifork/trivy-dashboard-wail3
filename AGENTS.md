@@ -9,7 +9,6 @@ Read in this order, stopping when you have enough:
 3. [`docs/architecture.md`](docs/architecture.md): how the code is laid out and why.
 4. [`docs/agent-runbook.md`](docs/agent-runbook.md): sandbox quirks, PR recipe, verification checklist.
 5. [`docs/decisions.md`](docs/decisions.md): why things are the way they are (do not re-litigate without new facts).
-6. [`docs/status.md`](docs/status.md): what is done, what is unverified, ideas not yet requested.
 
 ## Commands
 
