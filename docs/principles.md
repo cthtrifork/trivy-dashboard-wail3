@@ -6,7 +6,7 @@ Standing rules for this repository. They come from the maintainer's instructions
 
 1. **One change, one branch, one PR, from `main`.** Name branches `claude/<topic>`. Never commit to `main`.
 2. **Do not wait for CI.** Open the PR, give the link, stop. The maintainer merges.
-3. **Do the work asked, not adjacent work.** Parked ideas go in `docs/status.md`, not in the diff. Scope that was dropped stays dropped (the Fedora/GTK3 build was cancelled; see `docs/decisions.md`).
+3. **Do the work asked, not adjacent work.** Parked ideas are mentioned in the PR description, not put in the diff. Scope that was dropped stays dropped (the Fedora/GTK3 build was cancelled; see `docs/decisions.md`).
 4. **Ask only when blocked on a choice that is the maintainer's.** Otherwise pick a sensible default, say which, and continue.
 5. **Report faithfully.** State what was verified and how. State what was *not* verified and why. A test you could not run is "unverified", never "should work".
 

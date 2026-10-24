@@ -11,5 +11,5 @@
 ## Checklist
 
 - [ ] gofmt, vet (also `-tags production`), `go test -race` clean
-- [ ] Docs / README / `docs/status.md` updated
+- [ ] Docs / README updated
 - [ ] No fixtures or demo code reachable from a production build
