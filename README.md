@@ -49,7 +49,8 @@ so the flag is ignored there (with a logged warning), and CI and the release wor
 It needs Go, Node 20+ and Playwright with Chromium (`npm install --no-save playwright && npx playwright install chromium`), and no GTK, podman or network.
 The script also checks the data and that the dependency graph's layout stays finite, so a regression fails the run instead of producing a blank image.
 
-Notes: the Trivy cache (vulnerability DB) is mounted at an explicit `--cache-dir` from the `trivy-cache` podman volume by default; set `TRIVY_SCANNER_CACHE` to another volume name or to an absolute host directory (see [`docs/architecture.md`](docs/architecture.md#trivy-cache)). Scans pass `--list-all-pkgs`, so reports list every installed package. Trivy pulls the
+Notes: the Trivy cache (vulnerability DB) is a host directory (`~/.cache/trivy-scanner/trivy` on Linux) mounted at an explicit `--cache-dir`; with a remote podman it is the `trivy-cache` volume. Set `TRIVY_SCANNER_CACHE` to a volume name or an absolute directory to change it (see [`docs/architecture.md`](docs/architecture.md#trivy-cache)). Scans pass `--list-all-pkgs`, so reports list every installed package.
+Trivy pulls the
 target image itself from the registry; for private registries use *Options* to
 pass credentials (via `TRIVY_USERNAME`/`TRIVY_PASSWORD` env, not argv).
 Locally-built images that aren't in a registry are not scanned.

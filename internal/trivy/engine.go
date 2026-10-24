@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -23,9 +24,9 @@ const (
 	// cacheMount is where the Trivy cache sits inside the scanner container. It is passed to
 	// Trivy as --cache-dir so the location never depends on the image's HOME.
 	cacheMount = "/root/.cache/trivy"
-	// DefaultCacheSource is the podman named volume used unless TRIVY_SCANNER_CACHE says otherwise.
-	// A named volume lives wherever podman itself runs, so it works with a local podman, a podman
-	// machine VM, and a remote podman socket alike.
+	// DefaultCacheSource is the podman named volume used when there is no better default: a
+	// remote podman socket, or no user cache directory. A named volume lives wherever podman
+	// itself runs, so it is right for any podman, local or remote.
 	DefaultCacheSource = "trivy-cache"
 	// CacheEnv overrides the cache source: a volume name, or an absolute directory on the host
 	// that runs podman.
@@ -58,7 +59,7 @@ type PodmanEngine struct {
 	Bin string
 	// Cache is the Trivy cache source mounted into the scanner: a podman volume name or an
 	// absolute directory on the machine running podman. Defaults to $TRIVY_SCANNER_CACHE, then
-	// DefaultCacheSource.
+	// defaultCache().
 	Cache string
 }
 
@@ -69,7 +70,7 @@ func (p *PodmanEngine) cacheSource() (string, error) {
 		src = os.Getenv(CacheEnv)
 	}
 	if src == "" {
-		return DefaultCacheSource, nil
+		return defaultCache(), nil
 	}
 	// podman reads "-v a:b" as a volume when a has no slash, and as a host path when it starts
 	// with one. Anything in between ("./cache") would silently become a volume, so refuse it.
@@ -80,6 +81,21 @@ func (p *PodmanEngine) cacheSource() (string, error) {
 		return "", fmt.Errorf("%s=%q: ':' is not allowed in a volume name", CacheEnv, src)
 	}
 	return src, nil
+}
+
+// defaultCache is the cache source when nothing is configured. With a local podman it is a
+// directory in the user's cache dir, so the Trivy DB is a plain, inspectable host directory that
+// survives `podman system reset`. With a remote podman (including the containerised headless
+// deployment) our own paths mean nothing to the podman host, so it is the named volume there.
+func defaultCache() string {
+	if remote() || runtime.GOOS == "windows" { // Windows paths need translating for the podman VM
+		return DefaultCacheSource
+	}
+	dir, err := os.UserCacheDir()
+	if err != nil || !filepath.IsAbs(dir) {
+		return DefaultCacheSource
+	}
+	return filepath.Join(dir, "trivy-scanner", "trivy")
 }
 
 // remote reports whether the podman client talks to another machine's podman, in which case a
