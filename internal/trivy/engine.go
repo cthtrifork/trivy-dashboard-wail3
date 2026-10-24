@@ -33,9 +33,12 @@ const (
 	CacheEnv = "TRIVY_SCANNER_CACHE"
 )
 
+// passthroughEnv are Trivy settings forwarded into the scanner container when set.
+var passthroughEnv = []string{"TRIVY_DB_REPOSITORY", "TRIVY_JAVA_DB_REPOSITORY"}
+
 // TrivyJob is one `trivy image` invocation.
 type TrivyJob struct {
-	Image    string   // image reference to scan
+	Image    string   // image reference to scan; empty for --download-db-only
 	Flags    []string // e.g. --format json --scanners vuln
 	Username string   // optional registry credentials
 	Password string
@@ -125,9 +128,18 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 	if job.Username != "" {
 		args = append(args, "-e", "TRIVY_USERNAME", "-e", "TRIVY_PASSWORD")
 	}
+	// Let air-gapped and rate-limited setups point Trivy at a DB mirror.
+	for _, name := range passthroughEnv {
+		if os.Getenv(name) != "" {
+			args = append(args, "-e", name)
+		}
+	}
 	args = append(args, TrivyImage, "image", "--cache-dir", cacheMount)
 	args = append(args, job.Flags...)
-	return append(args, job.Image), nil
+	if job.Image != "" { // a DB-only job has no image
+		args = append(args, job.Image)
+	}
+	return args, nil
 }
 
 func (p *PodmanEngine) bin() string {
