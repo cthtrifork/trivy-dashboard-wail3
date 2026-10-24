@@ -56,6 +56,7 @@ Override with `TRIVY_SCANNER_EPSS_URL` / `TRIVY_SCANNER_KEV_URL` (mirrors, air-g
 - **Security** (`security.yml`) – `govulncheck` and a Trivy filesystem scan when Go files or dependencies change, plus weekly (new advisories appear without code changes).
 - **Release** (`release.yml`) – push a semver tag from `main` (`git tag v1.2.3 && git push origin v1.2.3`; `v1.2.3-rc.1` makes a pre-release). It re-runs vet/tests/govulncheck, builds a Linux amd64 binary, and publishes a GitHub release with a tarball, SHA-256 checksums, generated notes and a build-provenance attestation (`gh attestation verify <tarball> --repo <owner>/<repo>`). Run it manually for a dry run that builds but does not publish.
 - Dependabot keeps Go modules and the SHA-pinned actions current.
+- Which ideas came from Wails' cross-platform build guide and `wails-build-action`, and what was left out: [`docs/ci.md`](docs/ci.md).
 
 The release binary is built on Ubuntu 24.04 and links dynamically, so it needs GTK4 and WebKitGTK 6 (and a glibc at least as new as Ubuntu 24.04's) on the machine that runs it, plus `podman`.
 

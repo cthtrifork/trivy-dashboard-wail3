@@ -31,6 +31,17 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # The README promises a binary built on Ubuntu 24.04 (that fixes the glibc and WebKitGTK
+      # baseline). Like wails-build-action's distro discovery, fail loudly if the runner is
+      # anything else instead of silently shipping a different baseline.
+      - name: Check the build distribution
+        run: |
+          . /etc/os-release
+          if [ "$ID" != "ubuntu" ] || [ "$VERSION_ID" != "24.04" ]; then
+            echo "::error::Expected Ubuntu 24.04 but this runner is $PRETTY_NAME"; exit 1
+          fi
+          echo "Building on $PRETTY_NAME"
+
       - name: Work out the version
         id: meta
         env:
@@ -68,6 +79,12 @@ jobs:
           go-version: '1.26'
           check-latest: true
           cache: true
+          cache-dependency-path: go.sum
+
+      - name: Toolchain versions
+        run: |
+          go version
+          pkg-config --modversion gtk4 webkitgtk-6.0 libsoup-3.0
 
       # Never ship something CI would have rejected.
       - name: Vet and test
@@ -91,6 +108,7 @@ jobs:
           go build -tags production -trimpath -buildvcs=false \
             -ldflags "-w -s -X main.version=${VERSION}" \
             -o "dist/pkg/${APP}" .
+          chmod +x "dist/pkg/${APP}"
           # Demo mode replays bundled fixtures. It must never ship in a release.
           if grep -aqF "[fixtures] replaying" "dist/pkg/${APP}"; then
             echo "::error::demo-mode code is present in the release binary"; exit 1
