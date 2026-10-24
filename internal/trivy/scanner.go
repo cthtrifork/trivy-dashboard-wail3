@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 // ScanRequest is what the UI sends to start a scan.
@@ -111,6 +112,7 @@ type Scanner struct {
 
 	mu     sync.Mutex
 	cancel context.CancelFunc
+	done   chan struct{} // closed when the running job has fully finished
 }
 
 func (s *Scanner) logf(format string, a ...any) {
@@ -138,6 +140,33 @@ func (s *Scanner) Cancel() {
 	defer s.mu.Unlock()
 	if s.cancel != nil {
 		s.cancel()
+	}
+}
+
+// Running reports whether a scan or comparison is in progress.
+func (s *Scanner) Running() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.cancel != nil
+}
+
+// CancelAndWait aborts a running job and waits for it to finish cleaning up (the engine
+// stops its container while handling the cancellation), but no longer than grace. It
+// reports whether nothing is running any more. Shutdown uses it so quitting never leaves
+// a scan behind, while staying within the fast-shutdown budget Wails asks for.
+func (s *Scanner) CancelAndWait(grace time.Duration) bool {
+	s.mu.Lock()
+	cancel, done := s.cancel, s.done
+	s.mu.Unlock()
+	if cancel == nil {
+		return true
+	}
+	cancel()
+	select {
+	case <-done:
+		return true
+	case <-time.After(grace):
+		return false
 	}
 }
 
@@ -171,13 +200,15 @@ func (s *Scanner) begin(parent context.Context) (context.Context, func(), error)
 		cancel()
 		return nil, nil, errors.New("a scan is already running")
 	}
-	s.cancel = cancel
+	done := make(chan struct{})
+	s.cancel, s.done = cancel, done
 	s.mu.Unlock()
 	return ctx, func() {
 		cancel()
 		s.mu.Lock()
-		s.cancel = nil
+		s.cancel, s.done = nil, nil
 		s.mu.Unlock()
+		close(done)
 	}, nil
 }
 
