@@ -29,6 +29,8 @@ Quitting (closing the window) stops a running scan and removes its container, fo
 
 Running on a headless server that only has podman (no Go), reached from your browser over an SSH tunnel: [`docs/headless.md`](docs/headless.md).
 
+`make help` lists common tasks (`make check`, `make test`, `make headless`, ...).
+
 Contributors and AI agents: start at [`AGENTS.md`](AGENTS.md) (rules, commands, architecture, current status).
 
 ### Fake data (tests and screenshots only)

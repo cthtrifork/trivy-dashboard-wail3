@@ -12,6 +12,8 @@ Read in this order, stopping when you have enough:
 
 ## Commands
 
+`make help` lists shortcuts (`make check` runs the GTK-free CI checks; `make headless*` manages the podman deployment). Underlying commands:
+
 ```sh
 go test -race -count=1 ./...                       # what CI runs; replays recorded fixtures, no podman needed
 go vet ./... && go vet -tags production ./...
