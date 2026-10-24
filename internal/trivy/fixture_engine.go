@@ -15,8 +15,10 @@ import (
 )
 
 // Recorded Trivy output for two real Traefik releases, replayed instead of
-// running podman. Compiled out of production builds (-tags production), so a
-// release binary contains neither the data nor a code path that uses it.
+// running podman. Used by the Go tests and, when TRIVY_SCANNER_FAKE_PODMAN is
+// set, by the screenshot script. Compiled out of production builds
+// (-tags production), so a release binary contains neither the data nor a code
+// path that uses it.
 //
 //go:embed fixtures/*.json
 var fixtureFiles embed.FS
@@ -144,7 +146,7 @@ func (s fixtureSet) resolve(image string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("demo mode has no recorded scan for %q. Recorded versions: %s. "+
-		"Set TRIVY_SCANNER_REAL_PODMAN=1 to scan real images with podman",
+		"Unset TRIVY_SCANNER_FAKE_PODMAN to scan real images with podman",
 		image, strings.Join(s.versions, ", "))
 }
 

@@ -50,7 +50,7 @@ func NewScanService() *ScanService {
 	if vexPath == "" {
 		vexPath = filepath.Join(cfg, "trivy-scanner", "vex.json")
 	}
-	return &ScanService{
+	svc := &ScanService{
 		mode: mode,
 		scanner: &trivy.Scanner{Engine: engine, Enricher: &trivy.Enricher{
 			CacheDir: filepath.Join(cache, "trivy-scanner"),
@@ -61,6 +61,10 @@ func NewScanService() *ScanService {
 		vex:     &trivy.VEXStore{Path: vexPath},
 		product: map[string]string{},
 	}
+	if mode.Fixtures {
+		svc.scanner.Enricher = nil // recorded scans stay offline and deterministic
+	}
+	return svc
 }
 
 // ServiceStartup gives the service access to the app so it can emit events.

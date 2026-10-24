@@ -70,7 +70,7 @@ jobs:
       - name: Production build contains no demo mode
         run: |
           go build -tags production -trimpath -buildvcs=false -o "$RUNNER_TEMP/app" .
-          if grep -aq "TRIVY_SCANNER_REAL_PODMAN" "$RUNNER_TEMP/app"; then
+          if grep -aqF "[fixtures] replaying" "$RUNNER_TEMP/app"; then
             echo "::error::demo-mode code is present in a -tags production binary"; exit 1
           fi
 

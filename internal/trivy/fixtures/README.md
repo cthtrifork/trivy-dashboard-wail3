@@ -1,7 +1,9 @@
 # Recorded Trivy output
 
-Real output of Trivy, recorded once and replayed by the demo-mode `FixtureEngine`
-(development builds only) and by the tests. Nothing here is synthetic.
+Real output of Trivy, recorded once. It is used **only** by the Go tests and, when
+`TRIVY_SCANNER_FAKE_PODMAN=1` is set on a development build, by the screenshot script
+(`scripts/screenshots.sh`). Normal runs, `wails3 dev` included, use real podman. Nothing
+here is synthetic.
 
 | File | What it is | Used for |
 |---|---|---|

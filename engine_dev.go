@@ -4,25 +4,28 @@ package main
 
 import (
 	"context"
-	"os"
-	"strings"
 
 	"github.com/cthtrifork/trivy-dashboard-wail3/internal/trivy"
 )
 
-// newEngine picks how scans run in a development build, which is any build
-// without -tags production (`go run .`, `wails3 dev`, plain `go build`).
-// Recorded scans are replayed so the UI works without podman, a registry or
-// network. Set TRIVY_SCANNER_REAL_PODMAN=1 to use the real podman instead.
+// fakePodmanFlag switches a development build to recorded scan data.
+const fakePodmanFlag = "TRIVY_SCANNER_FAKE_PODMAN"
+
+// newEngine picks how scans run. By default every build, `wails dev` and
+// `go run .` included, uses the real podman. Only when TRIVY_SCANNER_FAKE_PODMAN
+// is set does a development build (one without -tags production) replay the
+// recorded Trivy output in internal/trivy/fixtures, which is what the Go tests
+// and the screenshot script use. Fake mode also turns off the live EPSS/KEV
+// lookups so its output is deterministic and offline.
 func newEngine() (trivy.Engine, Mode) {
-	if v := strings.ToLower(os.Getenv("TRIVY_SCANNER_REAL_PODMAN")); v != "" && v != "0" && v != "false" {
-		return nil, Mode{Detail: "Development build using real podman (TRIVY_SCANNER_REAL_PODMAN is set)."}
+	if !envFlag(fakePodmanFlag) {
+		return nil, Mode{}
 	}
 	e := trivy.NewFixtureEngine()
 	m := Mode{
 		Fixtures: true,
-		Detail: "Demo mode: scans replay recorded Trivy output for traefik, not a live scan. " +
-			"Set TRIVY_SCANNER_REAL_PODMAN=1 to use podman, or build with -tags production.",
+		Detail: "Demo mode (" + fakePodmanFlag + " is set): scans replay recorded Trivy output for traefik, " +
+			"not a live scan, and EPSS/KEV lookups are off. Unset the variable to use podman.",
 		Repo: "traefik",
 	}
 	if tags, err := e.ListTags(context.Background(), m.Repo); err == nil { // newest first, then "latest"

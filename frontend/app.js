@@ -143,7 +143,7 @@ function renderVulns() {
     const row = el("tr", { className: "row" },
       el("td", {}, tier),
       el("td", {}, sev),
-      el("td", { className: "mono", textContent: v.id }),
+      el("td", { className: "mono", textContent: v.id, style: "white-space:nowrap" }),
       el("td", { className: "mono", textContent: v.package }),
       el("td", { className: "mono", textContent: v.installed }),
       el("td", { className: "mono", textContent: v.fixed || "—" }),

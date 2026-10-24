@@ -3,6 +3,7 @@
 // so dependency graphs read top-down (image → packages → their dependencies).
 
 const LEVEL = 120;
+const MAX_SPEED = 40; // px per step: a safety net against runaway nodes
 
 export class Graph {
   constructor(canvas, { onSelect = () => {}, onHover = () => {} } = {}) {
@@ -43,7 +44,8 @@ export class Graph {
     this.byId = new Map(this.nodes.map((n, i) => [n.id, i]));
     this.edges = edges.filter(([a, b]) => this.byId.has(a) && this.byId.has(b)).map(([a, b]) => [this.byId.get(a), this.byId.get(b)]);
     this.adj = this.nodes.map(() => new Set());
-    for (const [a, b] of this.edges) { this.adj[a].add(b); this.adj[b].add(a); }
+    this.deg = this.nodes.map(() => 0);
+    for (const [a, b] of this.edges) { this.adj[a].add(b); this.adj[b].add(a); this.deg[a]++; this.deg[b]++; }
     this.autoFit = true;
     this.alpha = 1;
     this.kick();
@@ -138,16 +140,24 @@ export class Graph {
       const dx = q.x - p.x, dy = q.y - p.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
       const rest = 70 + p.r + q.r;
-      const f = (d - rest) * 0.035 * a;
+      const f = (d - rest) * 0.05 * a;
       const fx = (dx / d) * f, fy = (dy / d) * f;
-      p.vx += fx; p.vy += fy; q.vx -= fx; q.vy -= fy;
+      // Weight by degree (as d3-force does): the endpoint with more links moves less.
+      // Without this a hub with hundreds of links receives all of their force at once and
+      // is flung to infinity, which is what real Go-module graphs (one root, ~350 children) do.
+      const sum = this.deg[ai] + this.deg[bi];
+      const wp = this.deg[bi] / sum, wq = this.deg[ai] / sum;
+      p.vx += fx * wp; p.vy += fy * wp; q.vx -= fx * wq; q.vy -= fy * wq;
     }
     for (const n of ns) {
       if (n.fixed) { n.vx = n.vy = 0; continue; }
       n.vy += ((n.depth || 0) * LEVEL - n.y) * 0.02 * a; // layer bands
       n.vx += -n.x * 0.002 * a;
       n.vx *= 0.8; n.vy *= 0.8;
+      const speed = Math.hypot(n.vx, n.vy);
+      if (speed > MAX_SPEED) { n.vx *= MAX_SPEED / speed; n.vy *= MAX_SPEED / speed; }
       n.x += n.vx; n.y += n.vy;
+      if (!Number.isFinite(n.x) || !Number.isFinite(n.y)) { n.x = n.y = n.vx = n.vy = 0; } // never let one bad node blank the canvas
     }
   }
 
@@ -220,9 +230,20 @@ export class Graph {
     ctx.font = `${12 / Math.min(Math.max(this.k, 0.6), 1.4)}px system-ui, sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     const bg = col("--panel");
+    // Selected/hovered labels always show in full. The rest are shortened and skipped
+    // when they would overlap one already placed, so a dense graph stays readable.
+    const fontPx = 12 / Math.min(Math.max(this.k, 0.6), 1.4);
+    const shorten = (s) => (s.length > 30 ? "…" + s.slice(-29) : s);
+    const rank = (n) => (n === this.nodes[sel] || n === this.nodes[hov] ? 0 : n.hl ? 1 : n.always ? 2 : 3);
+    labelled.sort((x, y) => rank(x) - rank(y) || y.r - x.r);
+    const placed = [];
     for (const n of labelled) {
-      const t = n.label + (n.sub && (n === this.nodes[sel] || n === this.nodes[hov]) ? " " + n.sub : "");
-      const y = n.y + n.r + 4;
+      const important = rank(n) === 0;
+      const t = important ? n.label + (n.sub ? " " + n.sub : "") : shorten(n.label);
+      const w = ctx.measureText(t).width, y = n.y + n.r + 4;
+      const box = [n.x - w / 2 - 2, y - 1, n.x + w / 2 + 2, y + fontPx + 1];
+      if (!important && placed.some((r) => box[0] < r[2] && box[2] > r[0] && box[1] < r[3] && box[3] > r[1])) continue;
+      placed.push(box);
       ctx.lineWidth = 3 / this.k; ctx.strokeStyle = bg; ctx.strokeText(t, n.x, y);
       ctx.fillStyle = text; ctx.fillText(t, n.x, y);
     }

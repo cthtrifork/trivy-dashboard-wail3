@@ -153,7 +153,7 @@ func TestFixtureTagResolution(t *testing.T) {
 	}
 
 	_, err := s.Scan(context.Background(), ScanRequest{Image: "nginx:1.27"})
-	if err == nil || !strings.Contains(err.Error(), "3.7.16, 3.7.13") || !strings.Contains(err.Error(), "TRIVY_SCANNER_REAL_PODMAN") {
+	if err == nil || !strings.Contains(err.Error(), "3.7.16, 3.7.13") || !strings.Contains(err.Error(), "TRIVY_SCANNER_FAKE_PODMAN") {
 		t.Errorf("unknown tag error should list versions and the escape hatch: %v", err)
 	}
 
