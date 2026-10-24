@@ -1,13 +1,24 @@
 name: Release
 
-# Push a tag like v1.2.3 (or v1.2.3-rc.1 for a pre-release) to publish a GitHub
-# release with a Linux amd64 binary, a tarball, SHA256SUMS and a build-provenance attestation.
-# The in-app updater installs the raw binary and verifies it against SHA256SUMS, so those names are an interface.
-# Run it manually (workflow_dispatch) for a dry run that builds but does not publish.
+# Publishes a GitHub release with a Linux amd64 binary, a tarball, SHA256SUMS and a build-provenance
+# attestation. The in-app updater installs the raw binary and verifies it against SHA256SUMS, so those
+# names are an interface. Three ways to run it:
+#   - the "Tag and release" workflow creates a tag and calls this one (workflow_call). This is the
+#     normal route. It has to call rather than rely on the tag push below, because a tag pushed with
+#     the workflow's own GITHUB_TOKEN does not trigger other workflows.
+#   - pushing a tag like v1.2.3 (or v1.2.3-rc.1 for a pre-release) from a machine, which triggers it
+#   - running it by hand (workflow_dispatch) on a branch for a dry run that builds but does not
+#     publish. Dispatched on a tag ref it publishes, which also retries a release that failed.
 on:
   push:
     tags: ['v[0-9]+.[0-9]+.[0-9]+*']
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      tag:
+        description: The existing tag to release (v1.2.3 or v1.2.3-rc.1)
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -26,9 +37,12 @@ jobs:
     outputs:
       version: ${{ steps.meta.outputs.version }}
       prerelease: ${{ steps.meta.outputs.prerelease }}
+      publish: ${{ steps.meta.outputs.publish }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # When called with a tag, build exactly that tag; otherwise the ref that triggered the run.
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -46,26 +60,32 @@ jobs:
       - name: Work out the version
         id: meta
         env:
+          INPUT_TAG: ${{ inputs.tag }}
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ "$REF_TYPE" = "tag" ]; then
-            version="$REF_NAME"
-            if ! printf '%s' "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
-              echo "::error::Tag '$version' is not a semantic version like v1.2.3 or v1.2.3-rc.1"; exit 1
-            fi
+          # publish=true when there is a tag to release, false for a dry run on a branch.
+          if [ -n "$INPUT_TAG" ]; then
+            version="$INPUT_TAG"; publish=true
+          elif [ "$REF_TYPE" = "tag" ]; then
+            version="$REF_NAME"; publish=true
           else
-            version="v0.0.0-dryrun.$(git rev-parse --short HEAD)"
+            version="v0.0.0-dryrun.$(git rev-parse --short HEAD)"; publish=false
+          fi
+          if [ "$publish" = true ] && ! printf '%s' "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::Tag '$version' is not a semantic version like v1.2.3 or v1.2.3-rc.1"; exit 1
           fi
           case "$version" in *-*) pre=true ;; *) pre=false ;; esac
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "prerelease=$pre" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
 
       - name: Releases must come from main
-        if: github.ref_type == 'tag'
+        if: steps.meta.outputs.publish == 'true'
         run: |
           git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+          # HEAD is the tagged commit (checked out above), whichever way this run started.
+          if ! git merge-base --is-ancestor HEAD origin/main; then
             echo "::error::Tagged commit is not on main"; exit 1
           fi
 
@@ -129,7 +149,7 @@ jobs:
   publish:
     name: publish release
     needs: build
-    if: github.ref_type == 'tag'
+    if: needs.build.outputs.publish == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
