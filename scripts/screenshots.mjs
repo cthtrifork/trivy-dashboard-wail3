@@ -1,0 +1,145 @@
+// Drives the running app (started by screenshots.sh in fake-podman mode) and
+// saves one screenshot per panel view. Usage: node screenshots.mjs <url> <outDir>
+import { createRequire } from "node:module";
+import { execSync } from "node:child_process";
+import { mkdirSync, readdirSync, statSync } from "node:fs";
+import path from "node:path";
+
+const [url, outDir] = process.argv.slice(2);
+if (!url || !outDir) {
+  console.error("usage: node screenshots.mjs <url> <outDir>");
+  process.exit(2);
+}
+
+function loadPlaywright() {
+  const here = createRequire(import.meta.url);
+  try {
+    return here("playwright");
+  } catch {
+    const root = execSync("npm root -g", { encoding: "utf8" }).trim();
+    return createRequire(path.join(root, "noop.js"))("playwright");
+  }
+}
+const { chromium } = loadPlaywright();
+
+mkdirSync(outDir, { recursive: true });
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+const problems = [];
+page.on("pageerror", (e) => problems.push("page error: " + e.message));
+
+const shot = async (name) => {
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: path.join(outDir, name + ".png") });
+  console.log("  " + name + ".png");
+};
+const tab = (name) => page.click(`[data-tab=${name}]`);
+const text = (sel) => page.textContent(sel);
+const expect = (cond, what) => { if (!cond) problems.push("unexpected: " + what); };
+
+await page.goto(url);
+await page.waitForSelector("#mode-banner:not([hidden])", { timeout: 15000 });
+expect((await text("#mode-banner")).includes("Demo mode"), "demo banner should be visible");
+
+// ---- scan the recorded base image ----
+await page.click("#scan-btn");
+await page.waitForFunction(() => !document.querySelector("#scan-btn").disabled && document.querySelector("#vuln-count").textContent !== "0", null, { timeout: 30000 });
+expect((await text("#vuln-count")) === "29", "3.7.13 should have 29 findings, got " + (await text("#vuln-count")));
+const hideVexBoxes = () => page.evaluate(() => {
+  document.querySelectorAll("details.vexbox").forEach((d) => (d.open = false));
+  document.getElementById("prio-list").scrollTop = 0;
+});
+
+// ---- Priorities ----
+await hideVexBoxes();
+await shot("01-priorities");
+
+const first = page.locator(".pcard").first();
+await first.locator("summary").click();
+await first.locator(".vexform select").first().selectOption("not_affected");
+await first.locator(".vexform select").nth(1).selectOption("vulnerable_code_not_in_execute_path");
+await first.locator(".vexform textarea").first().fill("The vulnerable HTTP/2 path is not reachable: the entrypoint only serves HTTP/1.1.");
+await shot("02-priorities-vex-editor");
+await first.locator('.vexform button:has-text("Save")').click();
+await page.waitForTimeout(400);
+
+await page.click("#vex-export-btn");
+await page.fill("#vex-author", "Security Team");
+await page.fill("#vex-role", "Platform Security");
+await page.waitForFunction(() => document.querySelector("#vex-preview").value.includes("@context"));
+await shot("03-priorities-export-openvex");
+await page.click("#vex-close");
+
+// ---- Vulnerabilities ----
+await tab("vulns");
+await shot("04-vulnerabilities");
+// Expand a finding that has no VEX assessment, so the editor stays collapsed.
+await page.click("#vuln-table tbody tr:nth-child(2)");
+await shot("05-vulnerability-details");
+
+// ---- Dependencies ----
+// A runaway layout shows up as a blank canvas, so fail loudly instead of saving it.
+const graphSane = async (what) => {
+  const g = await page.evaluate(() => {
+    const gr = window.__depGraph, n = gr.nodes;
+    const xs = n.map((a) => a.x), ys = n.map((a) => a.y);
+    return { count: n.length, finite: n.every((a) => Number.isFinite(a.x) && Number.isFinite(a.y)),
+      w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), k: gr.k };
+  });
+  expect(g.count > 0 && g.finite, `${what}: graph has ${g.count} nodes, finite=${g.finite}`);
+  expect(g.w < 8000 && g.h < 8000, `${what}: layout exploded (${Math.round(g.w)}x${Math.round(g.h)}px)`);
+  console.log(`    ${what}: ${g.count} nodes, ${Math.round(g.w)}x${Math.round(g.h)}px, zoom ${g.k.toFixed(2)}`);
+};
+await tab("deps");
+await page.waitForTimeout(6000); // let the force layout settle
+await graphSane("overview");
+await shot("06-dependencies-graph");
+
+const pick = async (label) => {
+  const pos = await page.evaluate((l) => {
+    const g = window.__depGraph;
+    const n = g.nodes.find((x) => x.label === l);
+    return n ? g.screenPos(n.id) : null;
+  }, label);
+  expect(!!pos, "graph node " + label + " should exist");
+  if (pos) await page.mouse.click(pos.x, pos.y);
+  await page.waitForTimeout(400);
+};
+await pick("golang.org/x/net");
+await shot("07-dependencies-node-selected");
+await page.selectOption("#dep-focus", "2");
+await page.waitForTimeout(3000);
+await graphSane("focus ±2");
+await shot("08-dependencies-focus");
+await page.selectOption("#dep-focus", "0");
+await page.uncheck("#dep-vuln-only");
+await page.waitForTimeout(9000);
+await graphSane("all components");
+await shot("09-dependencies-all-components");
+
+// ---- SBOM ----
+await tab("sbom");
+await shot("10-sbom");
+
+// ---- Compare ----
+await tab("compare");
+await page.click("#cmp-go");
+await page.waitForSelector(".verdict", { timeout: 30000 });
+expect((await text(".verdict")).includes("28 fewer"), "compare verdict: " + (await text(".verdict")));
+await shot("11-compare-vulnerabilities");
+await page.click('.seg button:has-text("Packages")');
+await page.locator("label:has-text('upgraded') input").check();
+await shot("12-compare-packages");
+
+// ---- Log ----
+await tab("log");
+await shot("13-log");
+
+await browser.close();
+
+const files = readdirSync(outDir).filter((f) => f.endsWith(".png"));
+console.log(`${files.length} screenshots in ${outDir} (${files.reduce((n, f) => n + statSync(path.join(outDir, f)).size, 0) >> 10} KiB)`);
+if (problems.length) {
+  console.error("\nProblems:\n - " + problems.join("\n - "));
+  process.exit(1);
+}

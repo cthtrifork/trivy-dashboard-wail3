@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trivy Scanner</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <form id="scan-form">
+    <input id="image" placeholder="Container image, e.g. docker.io/library/nginx:1.27" autocomplete="off" spellcheck="false" required>
+    <button id="scan-btn" type="submit">Scan</button>
+    <button id="cancel-btn" type="button" hidden>Cancel</button>
+    <details id="opts">
+      <summary>Options</summary>
+      <div class="opts-body">
+        <label><input type="checkbox" id="ignore-unfixed"> Ignore unfixed</label>
+        <input id="username" placeholder="Registry username" autocomplete="off">
+        <input id="password" type="password" placeholder="Registry password / token" autocomplete="off">
+      </div>
+    </details>
+  </form>
+  <div id="meta"></div>
+</header>
+
+<div id="mode-banner" hidden></div>
+
+<nav>
+  <button class="tab active" data-tab="prio">Priorities <span class="badge" id="prio-count">0</span></button>
+  <button class="tab" data-tab="vulns">Vulnerabilities <span class="badge" id="vuln-count">0</span></button>
+  <button class="tab" data-tab="deps">Dependencies <span class="badge" id="dep-count">0</span></button>
+  <button class="tab" data-tab="sbom">SBOM <span class="badge" id="sbom-count">0</span></button>
+  <button class="tab" data-tab="compare">Compare</button>
+  <button class="tab right" data-tab="log">Log</button>
+</nav>
+
+<main>
+  <section id="tab-prio" class="panel active">
+    <div id="prio-summary"></div>
+    <div class="toolbar">
+      <label class="chk">Show <select id="prio-top"><option value="10">top 10</option><option value="25">top 25</option><option value="0">all</option></select></label>
+      <label class="chk"><input type="checkbox" id="prio-hide" checked> Hide resolved by VEX</label>
+      <label class="chk"><input type="checkbox" id="prio-low"> Include low-risk (Monitor)</label>
+      <label class="chk"><input type="checkbox" id="prio-fixable"> Only with a fix</label>
+      <button class="ghost" id="vex-export-btn">Export OpenVEX (<span id="vex-count">0</span>)</button>
+      <span id="prio-note"></span>
+    </div>
+    <div id="prio-list" class="scroll"><div class="empty">Run a scan to see what matters most.</div></div>
+  </section>
+
+  <section id="tab-vulns" class="panel">
+    <div id="sev-cards"></div>
+    <div class="toolbar"><input id="vuln-filter" placeholder="Filter by CVE, package, title…" autocomplete="off"><span id="vuln-shown"></span></div>
+    <div class="table-wrap"><table id="vuln-table">
+      <thead><tr>
+        <th data-sort="priority">Priority</th><th data-sort="severity">Severity</th><th data-sort="id">ID</th><th data-sort="package">Package</th>
+        <th data-sort="installed">Installed</th><th data-sort="fixed">Fixed in</th><th data-sort="score">CVSS</th><th data-sort="epss">EPSS</th><th data-sort="signals">Signals</th><th data-sort="title">Title</th>
+      </tr></thead><tbody></tbody></table>
+      <div class="empty" id="vuln-empty">Run a scan to see vulnerabilities.</div></div>
+  </section>
+
+  <section id="tab-deps" class="panel">
+    <div class="toolbar wrap">
+      <input id="dep-filter" placeholder="Find a package…" autocomplete="off">
+      <div class="seg" id="dep-cat">
+        <button data-cat="all" class="on">All</button><button data-cat="OS">OS</button><button data-cat="Application">Application</button>
+      </div>
+      <label class="chk"><input type="checkbox" id="dep-vuln-only" checked> Vulnerable paths only</label>
+      <label class="chk">Focus <select id="dep-focus">
+        <option value="0">whole graph</option><option value="1">selection ±1 hop</option>
+        <option value="2">selection ±2 hops</option><option value="3">selection ±3 hops</option></select></label>
+      <label class="chk"><input type="checkbox" id="dep-labels"> All labels</label>
+      <button class="ghost" id="dep-fit">Fit</button>
+      <span id="dep-shown"></span>
+    </div>
+    <div id="dep-split">
+      <div class="graph-wrap" id="dep-graph">
+        <canvas id="dep-canvas"></canvas>
+        <div id="dep-hover"></div>
+        <div id="dep-legend">
+          <span><i class="lg sq"></i>OS package</span><span><i class="lg"></i>library / app</span>
+          <span><i class="lg ring"></i>vulnerable via dependency</span><span>size = vulnerability count</span>
+          <span class="kv">scroll to zoom · drag to pan · double-click to fit</span>
+        </div>
+      </div>
+      <div class="table-wrap" id="dep-detail"><div class="empty">Run a scan to explore dependencies. Click a node to inspect it.</div></div>
+    </div>
+  </section>
+
+  <section id="tab-sbom" class="panel">
+    <div id="type-cards"></div>
+    <div class="toolbar"><input id="sbom-filter" placeholder="Filter by name, version, license, purl…" autocomplete="off"><span id="sbom-shown"></span></div>
+    <div class="table-wrap"><table id="sbom-table">
+      <thead><tr>
+        <th data-sort="name">Name</th><th data-sort="version">Version</th><th data-sort="type">Type</th>
+        <th data-sort="licenses">License</th><th data-sort="purl">Package URL</th>
+      </tr></thead><tbody></tbody></table>
+      <div class="empty" id="sbom-empty">Run a scan to see the SBOM.</div></div>
+  </section>
+
+  <section id="tab-compare" class="panel">
+    <form id="cmp-form" class="toolbar wrap">
+      <input id="cmp-repo" placeholder="Image repository, e.g. docker.io/library/nginx" autocomplete="off" spellcheck="false" required>
+      <label class="chk">Base <input id="cmp-a" list="cmp-tags" placeholder="tag, e.g. 1.26" autocomplete="off" required></label>
+      <span class="kv">→</span>
+      <label class="chk">Target <input id="cmp-b" list="cmp-tags" placeholder="tag, e.g. 1.27" autocomplete="off" required></label>
+      <datalist id="cmp-tags"></datalist>
+      <button class="ghost" id="cmp-load" type="button">Load tags</button>
+      <button id="cmp-go" type="submit">Compare</button>
+      <button id="cmp-cancel" type="button" hidden>Cancel</button>
+      <span id="cmp-note" class="kv"></span>
+    </form>
+    <div id="cmp-out" class="scroll"><div class="empty">Pick two tags of an image to see what changed: vulnerabilities added and removed, and package changes.</div></div>
+  </section>
+
+  <section id="tab-log" class="panel"><pre id="log"></pre></section>
+</main>
+<dialog id="vex-dialog">
+  <h3>Export OpenVEX</h3>
+  <p class="kv">One statement per assessed finding for <b id="vex-image"></b>. Statements carry over to future scans of the same image.</p>
+  <div class="form-grid">
+    <label>Author <input id="vex-author" placeholder="Your name or organisation"></label>
+    <label>Role <input id="vex-role" placeholder="e.g. Security Engineer (optional)"></label>
+  </div>
+  <textarea id="vex-preview" readonly rows="14" spellcheck="false"></textarea>
+  <div id="vex-msg" class="kv"></div>
+  <div class="dlg-actions"><button class="ghost" id="vex-copy">Copy</button><button class="ghost" id="vex-close">Close</button><button id="vex-save">Save file…</button></div>
+</dialog>
+<div id="status"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
