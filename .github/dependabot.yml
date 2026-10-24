@@ -1,5 +1,5 @@
-# Keeps Go modules (including the pre-1.0 Wails v3 beta) and the SHA-pinned
-# actions in .github/workflows up to date.
+# Keeps Go modules (including the pre-1.0 Wails v3 beta), the SHA-pinned
+# actions in .github/workflows and the default Trivy image version up to date.
 version: 2
 updates:
   - package-ecosystem: gomod
@@ -16,3 +16,8 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+  # internal/trivy/image/Dockerfile holds the Trivy version scans run with (embedded in the binary).
+  - package-ecosystem: docker
+    directory: /internal/trivy/image
+    schedule:
+      interval: weekly

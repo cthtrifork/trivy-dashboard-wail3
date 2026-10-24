@@ -26,7 +26,7 @@ Build with `CGO_ENABLED=0` for server mode to avoid GTK.
 
 ## Podman engine
 
-- Runs `podman run --rm --name trivy-scanner-<random> -v <cache source>:/root/.cache/trivy docker.io/aquasec/trivy:latest image --cache-dir /root/.cache/trivy …`; the cache survives between scans. The vulnerability scan also passes `--list-all-pkgs`.
+- Runs `podman run --rm --name trivy-scanner-<random> -v <cache source>:/root/.cache/trivy <trivy image> image --cache-dir /root/.cache/trivy …`; the cache survives between scans. The vulnerability scan also passes `--list-all-pkgs`.
 - Cancel: `podman rm --force --ignore --time 0 <name>`, then SIGTERM the client.
 - Tags: `podman search --list-tags <repo qualified to docker.io>`.
 - Env overrides: `PODMAN` (binary), `CONTAINER_HOST` (remote socket, used by the container deployment), `TRIVY_SCANNER_VEX_FILE`, `TRIVY_SCANNER_EPSS_URL`, `TRIVY_SCANNER_KEV_URL`, `XDG_CACHE_HOME`.
@@ -43,6 +43,12 @@ The scanner always gets an explicit `--cache-dir /root/.cache/trivy`, backed by 
 | `/abs/path` | a directory **on the machine running podman**; with a remote socket it must already exist (the app cannot create it) | local podman; remote with an existing path |
 
 Relative paths and `:` are rejected, because podman would silently treat `./cache` as a volume name. The host directory is the default only when podman is local: if the app itself runs in a container, its own paths mean nothing to the podman host, so the volume is used there. Upgrading from the volume default re-downloads the Trivy DB once. Set `TRIVY_SCANNER_CACHE=trivy-cache` to keep using the old volume.
+
+### Trivy version
+
+The default image is pinned in [`internal/trivy/image/Dockerfile`](../internal/trivy/image/Dockerfile) (`FROM docker.io/aquasec/trivy:<version>`), embedded into the binary and read by `DefaultTrivyImage()`. Dependabot's `docker` ecosystem (`.github/dependabot.yml`) opens a PR when a newer tag exists, so the version is bumped like any dependency. It is a Dockerfile only because that is what Dependabot understands; it is never built.
+
+Override it per run in the UI: **Options → Trivy version or image** (empty = the default; the field is remembered by the browser/webview). It takes a full reference (`registry.local/mirror/trivy:0.77.0`, `...@sha256:...`) or just a version (`0.77.0` / `v0.77.0`, meaning `docker.io/aquasec/trivy:0.77.0`), and is sent with every scan and comparison as `trivyImage`. Values that look like flags or contain whitespace are refused before anything runs. Changing it makes the next scan re-check the vulnerability DB for that version.
 
 ### Vulnerability DB
 

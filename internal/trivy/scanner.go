@@ -17,6 +17,8 @@ type ScanRequest struct {
 	Username      string `json:"username"`
 	Password      string `json:"password"`
 	IgnoreUnfixed bool   `json:"ignoreUnfixed"`
+	// TrivyImage selects the Trivy image or version to scan with. Empty means the default.
+	TrivyImage string `json:"trivyImage"`
 }
 
 // Vulnerability is one finding, flattened from trivy's JSON report.
@@ -111,7 +113,8 @@ type Scanner struct {
 	Enricher *Enricher
 
 	dbMu    sync.Mutex
-	dbFresh time.Time // when the vulnerability DB was last confirmed up to date
+	dbFresh time.Time // when the vulnerability DB was last confirmed up to date...
+	dbImage string    // ...by this Trivy image (another version may want another DB schema)
 
 	mu     sync.Mutex
 	cancel context.CancelFunc
@@ -224,21 +227,21 @@ const dbRefresh = time.Hour
 // themselves can run with --skip-db-update. That means the DB is checked once per session instead
 // of once per scan (a comparison is four scans), and a scan with an existing cache still works
 // offline: a failed refresh only logs a warning. It returns an error only if ctx was cancelled.
-func (s *Scanner) ensureDB(ctx context.Context, log func(string)) error {
+func (s *Scanner) ensureDB(ctx context.Context, trivyImage string, log func(string)) error {
 	s.dbMu.Lock()
 	defer s.dbMu.Unlock()
-	if !s.dbFresh.IsZero() && time.Since(s.dbFresh) < dbRefresh {
+	if s.dbImage == trivyImage && !s.dbFresh.IsZero() && time.Since(s.dbFresh) < dbRefresh {
 		return nil
 	}
 	s.logf("Checking the vulnerability database (cached between scans)…")
-	if _, err := s.engine().RunTrivy(ctx, TrivyJob{Flags: []string{"--download-db-only"}}, log); err != nil {
+	if _, err := s.engine().RunTrivy(ctx, TrivyJob{TrivyImage: trivyImage, Flags: []string{"--download-db-only"}}, log); err != nil {
 		if ctx.Err() != nil {
 			return errors.New("cancelled")
 		}
 		s.logf("Could not update the vulnerability database (%v); using the cached copy if there is one.", err)
 		return nil
 	}
-	s.dbFresh = time.Now()
+	s.dbFresh, s.dbImage = time.Now(), trivyImage
 	return nil
 }
 
@@ -260,13 +263,17 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	if err != nil {
 		return nil, err
 	}
-	job := TrivyJob{Image: image, Username: req.Username, Password: req.Password}
-	logLine := func(l string) { s.logf("%s", l) }
-
-	if err := s.ensureDB(ctx, logLine); err != nil {
+	trivyImage, err := ResolveTrivyImage(req.TrivyImage)
+	if err != nil {
 		return nil, err
 	}
-	s.logf("Scanning %s for vulnerabilities…", image)
+	job := TrivyJob{Image: image, Username: req.Username, Password: req.Password, TrivyImage: trivyImage}
+	logLine := func(l string) { s.logf("%s", l) }
+
+	if err := s.ensureDB(ctx, trivyImage, logLine); err != nil {
+		return nil, err
+	}
+	s.logf("Scanning %s for vulnerabilities with %s…", image, trivyImage)
 	// --list-all-pkgs puts every installed package in the report, not just the vulnerable ones.
 	job.Flags = []string{"--skip-db-update", "--format", "json", "--scanners", "vuln", "--list-all-pkgs"}
 	if req.IgnoreUnfixed {

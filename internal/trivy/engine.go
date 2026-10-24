@@ -5,20 +5,55 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	_ "embed"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
 	"time"
 )
 
-// TrivyImage is the container image used to run the scanner.
-const TrivyImage = "docker.io/aquasec/trivy:latest"
+// defaultTrivyRepo is the repository a bare version in the Trivy image setting refers to.
+const defaultTrivyRepo = "docker.io/aquasec/trivy"
+
+// trivyDockerfile pins the default Trivy version where Dependabot can update it.
+//
+//go:embed image/Dockerfile
+var trivyDockerfile string
+
+// DefaultTrivyImage is the image from image/Dockerfile (its first FROM line).
+func DefaultTrivyImage() string {
+	for _, line := range strings.Split(trivyDockerfile, "\n") {
+		if f := strings.Fields(line); len(f) >= 2 && strings.EqualFold(f[0], "FROM") {
+			return f[1]
+		}
+	}
+	panic("internal/trivy/image/Dockerfile has no FROM line")
+}
+
+var bareVersion = regexp.MustCompile(`^v?[0-9][0-9A-Za-z.+_-]*$`)
+
+// ResolveTrivyImage turns the "Trivy image" setting into an image reference: empty means the
+// default, a bare version ("0.77.0", "v0.77.0") means that tag of the default repository, and
+// anything else is taken as a full reference. Flag-like or whitespace values are refused.
+func ResolveTrivyImage(v string) (string, error) {
+	v = strings.TrimSpace(v)
+	switch {
+	case v == "":
+		return DefaultTrivyImage(), nil
+	case strings.HasPrefix(v, "-") || strings.ContainsAny(v, " \t\r\n"):
+		return "", fmt.Errorf("%q is not a valid Trivy image", v)
+	case bareVersion.MatchString(v):
+		return defaultTrivyRepo + ":" + strings.TrimPrefix(v, "v"), nil
+	}
+	return v, nil
+}
 
 const (
 	// cacheMount is where the Trivy cache sits inside the scanner container. It is passed to
@@ -38,10 +73,12 @@ var passthroughEnv = []string{"TRIVY_DB_REPOSITORY", "TRIVY_JAVA_DB_REPOSITORY"}
 
 // TrivyJob is one `trivy image` invocation.
 type TrivyJob struct {
-	Image    string   // image reference to scan; empty for --download-db-only
-	Flags    []string // e.g. --format json --scanners vuln
-	Username string   // optional registry credentials
-	Password string
+	Image string // image reference to scan; empty for --download-db-only
+	// TrivyImage is the scanner image (reference or bare version); empty means the engine's default.
+	TrivyImage string
+	Flags      []string // e.g. --format json --scanners vuln
+	Username   string   // optional registry credentials
+	Password   string
 }
 
 // Engine is whatever actually runs Trivy and talks to registries.
@@ -60,6 +97,9 @@ type Engine interface {
 type PodmanEngine struct {
 	// Bin is the podman binary; defaults to $PODMAN or "podman".
 	Bin string
+	// Image is the Trivy image to run when a job does not name one (see TrivyJob.TrivyImage):
+	// a reference or a bare version. Empty means the version pinned in image/Dockerfile.
+	Image string
 	// Cache is the Trivy cache source mounted into the scanner: a podman volume name or an
 	// absolute directory on the machine running podman. Defaults to $TRIVY_SCANNER_CACHE, then
 	// defaultCache().
@@ -113,6 +153,14 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	setting := job.TrivyImage
+	if setting == "" {
+		setting = p.Image
+	}
+	image, err := ResolveTrivyImage(setting)
+	if err != nil {
+		return nil, err
+	}
 	args := []string{"run", "--rm", "--name", name}
 	if filepath.IsAbs(src) {
 		// A host directory: make it when podman is local, and keep SELinux from blocking access
@@ -134,7 +182,7 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 			args = append(args, "-e", name)
 		}
 	}
-	args = append(args, TrivyImage, "image", "--cache-dir", cacheMount)
+	args = append(args, image, "image", "--cache-dir", cacheMount)
 	args = append(args, job.Flags...)
 	if job.Image != "" { // a DB-only job has no image
 		args = append(args, job.Image)

@@ -42,10 +42,13 @@ type Mode struct {
 	Repo     string `json:"repo"`  // example repository for Compare
 	TagA     string `json:"tagA"`
 	TagB     string `json:"tagB"`
+	// TrivyImage is the default Trivy image, shown as the placeholder of the Options field.
+	TrivyImage string `json:"trivyImage"`
 }
 
 func NewScanService() *ScanService {
 	engine, mode := newEngine()
+	mode.TrivyImage = trivy.DefaultTrivyImage()
 	if mode.Fixtures {
 		log.Print("trivy-scanner: " + mode.Detail)
 	}
