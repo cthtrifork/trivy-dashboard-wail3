@@ -1,0 +1,191 @@
+package trivy
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestAssessRules(t *testing.T) {
+	remote := Vulnerability{ID: "CVE-1", Severity: "CRITICAL", Score: 9.8, Fixed: "2.0",
+		Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", Title: "Remote code execution in foo"}
+	Assess(&remote)
+	for _, want := range []string{"remotely over the network", "low complexity", "no authentication", "no user interaction", "confidentiality, integrity and availability", "arbitrary code execution"} {
+		if !strings.Contains(remote.Attack, want) {
+			t.Errorf("attack text missing %q: %s", want, remote.Attack)
+		}
+	}
+	if remote.Tier != TierSoon { // 20 + 22 vector + 5 fix, no exploitation signal
+		t.Errorf("tier %s priority %d", remote.Tier, remote.Priority)
+	}
+
+	local := Vulnerability{ID: "CVE-2", Severity: "HIGH", Vector: "CVSS:3.1/AV:L/AC:H/PR:L/UI:R/S:C/C:L/I:N/A:N"}
+	Assess(&local)
+	if !strings.Contains(local.Attack, "local access") || !strings.Contains(local.Attack, "boundary") || local.Priority >= remote.Priority {
+		t.Errorf("local: %d %s", local.Priority, local.Attack)
+	}
+
+	kev := remote
+	kev.KEV, kev.KEVRansomware = true, true
+	Assess(&kev)
+	if kev.Priority != 100 {
+		t.Errorf("score should be capped at 100, got %d", kev.Priority)
+	}
+	if kev.Tier != TierNow || kev.Reasons[0].Signal != "KEV" || !strings.Contains(kev.Attack, "exploited in the real world") {
+		t.Errorf("kev: %+v", kev)
+	}
+
+	// low severity with high EPSS must outrank a medium without signals
+	a := Vulnerability{ID: "CVE-3", Severity: "LOW", HasEPSS: true, EPSS: 0.9, EPSSPercentile: 0.99}
+	b := Vulnerability{ID: "CVE-4", Severity: "MEDIUM"}
+	Assess(&a)
+	Assess(&b)
+	if a.Priority <= b.Priority || a.Tier != TierSoon {
+		t.Errorf("epss: %d vs %d (%s)", a.Priority, b.Priority, a.Tier)
+	}
+
+	none := Vulnerability{ID: "GHSA-x", Severity: "LOW"}
+	Assess(&none)
+	if none.Tier != TierMonitor || !strings.Contains(none.Attack, "No CVSS vector") {
+		t.Errorf("none: %+v", none)
+	}
+	if v := ParseVector("AV:N/AC:L/Au:N/C:P/I:P/A:P"); v.Version != 2 || v.M["Au"] != "N" {
+		t.Errorf("v2: %+v", v)
+	}
+}
+
+func TestEnrich(t *testing.T) {
+	epssCalls := 0
+	mux := http.NewServeMux()
+	mux.HandleFunc("/epss", func(w http.ResponseWriter, r *http.Request) {
+		epssCalls++
+		if !strings.Contains(r.URL.Query().Get("cve"), "CVE-2021-44228") {
+			t.Errorf("query: %s", r.URL.RawQuery)
+		}
+		w.Write([]byte(`{"status":"OK","data":[{"cve":"CVE-2021-44228","epss":"0.97565","percentile":"0.99993"}]}`))
+	})
+	mux.HandleFunc("/kev", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"catalogVersion":"2025.01.01","vulnerabilities":[{"cveID":"CVE-2021-44228","dateAdded":"2021-12-10","dueDate":"2021-12-24","requiredAction":"Apply updates","knownRansomwareCampaignUse":"Known"}]}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	e := &Enricher{EPSSURL: srv.URL + "/epss", KEVURL: srv.URL + "/kev", CacheDir: t.TempDir()}
+	vulns := []Vulnerability{{ID: "CVE-2021-44228", Severity: "CRITICAL"}, {ID: "CVE-2000-1", Severity: "LOW"}, {ID: "GHSA-1", Severity: "LOW"}}
+	info := e.Enrich(context.Background(), vulns)
+	if !info.EPSS || !info.KEV || info.KEVDate != "2025.01.01" || len(info.Warnings) != 0 {
+		t.Fatalf("info: %+v", info)
+	}
+	v := vulns[0]
+	if !v.KEV || !v.KEVRansomware || v.KEVDue != "2021-12-24" || !v.HasEPSS || v.EPSS != 0.97565 || v.Tier != TierNow {
+		t.Fatalf("vuln: %+v", v)
+	}
+	if vulns[1].KEV || vulns[1].HasEPSS {
+		t.Fatalf("unexpected signals: %+v", vulns[1])
+	}
+
+	// Second enricher with a dead KEV URL falls back to the on-disk cache.
+	srv.Close()
+	e2 := &Enricher{EPSSURL: srv.URL + "/epss", KEVURL: srv.URL + "/kev", CacheDir: e.CacheDir}
+	vs := []Vulnerability{{ID: "CVE-2021-44228", Severity: "CRITICAL"}}
+	info = e2.Enrich(context.Background(), vs)
+	if !info.KEV || !vs[0].KEV || info.EPSS || len(info.Warnings) != 1 || !strings.Contains(info.Warnings[0], "EPSS") {
+		t.Fatalf("fallback: %+v %+v", info, vs[0])
+	}
+}
+
+func TestVEX(t *testing.T) {
+	st := &VEXStore{Path: filepath.Join(t.TempDir(), "sub", "vex.json")}
+	img := "ghcr.io/acme/app:1.2"
+	base := VEXEntry{Vulnerability: "CVE-1", Package: "libssl3", Version: "3.0", PURL: "pkg:deb/debian/libssl3@3.0"}
+
+	bad := base
+	bad.Status = "not_affected"
+	if _, err := st.Set(img, bad); err == nil {
+		t.Error("not_affected without justification should fail")
+	}
+	bad.Status = "affected"
+	if _, err := st.Set(img, bad); err == nil {
+		t.Error("affected without action should fail")
+	}
+	bad.Status, bad.Justification = "bogus", ""
+	if _, err := st.Set(img, bad); err == nil {
+		t.Error("bad status should fail")
+	}
+
+	ok := base
+	ok.Status, ok.Justification, ok.Impact = "not_affected", "vulnerable_code_not_in_execute_path", "TLS is terminated at the proxy"
+	if _, err := st.Set(img, ok); err != nil {
+		t.Fatal(err)
+	}
+	inv := VEXEntry{Vulnerability: "CVE-2", Package: "lodash", Version: "4", Status: "under_investigation", Justification: "ignored"}
+	if e, err := st.Set(img, inv); err != nil || e.Justification != "" {
+		t.Fatalf("%+v %v", e, err)
+	}
+
+	// New tag of the same repository sees the same assessments.
+	got, err := st.List("ghcr.io/acme/app:1.3")
+	if err != nil || len(got) != 2 {
+		t.Fatalf("list: %v %v", got, err)
+	}
+
+	product := ProductPURL(img, []string{"ghcr.io/acme/app@sha256:abc123"})
+	raw, err := ExportOpenVEX(got, product, "Jane", "Security")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc struct {
+		Context    string `json:"@context"`
+		ID         string `json:"@id"`
+		Author     string
+		Role       string
+		Version    int
+		Timestamp  string
+		Statements []struct {
+			Vulnerability struct{ Name string }
+			Products      []struct {
+				ID            string `json:"@id"`
+				Subcomponents []struct {
+					ID string `json:"@id"`
+				}
+			}
+			Status, Justification string
+			ImpactStatement       string `json:"impact_statement"`
+		}
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc.Context != "https://openvex.dev/ns/v0.2.0" || !strings.HasPrefix(doc.ID, "https://openvex.dev/docs/public/vex-") || doc.Author != "Jane" || doc.Version != 1 || doc.Timestamp == "" || len(doc.Statements) != 2 {
+		t.Fatalf("doc: %s", raw)
+	}
+	s0 := doc.Statements[0]
+	if s0.Vulnerability.Name != "CVE-1" || s0.Status != "not_affected" || s0.Justification != "vulnerable_code_not_in_execute_path" ||
+		s0.Products[0].ID != "pkg:oci/app@sha256%3Aabc123?repository_url=ghcr.io%2Facme%2Fapp" ||
+		s0.Products[0].Subcomponents[0].ID != base.PURL {
+		t.Fatalf("stmt: %+v", s0)
+	}
+	if !strings.Contains(string(raw), "pkg:generic/lodash@4") {
+		t.Error("fallback subcomponent id missing")
+	}
+	if _, err := ExportOpenVEX(got, product, " ", ""); err == nil {
+		t.Error("author required")
+	}
+
+	if err := st.Delete(img, got[0].Key); err != nil {
+		t.Fatal(err)
+	}
+	if l, _ := st.List(img); len(l) != 1 {
+		t.Fatalf("after delete: %v", l)
+	}
+	if p := ProductPURL("nginx:1.27", nil); p != "pkg:oci/nginx?repository_url=nginx&tag=1.27" {
+		t.Errorf("tag purl: %s", p)
+	}
+	if ImageRepo("docker://localhost:5000/a/b:1@sha256:x") != "localhost:5000/a/b" {
+		t.Errorf("repo: %s", ImageRepo("docker://localhost:5000/a/b:1@sha256:x"))
+	}
+}

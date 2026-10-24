@@ -28,6 +28,79 @@ go.work.sum
 # env file
 .env
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# Editor/IDE (see "Editors and OS" below)
+
+# ---------------------------------------------------------------------------
+# Project: build output
+# ---------------------------------------------------------------------------
+# `go build .` names the binary after the module, so it lands in the repo root.
+/trivy-dashboard-wail3
+/trivy-scanner
+/trivy-server
+# Release workflow output and Wails build directories
+/bin/
+/dist/
+/build/bin/
+# Race/profile/trace output from `go test`
+*.prof
+*.pprof
+*.trace
+*.exe
+*.syso
+
+# Frontend tooling (the UI is plain JS today; these appear if a bundler is added)
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# Browser/UI test output (Playwright etc.)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# ---------------------------------------------------------------------------
+# Project: local state and secrets
+# ---------------------------------------------------------------------------
+# VEX assessments, KEV cache and scan output can be pointed into the working
+# tree via TRIVY_SCANNER_VEX_FILE / XDG_CACHE_HOME; they are user data.
+vex.json
+vex.json.tmp
+kev.json
+*.openvex.json
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.kubeconfig
+.docker/
+auth.json
+
+# Logs
+*.log
+
+# ---------------------------------------------------------------------------
+# Editors and OS
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# AI assistant local settings (project-shared files like CLAUDE.md are not ignored)
+.claude/settings.local.json
+.claude/scratch/
+
