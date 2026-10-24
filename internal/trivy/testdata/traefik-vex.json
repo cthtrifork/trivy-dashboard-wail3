@@ -1,0 +1,107 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://example.com/vex/traefik.openvex.json",
+  "author": "Example Org",
+  "version": 8,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-15558",
+        "description": "docker/cli: Docker CLI for Windows: Privilege escalation via malicious plugin binaries"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/traefik",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/github.com/docker/cli"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Applies to Windows Docker CLI plugin-manager code. This ingress workload uses the Linux Alpine Traefik image, so the Windows plugin execution path is absent.",
+      "timestamp": "2026-03-11T09:41:03.855895726Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-85091",
+        "description": "zlib: Arbitrary code execution via buffer overflow in untgz utility"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/traefik",
+          "subcomponents": [
+            {
+              "@id": "pkg:apk/alpine/zlib"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "untgz is not used.",
+      "timestamp": "2026-03-11T09:41:04.115939759Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-107891",
+        "description": "musl: Arbitrary code execution and denial of service via stack-based memory corruption in qsort"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/traefik",
+          "subcomponents": [
+            {
+              "@id": "pkg:apk/alpine/musl"
+            },
+            {
+              "@id": "pkg:apk/alpine/musl-utils"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "qsort not used.",
+      "timestamp": "2026-04-29T08:33:53.072023432Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56866",
+        "description": "TLS key update messages"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/traefik",
+          "subcomponents": [
+            {
+              "@id": "pkg:golang/stdlib"
+            }
+          ]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "We control endpoints.",
+      "timestamp": "2026-04-29T08:33:52.613968663Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-81870",
+        "description": "not in any scan"
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/traefik"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "timestamp": "2026-09-09T00:00:00Z"
+    }
+  ],
+  "timestamp": "2026-03-11T09:41:03Z",
+  "last_updated": "2026-09-09T00:00:00Z"
+}
