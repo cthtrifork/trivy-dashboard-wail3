@@ -29,6 +29,8 @@ Quitting (closing the window) stops a running scan and removes its container, fo
 
 Running on a headless server that only has podman (no Go), reached from your browser over an SSH tunnel: [`docs/headless.md`](docs/headless.md).
 
+Contributors and AI agents: start at [`AGENTS.md`](AGENTS.md) (rules, commands, architecture, current status).
+
 ### Fake data (tests and screenshots only)
 Recorded Trivy output for two real Traefik releases lives in [`internal/trivy/fixtures`](internal/trivy/fixtures/README.md).
 The Go tests replay it directly. To run the app itself on it, set a flag, in any **development** build (one without `-tags production`):
