@@ -358,7 +358,7 @@ $("prio-hide").addEventListener("change", (e) => { prio.hideResolved = e.target.
 $("prio-low").addEventListener("change", (e) => { prio.includeLow = e.target.checked; renderPrio(); });
 $("prio-fixable").addEventListener("change", (e) => { prio.fixableOnly = e.target.checked; renderPrio(); });
 
-// ---- OpenVEX export ----
+// ---- OpenVEX edit/create ----
 const dlg = $("vex-dialog");
 const lsGet = (k) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } };
@@ -369,6 +369,7 @@ $("vex-export-btn").addEventListener("click", async () => {
   $("vex-role").value = lsGet("vex-role");
   $("vex-msg").textContent = vex.size ? "" : "No assessments yet: open a finding and set a VEX status first.";
   $("vex-preview").value = "";
+  $("vex-paste").value = "";
   dlg.showModal();
   refreshPreview();
 });
@@ -381,6 +382,22 @@ async function refreshPreview() {
     $("vex-msg").textContent = e.message || String(e);
   }
 }
+$("vex-apply").addEventListener("click", async () => {
+  const doc = $("vex-paste").value.trim();
+  if (!doc) { $("vex-msg").textContent = "Paste an OpenVEX document first."; return; }
+  try {
+    const rep = await call("VEXImport", result.image, doc);
+    await loadVEX();
+    renderPrio();
+    renderVulns();
+    await refreshPreview();
+    $("vex-msg").textContent = `Imported ${rep.imported} assessment${rep.imported === 1 ? "" : "s"}` +
+      (rep.warnings?.length ? ` · ${rep.warnings.length} warning${rep.warnings.length === 1 ? "" : "s"}: ${rep.warnings.join("; ")}` : "") + ".";
+    $("vex-paste").value = "";
+  } catch (e) {
+    $("vex-msg").textContent = e.message || String(e);
+  }
+});
 $("vex-author").addEventListener("input", refreshPreview);
 $("vex-role").addEventListener("input", refreshPreview);
 $("vex-close").addEventListener("click", () => dlg.close());

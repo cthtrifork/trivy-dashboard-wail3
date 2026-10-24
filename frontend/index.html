@@ -48,7 +48,7 @@
       <label class="chk"><input type="checkbox" id="prio-hide" checked> Hide resolved by VEX</label>
       <label class="chk"><input type="checkbox" id="prio-low"> Include low-risk (Monitor)</label>
       <label class="chk"><input type="checkbox" id="prio-fixable"> Only with a fix</label>
-      <button class="ghost" id="vex-export-btn">Export OpenVEX (<span id="vex-count">0</span>)</button>
+      <button class="ghost" id="vex-export-btn">Edit/Create VEX (<span id="vex-count">0</span>)</button>
       <span id="prio-note"></span>
     </div>
     <div id="prio-list" class="scroll"><div class="empty">Run a scan to see what matters most.</div></div>
@@ -122,8 +122,14 @@
   <section id="tab-log" class="panel"><pre id="log"></pre></section>
 </main>
 <dialog id="vex-dialog">
-  <h3>Export OpenVEX</h3>
+  <h3>Edit/Create VEX</h3>
   <p class="kv">One statement per assessed finding for <b id="vex-image"></b>. Statements carry over to future scans of the same image.</p>
+  <details id="vex-import">
+    <summary>Import an existing OpenVEX file</summary>
+    <p class="kv">Paste an OpenVEX document. Its statements are matched to this scan's findings, saved as assessments (replacing existing ones for the same finding), and the shortlist is updated.</p>
+    <textarea id="vex-paste" rows="8" spellcheck="false" placeholder='{"@context": "https://openvex.dev/ns/v0.2.0", "statements": [...]}'></textarea>
+    <div class="dlg-actions"><button id="vex-apply">Apply to scan</button></div>
+  </details>
   <div class="form-grid">
     <label>Author <input id="vex-author" placeholder="Your name or organisation"></label>
     <label>Role <input id="vex-role" placeholder="e.g. Security Engineer (optional)"></label>
