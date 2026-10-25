@@ -1,9 +1,10 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import {
-  ScanService, result, image, opts, saveTrivyImage, scanning, comparing, status, logText, mode, appInfo,
+  ScanService, result, image, opts, saveTrivyImage, scanning, comparing, status, logText, mode, appInfo, footprint,
   runScan, cancel, init, setStatus, errText,
 } from "./store.js";
+import { bytes } from "./lib/format.js";
 import PrioritiesPanel from "./components/PrioritiesPanel.vue";
 import VulnsPanel from "./components/VulnsPanel.vue";
 import DepsPanel from "./components/DepsPanel.vue";
@@ -25,6 +26,13 @@ const counts = computed(() => ({
   deps: Object.keys(result.value?.depNodes ?? {}).length,
   sbom: result.value?.components.length ?? 0,
 }));
+
+const footprintNote = computed(() => {
+  const f = footprint.value;
+  if (!f) return "";
+  const cache = f.cacheBytes < 0 ? `Trivy cache in podman volume ${f.cacheLocation}` : `Trivy cache ${bytes(f.cacheBytes)}`;
+  return `Footprint: ${cache} · KEV cache ${bytes(f.appCacheBytes)} · ~${bytes(f.memoryBytes)} memory (app only, excl. webview and podman)`;
+});
 
 async function checkForUpdates() {
   appInfo.value = { ...appInfo.value, enabled: false };
@@ -97,4 +105,5 @@ onMounted(init);
 
   <VexDialog ref="vexDialog" />
   <div id="status" :class="[status.err ? 'err' : '', status.busy ? 'spin' : '']">{{ status.msg }}</div>
+  <footer id="footprint" v-if="footprintNote" :title="footprint.cacheLocation">{{ footprintNote }}</footer>
 </template>

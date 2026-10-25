@@ -8,6 +8,7 @@ export {
 };
 
 export {
+    Footprint,
     Mode,
     UpdateInfo
 } from "./models.js";

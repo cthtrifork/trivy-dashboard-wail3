@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -135,6 +136,51 @@ func (s *ScanService) logInfo(msg string, args ...any) {
 
 // Mode reports whether scans are real or replayed demo data.
 func (s *ScanService) Mode() Mode { return s.mode }
+
+// Footprint is what the app keeps on disk and in memory, for the footer note.
+type Footprint struct {
+	// CacheBytes is the Trivy cache (vulnerability DB); -1 when it is a podman volume the app
+	// cannot measure. CacheLocation names the directory or volume.
+	CacheBytes    int64  `json:"cacheBytes"`
+	CacheLocation string `json:"cacheLocation"`
+	// AppCacheBytes is the app's own cache (the KEV catalog).
+	AppCacheBytes int64 `json:"appCacheBytes"`
+	// MemoryBytes estimates the app's memory: the Go runtime's resident share, excluding the
+	// webview and the podman containers.
+	MemoryBytes int64 `json:"memoryBytes"`
+}
+
+// Footprint measures the cache directories and the Go runtime's memory.
+func (s *ScanService) Footprint() Footprint {
+	f := Footprint{CacheBytes: -1}
+	if src, err := trivy.CacheSource(); err == nil {
+		f.CacheLocation = src
+		if filepath.IsAbs(src) {
+			f.CacheBytes = dirSize(src)
+		}
+	}
+	if s.scanner.Enricher != nil {
+		f.AppCacheBytes = dirSize(s.scanner.Enricher.CacheDir)
+	}
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	f.MemoryBytes = int64(m.Sys - m.HeapReleased)
+	return f
+}
+
+// dirSize sums the regular files under dir; a missing directory is 0.
+func dirSize(dir string) int64 {
+	var n int64
+	_ = filepath.WalkDir(dir, func(_ string, d os.DirEntry, err error) error {
+		if err == nil && d.Type().IsRegular() {
+			if info, ierr := d.Info(); ierr == nil {
+				n += info.Size()
+			}
+		}
+		return nil
+	})
+	return n
+}
 
 // PodmanVersion returns the podman version string or an error.
 func (s *ScanService) PodmanVersion() (string, error) { return s.scanner.Version() }
