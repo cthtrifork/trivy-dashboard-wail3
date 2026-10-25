@@ -41,15 +41,15 @@ mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
 	go mod tidy -diff
 	go mod verify
 
-lint: lint-go lint-frontend ## golangci-lint plus the frontend's ESLint and Prettier check (as CI runs them)
+lint: lint-go lint-frontend ## golangci-lint plus the frontend's Biome lint and format check (as CI runs them)
 
 lint-go: ## golangci-lint on the server-tag build (CGO off, no GTK needed)
 	CGO_ENABLED=0 golangci-lint run --build-tags server ./...
 
-lint-frontend: ## ESLint and the Prettier check for the Vue app (needs `make frontend` once for node_modules)
+lint-frontend: ## Biome lint and format check for the Vue app (needs `make frontend` once for node_modules)
 	cd frontend && npm run lint && npm run format:check
 
-format-frontend: ## Reformat the Vue app with Prettier
+format-frontend: ## Reformat the Vue app with Biome
 	cd frontend && npm run format
 
 audit-frontend: ## npm audit of the runtime dependencies (HIGH and above fails)

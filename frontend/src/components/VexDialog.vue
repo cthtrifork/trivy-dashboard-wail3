@@ -106,7 +106,7 @@ defineExpose({ open });
         spellcheck="false"
         placeholder='{"@context": "https://openvex.dev/ns/v0.2.0", "statements": [...]}'
       ></textarea>
-      <div class="dlg-actions"><button id="vex-apply" @click="apply">Apply to scan</button></div>
+      <div class="dlg-actions"><button type="button" id="vex-apply" @click="apply">Apply to scan</button></div>
     </details>
     <div class="form-grid">
       <label>Author <input id="vex-author" v-model="form.author" placeholder="Your name or organisation" /></label>
@@ -115,9 +115,9 @@ defineExpose({ open });
     <textarea id="vex-preview" ref="preview" :value="text" readonly rows="14" spellcheck="false"></textarea>
     <div id="vex-msg" class="kv">{{ msg }}</div>
     <div class="dlg-actions">
-      <button class="ghost" id="vex-copy" @click="copy">Copy</button>
-      <button class="ghost" id="vex-close" @click="dlg.close()">Close</button>
-      <button id="vex-save" @click="save">Save file…</button>
+      <button type="button" class="ghost" id="vex-copy" @click="copy">Copy</button>
+      <button type="button" class="ghost" id="vex-close" @click="dlg.close()">Close</button>
+      <button type="button" id="vex-save" @click="save">Save file…</button>
     </div>
   </dialog>
 </template>
