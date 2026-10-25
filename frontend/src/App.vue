@@ -11,10 +11,12 @@ import DepsPanel from "./components/DepsPanel.vue";
 import SbomPanel from "./components/SbomPanel.vue";
 import ComparePanel from "./components/ComparePanel.vue";
 import VexDialog from "./components/VexDialog.vue";
+import HelpDialog from "./components/HelpDialog.vue";
 
 const tab = ref("prio");
 const prio = ref(null);
 const vexDialog = ref(null);
+const helpDialog = ref(null);
 const logEl = ref(null);
 
 const trivyPlaceholder = computed(() =>
@@ -84,6 +86,7 @@ onMounted(init);
       </details>
     </form>
     <div id="meta">{{ meta }}</div>
+    <button id="help-btn" type="button" class="ghost" title="Glossary and app configuration" aria-label="Help" @click="helpDialog.open()">?</button>
   </header>
 
   <div id="mode-banner" v-if="mode?.fixtures">{{ mode.detail }}</div>
@@ -107,6 +110,7 @@ onMounted(init);
   </main>
 
   <VexDialog ref="vexDialog" />
+  <HelpDialog ref="helpDialog" />
   <div id="status" :class="[status.err ? 'err' : '', status.busy ? 'spin' : '']">{{ status.msg }}</div>
   <footer id="footprint" v-if="footprintNote" :title="footprint.cacheLocation">{{ footprintNote }}</footer>
 </template>
