@@ -30,6 +30,7 @@ The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. U
 ## Rules that are easy to get wrong
 
 - **Real podman by default.** Fake data exists only for Go tests and screenshots, behind `TRIVY_SCANNER_FAKE_PODMAN=1`, and only in builds *without* `-tags production`. Never make fixtures reachable from a production build; CI checks the binary for demo code.
+- **Never try to build or run the GTK GUI.** Do not run a plain `go build`/`go run`, `wails3 build`/`dev`, or install GTK4/WebKitGTK; it fails in the sandbox and wastes time. Always use `CGO_ENABLED=0` with `-tags server` (add `production` to check the release shape), and exercise the UI through the headless server (see `docs/agent-runbook.md`). Mention in the PR that the GUI path was not tested.
 - **Always open a PR** for every change, without being asked, from a new branch off `main`. Do not push to `main`. If the session names a branch to develop on, use it, but still open the PR.
 - **Do not watch CI or subscribe to PR activity** after opening a PR unless the user says to. Open it, report the link and what you verified, stop.
 - **Be honest about verification.** Say what you ran, and list what you could not test (see `docs/principles.md`).
