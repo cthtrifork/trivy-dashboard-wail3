@@ -1,0 +1,66 @@
+name: Bindings
+
+# When a pull request changes Go code, regenerate frontend/bindings with the wails3 CLI at the
+# go.mod version and push the result to the PR branch, so stale bindings never cause rebase
+# conflicts or a failing "Check Wails bindings" step in CI. Same-repository PRs only (a fork's
+# token is read-only). The workflow ignores pushes made by github-actions[bot], which is what
+# stops its own commit from triggering another run.
+on:
+  pull_request:
+    paths:
+      - '**.go'
+      - go.mod
+      - go.sum
+      - .github/workflows/bindings.yml
+
+permissions:
+  contents: write # push the bindings commit to the PR branch
+
+concurrency:
+  group: bindings-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOTOOLCHAIN: local
+
+jobs:
+  bindings:
+    name: bindings
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true # needed to push the bindings commit
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26' # go.mod requires 1.26.x (Wails v3)
+          check-latest: true
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Generate bindings
+        run: |
+          version="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
+          (cd "$RUNNER_TEMP" && CGO_ENABLED=0 GOBIN="$RUNNER_TEMP/bin" go install -tags server "github.com/wailsapp/wails/v3/cmd/wails3@${version}")
+          CGO_ENABLED=0 "$RUNNER_TEMP/bin/wails3" generate bindings -silent
+
+      - name: Commit and push
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ -z "$(git status --porcelain -- frontend/bindings)" ]; then
+            echo "Bindings are up to date." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/bindings
+          git commit -m "Regenerate Wails bindings"
+          git push origin "HEAD:refs/heads/${HEAD_REF}"
+          echo "Pushed regenerated bindings to \`${HEAD_REF}\`." | tee -a "$GITHUB_STEP_SUMMARY"
