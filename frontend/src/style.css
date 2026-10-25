@@ -1052,9 +1052,15 @@ code.rule {
 /* VEX assess drawer: a modal dialog docked to the right edge */
 .vexbtn {
   align-self: flex-start;
-  text-align: left;
-  padding: 2px 0;
+  padding: 6px 12px;
+  border: 1px solid var(--accent);
   color: var(--accent);
+}
+.vexbtn:hover {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.vexbtn.set {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 dialog.drawer {
   position: fixed;

@@ -9,7 +9,7 @@ const existing = computed(() => vex.value.get(props.v.key));
 </script>
 
 <template>
-  <button type="button" class="ghost vexbtn" @click.stop="assessing = v">
+  <button type="button" class="ghost vexbtn" :class="{ set: existing }" @click.stop="assessing = v">
     {{
       existing
         ? `VEX assessment: ${STATUS_LABEL[existing.status]}${isExpired(existing) ? " (expired)" : ""} · Edit`
