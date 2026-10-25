@@ -1,6 +1,6 @@
 // Shared state and the calls into the Go ScanService. A plain module of refs instead of a store
 // library: the app has one scan result and a handful of settings.
-import { reactive, ref, shallowRef } from "vue";
+import { computed, reactive, ref, shallowRef } from "vue";
 import { Events } from "@wailsio/runtime";
 import { ScanService } from "../bindings/github.com/cthtrifork/trivy-dashboard-wail3";
 
@@ -16,6 +16,17 @@ export const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* 
 
 // The latest scan. Shallow: the dependency graph holds thousands of read-only objects.
 export const result = shallowRef(null);
+// Findings of the latest scan by CVE id, one per VEX key (a finding repeated across image layers counts once),
+// so the VEX editor can offer the other components that carry the same CVE.
+export const findingsById = computed(() => {
+  const m = new Map();
+  for (const v of result.value?.vulnerabilities ?? []) {
+    const list = m.get(v.id) ?? m.set(v.id, new Map()).get(v.id);
+    if (!list.has(v.key)) list.set(v.key, v);
+  }
+  return m;
+});
+
 // The findings in the order the current scoring rules rank them: the scan result's own list when
 // the rules are the defaults, otherwise the same findings with the priority, tier and reasons
 // the Go side computed under the rules (see rerank).

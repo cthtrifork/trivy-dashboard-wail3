@@ -1,11 +1,12 @@
 <script setup>
-import { computed, reactive } from "vue";
+import { computed, reactive, ref } from "vue";
 import { result, vulns, vex } from "../store.js";
-import { RESOLVED, TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
+import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import SummaryCard from "./SummaryCard.vue";
 import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
+import SuppressedRow from "./SuppressedRow.vue";
 import { useVirtualList } from "../lib/virtual.js";
 
 const emit = defineEmits(["export"]);
@@ -13,10 +14,24 @@ const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false, include
 const TIERS = Object.keys(TIER_COLOR);
 const AV = { N: "Network", A: "Adjacent", L: "Local", P: "Physical" };
 
-const isResolved = (v) => RESOLVED.has(vex.value.get(v.key)?.status);
+const isResolved = (v) => suppresses(vex.value.get(v.key));
 const all = computed(() => vulns.value);
 const hidden = computed(() => all.value.filter((v) => prio.hideResolved && isResolved(v)));
 const open = computed(() => all.value.filter((v) => !(prio.hideResolved && isResolved(v)) && (!prio.fixableOnly || v.fixed)));
+// The suppressed list is not virtualised, so it is paged to keep the DOM small.
+// One CVE hits several components (a module and its sub-packages, a library bundled twice): group by
+// id so it appears once with the components as children. Pages count groups, not findings.
+const SUPPRESSED_PAGE = 25;
+const supPage = ref(0);
+const supGroups = computed(() => {
+  const m = new Map();
+  for (const v of hidden.value) (m.get(v.id) ?? m.set(v.id, []).get(v.id)).push(v);
+  return [...m].map(([id, items]) => ({ id, items }));
+});
+const supPages = computed(() => Math.max(1, Math.ceil(supGroups.value.length / SUPPRESSED_PAGE)));
+// Clamp instead of resetting: removing the last row of a page must not jump back to page 1.
+const supCurrent = computed(() => Math.min(supPage.value, supPages.value - 1));
+const suppressedShown = computed(() => supGroups.value.slice(supCurrent.value * SUPPRESSED_PAGE, (supCurrent.value + 1) * SUPPRESSED_PAGE));
 const lowN = computed(() => open.value.filter((v) => v.tier === "Monitor").length);
 const pool = computed(() => (prio.includeLow ? open.value : open.value.filter((v) => v.tier !== "Monitor")));
 const list = computed(() => (prio.top ? pool.value.slice(0, prio.top) : pool.value));
@@ -87,7 +102,7 @@ defineExpose({ count: computed(() => pool.value.length) });
             <Chip v-if="v.hasEpss" :kind="v.epss >= 0.1 ? 'warm' : ''" :title="`Exploitation probability in the next 30 days; percentile ${(v.epssPercentile * 100).toFixed(1)}`">EPSS {{ pct(v.epss) }}</Chip>
             <Chip v-if="attackVector(v)" :kind="attackVector(v) === 'N' ? 'warm' : ''" :title="v.vector">{{ AV[attackVector(v)] }}</Chip>
             <Chip>{{ v.fixed ? "Fix: " + v.fixed : "No fix yet" }}</Chip>
-            <Chip v-if="vex.get(v.key)" kind="vex">VEX: {{ STATUS_LABEL[vex.get(v.key).status] }}</Chip>
+            <Chip v-if="vex.get(v.key)" :kind="isExpired(vex.get(v.key)) ? 'warm' : 'vex'" :title="isExpired(vex.get(v.key)) ? `Expired ${vex.get(v.key).expires}: shown again until reassessed` : ''">VEX: {{ STATUS_LABEL[vex.get(v.key).status] }}{{ isExpired(vex.get(v.key)) ? " · expired" : "" }}</Chip>
           </div>
           <p class="attack">{{ v.attack }}</p>
           <div v-if="v.title" class="kv">{{ v.title }}</div>
@@ -105,6 +120,24 @@ defineExpose({ count: computed(() => pool.value.length) });
       <div v-if="after > 0" class="pad" :style="{ height: after - GAP + 'px' }"></div>
       <div v-if="!list.length" class="empty">Nothing left to show with these filters.</div>
       <div v-else-if="pool.length > list.length" class="kv">{{ pool.length - list.length }} more findings not shown — they rank lower.</div>
+      <details v-if="hidden.length" id="prio-suppressed" class="suppressed">
+        <summary>Suppressed by VEX ({{ hidden.length }})</summary>
+        <template v-for="g in suppressedShown" :key="g.id">
+          <SuppressedRow v-if="g.items.length === 1" :v="g.items[0]" />
+          <details v-else class="sup supgroup">
+            <summary>
+              <span class="id">{{ g.id }}</span>
+              <Chip>{{ g.items.length }} components</Chip>
+            </summary>
+            <SuppressedRow v-for="v in g.items" :key="cardKey(v)" :v="v" child />
+          </details>
+        </template>
+        <div v-if="supPages > 1" class="row pager">
+          <button type="button" class="ghost" :disabled="supCurrent === 0" @click="supPage = supCurrent - 1">Previous</button>
+          <span class="kv">Page {{ supCurrent + 1 }} of {{ supPages }}</span>
+          <button type="button" class="ghost" :disabled="supCurrent >= supPages - 1" @click="supPage = supCurrent + 1">Next</button>
+        </div>
+      </details>
     </template>
   </div>
 </template>

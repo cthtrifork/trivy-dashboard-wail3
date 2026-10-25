@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestAssessRules(t *testing.T) {
@@ -187,6 +188,39 @@ func TestVEX(t *testing.T) {
 	}
 	if ImageRepo("docker://localhost:5000/a/b:1@sha256:x") != "localhost:5000/a/b" {
 		t.Errorf("repo: %s", ImageRepo("docker://localhost:5000/a/b:1@sha256:x"))
+	}
+}
+
+func TestVEXExpiry(t *testing.T) {
+	st := &VEXStore{Path: filepath.Join(t.TempDir(), "vex.json")}
+	e := VEXEntry{
+		Vulnerability: "CVE-1", Package: "zlib", Version: "1", Status: "not_affected",
+		Impact: "not reachable", Author: "  Jane ", Expires: "2026-06-30",
+	}
+
+	bad := e
+	bad.Expires = "30/06/2026"
+	if _, err := st.Set("app:1", bad); err == nil {
+		t.Error("malformed expiry should fail")
+	}
+
+	got, err := st.Set("app:1", e)
+	if err != nil || got.Author != "Jane" {
+		t.Fatalf("%+v %v", got, err)
+	}
+	day := func(s string) time.Time { d, _ := time.Parse(expiryLayout, s); return d.Add(23 * time.Hour) }
+	if got.Expired(day("2026-06-30")) {
+		t.Error("the expiry day itself is still valid")
+	}
+	if !got.Expired(day("2026-07-01")) {
+		t.Error("the day after the expiry date is expired")
+	}
+	if (VEXEntry{}).Expired(day("2099-01-01")) {
+		t.Error("no expiry never expires")
+	}
+	listed, _ := st.List("app:2")
+	if len(listed) != 1 || listed[0].Expires != "2026-06-30" || listed[0].Author != "Jane" {
+		t.Errorf("author/expiry not persisted: %+v", listed)
 	}
 }
 

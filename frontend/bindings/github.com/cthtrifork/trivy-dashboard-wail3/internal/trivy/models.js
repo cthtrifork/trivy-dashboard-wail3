@@ -1332,6 +1332,24 @@ export class VEXEntry {
              */
             this["action"] = "";
         }
+        if (!("author" in $$source)) {
+            /**
+             * Author and Expires are kept locally and are not part of the OpenVEX
+             * export: the format has no per-statement expiry, and its author is
+             * document-level. Expires is a UTC date (YYYY-MM-DD); after it the
+             * assessment stays on record but no longer hides the finding.
+             * @member
+             * @type {string}
+             */
+            this["author"] = "";
+        }
+        if (!("expires" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["expires"] = "";
+        }
         if (!("updated" in $$source)) {
             /**
              * @member
