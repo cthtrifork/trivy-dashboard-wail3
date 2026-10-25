@@ -4,7 +4,7 @@
 FROM mcr.microsoft.com/devcontainers/base:trixie
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends podman uidmap fuse-overlayfs slirp4netns netavark aardvark-dns make curl \
+ && apt-get install -y --no-install-recommends podman uidmap fuse-overlayfs passt netavark aardvark-dns make curl \
  && rm -rf /var/lib/apt/lists/* \
  && echo "vscode:100000:65536" > /etc/subuid \
  && echo "vscode:100000:65536" > /etc/subgid \
