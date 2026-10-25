@@ -37,6 +37,8 @@ Sources:
 
 `screenshots.yml` keeps `docs/screenshots` in step with the UI: when a same-repository pull request changes `frontend/**` (or the screenshot scripts), it runs `scripts/screenshots.sh` on the recorded fixtures and, if any image changed, pushes an `Update screenshots` commit to the PR branch.
 
+`bindings.yml` does the same for `frontend/bindings`: when a same-repository pull request changes Go code, it regenerates the bindings with the `wails3` CLI at the go.mod version and, if anything changed, pushes a `Regenerate Wails bindings` commit to the PR branch. Commits pushed with `GITHUB_TOKEN` do not start new workflow runs, so close and reopen the PR or push once more if you need CI re-run on the bot commit. The CI bindings check stays as the backstop.
+
 - Fork PRs and Dependabot PRs are skipped (read-only token).
 - **No loop:** pushes made by `github-actions[bot]` are ignored (`github.actor` check). Without it the bot's commit re-triggers the workflow, and because rendering is never perfectly identical between runs, each run would commit again.
 - The script is made as reproducible as it reasonably can be: it waits for the force-directed graph to rest instead of sleeping, pins the OpenVEX timestamps, disables animations, and the graph's tie-breaking random numbers are seeded. Fonts on the runner can differ from your machine, so let the workflow regenerate the images rather than committing locally generated ones.
