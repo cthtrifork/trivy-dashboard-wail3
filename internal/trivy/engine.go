@@ -145,6 +145,12 @@ func defaultCache() string {
 	return filepath.Join(dir, "trivy-scanner", "trivy")
 }
 
+// PodmanBin is the podman binary a default engine runs: $PODMAN or "podman".
+func PodmanBin() string { return (&PodmanEngine{}).bin() }
+
+// Remote reports whether the podman client talks to another machine's podman.
+func Remote() bool { return remote() }
+
 // remote reports whether the podman client talks to another machine's podman, in which case a
 // host path is not ours to create.
 func remote() bool {

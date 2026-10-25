@@ -1,9 +1,11 @@
 <script setup>
 import { computed, ref } from "vue";
-import { footprint, mode } from "../store.js";
+import { ScanService, mode, errText } from "../store.js";
 
 const dlg = ref(null);
 const tab = ref("glossary");
+const cfg = ref(null);
+const cfgErr = ref("");
 
 const glossary = [
   { group: "Vulnerability data", items: [
@@ -41,38 +43,21 @@ const glossary = [
   ]},
 ];
 
-const envVars = [
-  ["TRIVY_SCANNER_CACHE", "Trivy cache source: a podman volume name or an absolute directory on the podman host.", "<user cache dir>/trivy-scanner/trivy (local podman); volume trivy-cache (remote podman or Windows)"],
-  ["TRIVY_SCANNER_VEX_FILE", "Where VEX assessments are stored.", "<user config dir>/trivy-scanner/vex.json"],
-  ["TRIVY_SCANNER_EPSS_URL", "EPSS API endpoint, for an air-gapped mirror.", "api.first.org EPSS API"],
-  ["TRIVY_SCANNER_KEV_URL", "CISA KEV feed URL, for an air-gapped mirror.", "cisa.gov known_exploited_vulnerabilities.json"],
-  ["TRIVY_DB_REPOSITORY", "Trivy vulnerability DB mirror, forwarded into the scanner container when set.", "Trivy default"],
-  ["TRIVY_JAVA_DB_REPOSITORY", "Trivy Java DB mirror, forwarded into the scanner container when set.", "Trivy default"],
-  ["PODMAN", "Path of the podman binary.", "podman"],
-  ["CONTAINER_HOST / DOCKER_HOST", "Remote podman socket. Switches the cache default to a named volume.", "unset (local podman)"],
-  ["WAILS_SERVER_HOST", "Listen address in server mode. Keep it on loopback.", "127.0.0.1 (container image)"],
-  ["WAILS_SERVER_PORT", "Listen port in server mode.", "8080 (container image)"],
-  ["XDG_CACHE_HOME / XDG_CONFIG_HOME", "Move the user cache and config dirs used above (Linux).", "~/.cache, ~/.config"],
-  ["TRIVY_SCANNER_FAKE_PODMAN", "Demo mode on recorded data. Dev builds only; ignored in production builds.", "unset"],
-  ["TRIVY_SCANNER_UPDATE_API_URL", "Update API base URL for testing. Dev builds only.", "api.github.com"],
-];
-
-const paths = computed(() => [
-  ["Trivy cache (this run)", footprint.value?.cacheLocation || "unknown", "Vulnerability DB; a plain directory or a podman volume"],
-  ["Enrichment cache", "<user cache dir>/trivy-scanner/", "Downloaded EPSS data and kev.json, reused between scans"],
-  ["VEX assessments", "<user config dir>/trivy-scanner/vex.json", "Overridable with TRIVY_SCANNER_VEX_FILE"],
-  ["Scanner container", "trivy-scanner-<random>", "Removed on cancel and on quit"],
-  ["Container deployment data", "/data (vex.json, cache/)", "Volume of the Containerfile image"],
-  ["Podman socket (container deployment)", "/run/podman/podman.sock", "CONTAINER_HOST in the Containerfile"],
-  ["Cache mount inside Trivy", "/root/.cache/trivy", "Passed to Trivy as --cache-dir"],
-]);
-
 const behaviour = computed(() => [
   ["Mode", mode.value?.fixtures ? "Demo (recorded data)" : "Real podman"],
-  ["Scanner", mode.value?.trivyImage || "default"],
-]);
+  ["Version", cfg.value?.version],
+  ["Platform", cfg.value?.platform + (cfg.value?.headless ? " · server mode" : "")],
+  ["Scanner image", mode.value?.trivyImage || "default"],
+  ["Podman", cfg.value ? cfg.value.podman + (cfg.value.remote ? " (remote)" : " (local)") : ""],
+].filter(([, v]) => v));
 
-function open() { dlg.value.showModal(); }
+// Resolved by the Go side each time, so it reflects this process's real environment.
+async function load() {
+  cfgErr.value = "";
+  try { cfg.value = await ScanService.Config(); } catch (e) { cfgErr.value = errText(e); }
+}
+
+function open() { dlg.value.showModal(); load(); }
 defineExpose({ open });
 </script>
 
@@ -98,18 +83,27 @@ defineExpose({ open });
         </section>
       </template>
       <template v-else>
-        <section>
-          <h4>Current behaviour</h4>
-          <dl><template v-for="[k, v] in behaviour" :key="k"><dt>{{ k }}</dt><dd>{{ v }}</dd></template></dl>
-        </section>
-        <section>
-          <h4>Files and locations</h4>
-          <dl><template v-for="[k, v, note] in paths" :key="k"><dt>{{ k }}</dt><dd><code>{{ v }}</code><div class="kv">{{ note }}</div></dd></template></dl>
-        </section>
-        <section>
-          <h4>Environment variables</h4>
-          <dl><template v-for="[k, desc, def] in envVars" :key="k"><dt><code>{{ k }}</code></dt><dd>{{ desc }}<div class="kv">Default: {{ def }}</div></dd></template></dl>
-        </section>
+        <p v-if="cfgErr" class="vexerr">{{ cfgErr }}</p>
+        <p v-else-if="!cfg" class="kv">Loading…</p>
+        <template v-else>
+          <section>
+            <h4>Current behaviour</h4>
+            <dl><template v-for="[k, v] in behaviour" :key="k"><dt>{{ k }}</dt><dd>{{ v }}</dd></template></dl>
+          </section>
+          <section>
+            <h4>Files and locations (this machine)</h4>
+            <dl><template v-for="p in cfg.paths" :key="p.label"><dt>{{ p.label }}</dt><dd><code>{{ p.value }}</code><div class="kv" v-if="p.note">{{ p.note }}</div></dd></template></dl>
+          </section>
+          <section>
+            <h4>Environment variables</h4>
+            <dl><template v-for="e in cfg.env" :key="e.name"><dt><code>{{ e.name }}</code></dt><dd>
+              <span :class="['envstate', { on: e.set }]">{{ e.set ? "set" : "not set" }}</span>
+              <code v-if="e.set && e.value"> {{ e.value }}</code>
+              <div>{{ e.desc }}</div>
+              <div class="kv">Default: {{ e.default }}</div>
+            </dd></template></dl>
+          </section>
+        </template>
       </template>
     </div>
   </dialog>
