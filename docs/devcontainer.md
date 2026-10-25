@@ -10,7 +10,11 @@ A dev container with Go and Node (both baked into the `Dockerfile`, copied from 
 
 ## Editor
 
-The container installs the Go, ESLint, Prettier, MDX and Vue extensions. The Go tools (`goimports`, `golangci-lint`) are installed by `post-create.sh`. `.vscode/settings.json` is committed and turns on format on save (`goimports` for Go) and `golangci-lint` on save. The repo has no ESLint or Prettier config yet, so those two extensions use their defaults until one is added.
+The container installs the Go, ESLint, Prettier, MDX and Vue extensions. The Go tools (`goimports`, `golangci-lint`) come from `post-create.sh`. `.vscode/settings.json` is committed: format on save (`goimports` for Go, Prettier for JS, Vue, CSS, HTML and JSON; Markdown is left alone) and `golangci-lint` on save.
+
+Frontend checks, from `frontend/`: `npm run lint` (ESLint, the `essential` Vue rules: real errors only), `npm run format:check` and `npm run format` (Prettier; config in `.prettierrc.json`, generated `bindings/` and `dist/` are ignored). The existing frontend code predates Prettier, so `format:check` reports most files and the first save of each reformats it; run `npm run format` once in its own commit when you want that churn out of the way.
+
+`.editorconfig` sets UTF-8, LF, a final newline, tabs for Go and the Makefile and two spaces elsewhere. `.gitattributes` normalises text to LF and marks `frontend/bindings` and the lockfile as generated.
 
 ## File ownership
 

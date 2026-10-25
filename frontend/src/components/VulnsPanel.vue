@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive } from "vue";
 import { result, vex, SEVERITIES, sevStyle } from "../store.js";
-import { TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
+import { tierStyle, pct } from "../lib/format.js";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
 import Chip from "./Chip.vue";
