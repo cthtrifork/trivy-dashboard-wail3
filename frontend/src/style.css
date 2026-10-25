@@ -10,6 +10,7 @@
   --MEDIUM: #f5b800;
   --LOW: #3e9bd6;
   --UNKNOWN: #7b8494;
+  --ok: #3fb97a;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -18,6 +19,7 @@
     --line: #dde1e8;
     --text: #1c2330;
     --mute: #5e6878;
+    --ok: #1a7f45;
   }
 }
 * {
@@ -605,31 +607,6 @@ textarea {
 .why .pos {
   color: var(--text);
 }
-details.vexbox {
-  margin-top: 0;
-}
-details.vexbox summary {
-  padding: 2px 0;
-}
-.vexform {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 640px;
-  margin-top: 6px;
-}
-.vexform label {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 12px;
-  color: var(--mute);
-}
-.vexform .row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
 .vexerr {
   color: var(--CRITICAL);
   font-size: 12px;
@@ -975,14 +952,6 @@ dialog::backdrop {
   color: var(--accent);
   border-color: var(--accent);
 }
-.vexmeta {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.vexmeta label {
-  flex: 1 1 200px;
-}
 details.suppressed {
   margin-top: 12px;
   border: 1px solid var(--line);
@@ -1017,25 +986,6 @@ details.suppressed summary {
   border-left: 2px solid var(--line);
   margin-left: 6px;
   padding-left: 12px;
-}
-.vexalso {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 6px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.vexalso legend {
-  font-size: 12px;
-  color: var(--mute);
-  padding: 0 4px;
-}
-.vexalso .chk {
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  color: var(--text);
 }
 details#rules {
   background: var(--panel);
@@ -1099,4 +1049,331 @@ code.rule {
 .ptitle {
   font-weight: 600;
   margin: 2px 0 6px;
+}
+
+/* VEX assess drawer: a modal dialog docked to the right edge */
+.vexbtn {
+  --t: var(--accent);
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 99px;
+  font-size: 13px;
+  color: var(--text);
+  background: none;
+}
+.vexbtn.add {
+  border: 1px dashed var(--mute);
+}
+.vexbtn.add:hover {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.vexbtn.set {
+  --t: var(--accent);
+  padding-right: 5px;
+  border: 1px solid var(--t);
+  background: color-mix(in srgb, var(--t) 14%, transparent);
+  color: var(--t);
+  font-weight: 600;
+}
+.vexbtn.ok {
+  --t: var(--ok);
+}
+.vexbtn.warm {
+  --t: var(--HIGH);
+}
+.vexbtn.set:hover {
+  background: color-mix(in srgb, var(--t) 24%, transparent);
+}
+.vexedit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--panel);
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+dialog.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(560px, 100vw);
+  height: 100vh;
+  max-height: none;
+  padding: 0;
+  border-width: 0 0 0 1px;
+  border-radius: 0;
+}
+dialog.drawer[open] {
+  display: flex;
+  flex-direction: column;
+}
+.drawer-head {
+  flex: none;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+.drawer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.drawer-top small,
+.glance small {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mute);
+}
+.drawer-x {
+  font-size: 22px;
+  line-height: 1;
+  padding: 4px 10px;
+  margin-right: -10px;
+  color: var(--mute);
+}
+.drawer-id {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.drawer-id .id {
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+}
+.drawer-adv {
+  margin-left: auto;
+  font-size: 13px;
+}
+.drawer-title {
+  margin-top: 6px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.glance {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.glance-head {
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.glance-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.glance-facts div {
+  background: var(--bg);
+  border-radius: 6px;
+  padding: 4px 8px;
+  min-width: 0;
+}
+.glance-facts span {
+  display: block;
+  font-size: 11px;
+  color: var(--mute);
+}
+.glance-facts b {
+  display: block;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.glance-more summary {
+  padding: 6px 0 0;
+  font-size: 12px;
+}
+.glance-more .attack {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.drawer-group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.drawer-group legend,
+.drawer-label {
+  font-weight: 600;
+  font-size: 13px;
+  padding: 0;
+  margin-bottom: 6px;
+}
+.drawer-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 0;
+}
+.drawer-label .kv {
+  font-weight: 400;
+}
+.drawer-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.drawer-row legend {
+  float: none;
+}
+.drawer-all {
+  color: var(--accent);
+  font-weight: 600;
+}
+.comps {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.comp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 12px;
+}
+.comp + .comp {
+  border-top: 1px solid var(--line);
+}
+.comp.on {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.comp-pkg {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.comp input,
+.radio input,
+.drawer-all input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.seg {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.seg label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 44px;
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.seg label.on {
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-weight: 600;
+}
+.seg input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.seg label:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.drawer-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.drawer-group textarea,
+.drawer-group input[type="text"] {
+  width: 100%;
+}
+.pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pill {
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: none;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.pill.on {
+  border: 2px solid var(--accent);
+  padding: 5px 13px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-weight: 600;
+}
+.pill-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.drawer-foot {
+  flex: none;
+  padding: 10px 24px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.drawer-foot .vexerr:empty {
+  display: none;
+}
+.drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.grow {
+  flex: 1;
 }

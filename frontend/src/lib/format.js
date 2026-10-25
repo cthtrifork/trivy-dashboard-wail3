@@ -17,6 +17,14 @@ export const JUSTIFICATIONS = {
   vulnerable_code_cannot_be_controlled_by_adversary: "Code cannot be controlled by an adversary",
   inline_mitigations_already_exist: "Inline mitigations already exist",
 };
+// The same justifications in plain words, for the assess drawer.
+export const JUSTIFICATION_PLAIN = {
+  component_not_present: "The component isn't in the image",
+  vulnerable_code_not_present: "The vulnerable code isn't there",
+  vulnerable_code_not_in_execute_path: "The vulnerable code is never run",
+  vulnerable_code_cannot_be_controlled_by_adversary: "An attacker can't control it",
+  inline_mitigations_already_exist: "A mitigation already blocks it",
+};
 export const RESOLVED = new Set(["not_affected", "fixed"]);
 // Expiry is a UTC date (YYYY-MM-DD) and the day itself still counts, mirroring VEXEntry.Expired in Go.
 export const isExpired = (e) => !!e?.expires && new Date().toISOString().slice(0, 10) > e.expires;

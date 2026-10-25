@@ -46,8 +46,8 @@ export const vulns = shallowRef([]);
 // Saved VEX assessments for the scanned image repo, finding key -> entry. Replaced, never mutated.
 export const vex = shallowRef(new Map());
 
-// Findings whose VEX editor the user has opened.
-export const openVex = new Set();
+// The finding open in the VEX assess drawer, or null when it is closed.
+export const assessing = shallowRef(null);
 
 // Scoring rules. `rules` is the live set the Go side applies; presets are named copies of it.
 // Built-in presets come from Go; the user's own live in localStorage next to the Trivy version.
