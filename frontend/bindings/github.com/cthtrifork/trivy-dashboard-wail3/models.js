@@ -31,14 +31,6 @@ export class Footprint {
              */
             this["cacheLocation"] = "";
         }
-        if (!("appCacheBytes" in $$source)) {
-            /**
-             * AppCacheBytes is the app's own cache (the KEV catalog).
-             * @member
-             * @type {number}
-             */
-            this["appCacheBytes"] = 0;
-        }
         if (!("memoryBytes" in $$source)) {
             /**
              * MemoryBytes estimates the app's memory: the Go runtime's resident share, excluding the
