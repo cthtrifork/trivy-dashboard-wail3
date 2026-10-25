@@ -588,6 +588,14 @@ export class ImportReport {
              */
             this["skipped"] = 0;
         }
+        if (!("marked" in $$source)) {
+            /**
+             * findings left without a statement that were marked under_investigation
+             * @member
+             * @type {number}
+             */
+            this["marked"] = 0;
+        }
         if (!("warnings" in $$source)) {
             /**
              * @member
@@ -605,10 +613,10 @@ export class ImportReport {
      * @returns {ImportReport}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType6;
+        const $$createField3_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("warnings" in $$parsedSource) {
-            $$parsedSource["warnings"] = $$createField2_0($$parsedSource["warnings"]);
+            $$parsedSource["warnings"] = $$createField3_0($$parsedSource["warnings"]);
         }
         return new ImportReport(/** @type {Partial<ImportReport>} */($$parsedSource));
     }
@@ -1101,6 +1109,15 @@ export class ScanRequest {
              * @type {string}
              */
             this["trivyImage"] = "";
+        }
+        if (!("markUnderInvestigation" in $$source)) {
+            /**
+             * MarkUnderInvestigation records an under_investigation VEX assessment for every
+             * finding that has none after the scan (handled by the service, which owns the store).
+             * @member
+             * @type {boolean}
+             */
+            this["markUnderInvestigation"] = false;
         }
 
         Object.assign(this, $$source);

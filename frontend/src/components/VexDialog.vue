@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import { ScanService, result, vex, loadVEX, errText, lsGet, lsSet } from "../store.js";
 
 const dlg = ref(null);
@@ -8,6 +8,21 @@ const form = reactive({ author: lsGet("vex-author"), role: lsGet("vex-role") });
 const text = ref("");
 const msg = ref("");
 const paste = ref("");
+const markRest = ref(false);
+
+// How much of the scan the assessments cover: every CVE should end up assessed, and the
+// under_investigation ones are what is left to decide.
+const coverage = computed(() => {
+  const keys = new Set((result.value?.vulnerabilities ?? []).map((v) => v.key));
+  let open = 0,
+    done = 0;
+  for (const k of keys) {
+    const e = vex.value.get(k);
+    if (!e) continue;
+    e.status === "under_investigation" ? open++ : done++;
+  }
+  return { total: keys.size, open, done, none: keys.size - open - done };
+});
 
 async function refresh() {
   msg.value = "";
@@ -37,15 +52,28 @@ async function apply() {
     return;
   }
   try {
-    const rep = await ScanService.VEXImport(result.value.image, doc);
+    const rep = await ScanService.VEXImport(result.value.image, doc, markRest.value);
     await loadVEX();
     await refresh();
     const w = rep.warnings?.length ?? 0;
     msg.value =
       `Imported ${rep.imported} assessment${rep.imported === 1 ? "" : "s"}` +
+      (rep.marked ? ` · ${rep.marked} more marked under investigation` : "") +
       (w ? ` · ${w} warning${w === 1 ? "" : "s"}: ${rep.warnings.join("; ")}` : "") +
       ".";
     paste.value = "";
+  } catch (e) {
+    msg.value = errText(e);
+  }
+}
+
+// Cover every finding that has no assessment yet, so nothing is silently missing from the export.
+async function markAll() {
+  try {
+    const n = await ScanService.VEXMarkUnassessed(result.value.image, form.author);
+    await loadVEX();
+    await refresh();
+    msg.value = n ? `Marked ${n} finding${n === 1 ? "" : "s"} as under investigation.` : "Every finding already has an assessment.";
   } catch (e) {
     msg.value = errText(e);
   }
@@ -97,8 +125,11 @@ defineExpose({ open });
       <summary>Import an existing OpenVEX file</summary>
       <p class="kv">
         Paste an OpenVEX document. Its statements are matched to this scan's findings, saved as assessments (replacing existing ones for the
-        same finding), and the shortlist is updated.
+        same finding; other assessments are kept), and the shortlist is updated.
       </p>
+      <label class="chk"
+        ><input id="vex-mark-rest" v-model="markRest" type="checkbox" /> Mark findings the file does not cover as under investigation</label
+      >
       <textarea
         id="vex-paste"
         v-model="paste"
@@ -108,6 +139,13 @@ defineExpose({ open });
       ></textarea>
       <div class="dlg-actions"><button type="button" id="vex-apply" @click="apply">Apply to scan</button></div>
     </details>
+    <div id="vex-coverage" class="kv">
+      {{ coverage.done }} of {{ coverage.total }} findings assessed · {{ coverage.open }} under investigation · {{ coverage.none }} without a
+      statement
+      <button v-if="coverage.none" type="button" class="ghost" id="vex-mark-all" @click="markAll">
+        Mark the {{ coverage.none }} as under investigation
+      </button>
+    </div>
     <div class="form-grid">
       <label>Author <input id="vex-author" v-model="form.author" placeholder="Your name or organisation" /></label>
       <label>Role <input id="vex-role" v-model="form.role" placeholder="e.g. Security Engineer (optional)" /></label>

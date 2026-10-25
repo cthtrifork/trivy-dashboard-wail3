@@ -279,6 +279,7 @@ func ExportOpenVEX(entries []VEXEntry, product, author, role string) ([]byte, er
 type ImportReport struct {
 	Imported int      `json:"imported"` // findings that received an assessment
 	Skipped  int      `json:"skipped"`  // statements that matched nothing or were invalid
+	Marked   int      `json:"marked"`   // findings left without a statement that were marked under_investigation
 	Warnings []string `json:"warnings"`
 }
 
@@ -400,6 +401,39 @@ func (s *VEXStore) SetMany(image string, entries []VEXEntry) error {
 		f[repo][e.Key] = e
 	}
 	return s.save(f)
+}
+
+// MarkUnassessed gives every finding that has no assessment yet an
+// under_investigation one, so each CVE is covered and the open work is the
+// list of under_investigation entries. Existing assessments, expired ones
+// included, are left alone. It returns how many entries it added.
+func (s *VEXStore) MarkUnassessed(image string, findings []Vulnerability, author string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	f, err := s.load()
+	if err != nil {
+		return 0, err
+	}
+	repo := ImageRepo(image)
+	if f[repo] == nil {
+		f[repo] = map[string]VEXEntry{}
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	n := 0
+	for _, v := range findings {
+		if _, ok := f[repo][v.Key]; ok {
+			continue // a finding repeated across layers shares one key
+		}
+		f[repo][v.Key] = VEXEntry{
+			Key: v.Key, Vulnerability: v.ID, Package: v.Package, Version: v.Installed, PURL: v.PURL,
+			Status: "under_investigation", Author: strings.TrimSpace(author), Updated: now,
+		}
+		n++
+	}
+	if n == 0 {
+		return 0, nil
+	}
+	return n, s.save(f)
 }
 
 // anyPURLMatches reports whether a statement's subcomponent ids cover a finding.
