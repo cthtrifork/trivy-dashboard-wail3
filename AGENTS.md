@@ -39,6 +39,7 @@ The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. U
 - The Trivy scanner container is named `trivy-scanner-<random>` so cancel can `podman rm --force --ignore --time 0` it by name before signalling the client.
 - Pin GitHub Actions by commit SHA with a version comment, as the existing workflows do.
 
+- **Run the frontend lint before every push that touches `frontend/src`:** `(cd frontend && npx prettier --write src && npm run lint && npm run format:check)`. CI's `lint` job fails on unformatted Vue/JS/CSS and skips test/build/vet behind it.
 - **Frontend is Vue 3 + Vite** (decision 14). After changing an exported `ScanService` method or a type it exchanges, run `make bindings` (needs the `wails3` CLI) and commit `frontend/bindings`. `frontend/dist` is untracked build output except `.gitkeep`.
 
 ## Layout
