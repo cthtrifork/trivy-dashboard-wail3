@@ -15,7 +15,7 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
 - **SBOM** – CycloneDX components (name, version, type, license, purl) with search and type filters.
 
 ## Requirements
-- Go 1.26+ (required by Wails v3 beta.34), [Wails v3 CLI](https://v3.wails.io) (`go install github.com/wailsapp/wails/v3/cmd/wails3@latest`)
+- Go 1.26+ (required by Wails v3 beta.34), [Wails v3 CLI](https://v3.wails.io) (`make wails3-install` installs the version pinned in `go.mod`)
 - Node 20.19+ or 22.12+ to build the Vue frontend (`frontend/`, Vite)
 - Linux: GTK4 + WebKitGTK 6 dev packages (see Wails docs); macOS/Windows: native webview
 - `podman` on PATH (override with `PODMAN=/path/to/podman`) for real scans; not needed in demo mode
