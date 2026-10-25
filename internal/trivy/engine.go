@@ -182,7 +182,8 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 			args = append(args, "-e", name)
 		}
 	}
-	args = append(args, image, "image", "--cache-dir", cacheMount)
+	// --skip-version-check: no "newer Trivy available" lookup; the version is pinned by us.
+	args = append(args, image, "image", "--cache-dir", cacheMount, "--skip-version-check")
 	args = append(args, job.Flags...)
 	if job.Image != "" { // a DB-only job has no image
 		args = append(args, job.Image)
