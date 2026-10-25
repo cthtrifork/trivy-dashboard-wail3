@@ -341,3 +341,34 @@ func TestMarkUnassessedAndMerge(t *testing.T) {
 		t.Errorf("marked %d after import, want %d", n, len(keys)-len(entries))
 	}
 }
+
+// Our own export must read back through the importer, and documents in the
+// v0.0.1 layout (string-valued vulnerability) are read through go-vex.
+func TestOpenVEXRoundTripAndLegacy(t *testing.T) {
+	res, err := fixtureScanner().Scan(context.Background(), ScanRequest{Image: "docker.io/library/traefik:3.7.13"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := res.Vulnerabilities[0]
+	st := &VEXStore{Path: filepath.Join(t.TempDir(), "vex.json")}
+	img := "docker.io/library/traefik:3.7.13"
+	if _, err := st.Set(img, VEXEntry{Vulnerability: v.ID, Package: v.Package, Version: v.Installed, PURL: v.PURL, Status: "affected", Action: "upgrade"}); err != nil {
+		t.Fatal(err)
+	}
+	entries, _ := st.List(img)
+	raw, err := ExportOpenVEX(entries, ProductPURL(img, nil), "Jane", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	back, rep, err := ParseOpenVEX(raw, res.Vulnerabilities)
+	if err != nil || len(back) == 0 || back[0].Status != "affected" || back[0].Action != "upgrade" {
+		t.Fatalf("round trip: %+v %+v %v", back, rep, err)
+	}
+
+	legacy := `{"@context":"https://openvex.dev/ns","@id":"x","author":"a","role":"r","timestamp":"2023-01-01T00:00:00Z","version":"1",
+	"statements":[{"vulnerability":"` + v.ID + `","products":["pkg:oci/traefik"],"status":"not_affected","justification":"component_not_present"}]}`
+	got, _, err := ParseOpenVEX([]byte(legacy), res.Vulnerabilities)
+	if err != nil || len(got) == 0 || got[0].Status != "not_affected" {
+		t.Fatalf("legacy: %+v %v", got, err)
+	}
+}
