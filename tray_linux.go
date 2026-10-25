@@ -3,9 +3,13 @@
 package main
 
 import (
+	_ "embed"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"github.com/wailsapp/wails/v3/pkg/icons"
 )
+
+//go:embed tray_icon.png
+var trayIcon []byte
 
 // addTray puts an icon in the StatusNotifier tray (GNOME needs an AppIndicator extension to
 // show it). Closing the window still quits, so a scan is never left running unseen; the tray
@@ -24,8 +28,7 @@ func addTray(app *application.App, window application.Window) {
 	menu.Add("Quit").OnClick(func(*application.Context) { app.Quit() })
 
 	app.SystemTray.New().
-		SetIcon(icons.SystrayLight).
-		SetDarkModeIcon(icons.SystrayDark).
+		SetIcon(trayIcon).
 		SetMenu(menu).
 		OnClick(show)
 }
