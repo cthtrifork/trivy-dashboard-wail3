@@ -58,18 +58,49 @@ const footprintNote = computed(() => {
   return `Footprint: ${cache} · ${mem}`;
 });
 
-async function checkForUpdates() {
-  appInfo.value = { ...appInfo.value, enabled: false };
-  setStatus("Checking for updates…", { busy: true });
+// Updating is three clicks, never automatic: check, then download, then restart.
+const update = ref({ step: "idle", version: "" }); // idle | available | ready
+const updateBusy = ref(false);
+
+async function updateStep(busyMsg, run) {
+  updateBusy.value = true;
+  setStatus(busyMsg, { busy: true });
   try {
-    await ScanService.CheckForUpdates(); // opens the updater window; resolves once the update is staged or none is found
-    setStatus("Update check finished.");
+    await run();
   } catch (err) {
     setStatus(errText(err), { err: true });
   } finally {
-    appInfo.value = { ...appInfo.value, enabled: true };
+    updateBusy.value = false;
   }
 }
+
+const checkForUpdates = () =>
+  updateStep("Checking for updates…", async () => {
+    const r = await ScanService.CheckForUpdates();
+    update.value = r.available ? { step: "available", version: r.version } : { step: "idle", version: "" };
+    setStatus(r.available ? `Version ${r.version} is available.` : "You are on the latest version.");
+  });
+
+const installUpdate = () =>
+  updateStep(`Downloading ${update.value.version}…`, async () => {
+    await ScanService.InstallUpdate();
+    update.value = { ...update.value, step: "ready" };
+    setStatus(`Version ${update.value.version} is downloaded and verified. Restart to apply it.`);
+  });
+
+const restartToUpdate = () => updateStep("Restarting…", () => ScanService.RestartToUpdate());
+
+const updateAction = computed(() => {
+  const v = update.value.version;
+  switch (update.value.step) {
+    case "available":
+      return { label: `Download ${v}`, run: installUpdate };
+    case "ready":
+      return { label: "Restart & apply", run: restartToUpdate };
+    default:
+      return { label: "Check for updates…", run: checkForUpdates };
+  }
+});
 
 // Follow the log as it grows.
 watch(logText, async () => {
@@ -117,11 +148,11 @@ onMounted(init);
               type="button"
               class="ghost"
               id="update-btn"
-              :disabled="!appInfo?.enabled"
+              :disabled="!appInfo?.enabled || updateBusy"
               :title="appInfo?.enabled ? '' : appInfo?.reason"
-              @click="checkForUpdates"
+              @click="updateAction.run"
             >
-              Check for updates…
+              {{ updateAction.label }}
             </button>
           </div>
         </div>

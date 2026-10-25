@@ -29,13 +29,14 @@ export function Cancel() {
 }
 
 /**
- * CheckForUpdates opens the updater window, which checks GitHub Releases, downloads the
- * binary, verifies its SHA-256 and offers "Restart & Apply". It blocks until the update
- * is staged or fails, so it must be called from a binding (its own goroutine), never the UI thread.
- * @returns {$CancellablePromise<void>}
+ * CheckForUpdates asks GitHub Releases whether a newer release exists. It only looks:
+ * nothing is downloaded until InstallUpdate is called.
+ * @returns {$CancellablePromise<$models.UpdateStatus>}
  */
 export function CheckForUpdates() {
-    return $Call.ByID(129223899);
+    return $Call.ByID(129223899).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType0($result);
+    }));
 }
 
 /**
@@ -45,7 +46,7 @@ export function CheckForUpdates() {
  */
 export function Compare(req) {
     return $Call.ByID(772315051, req).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType2($result);
     }));
 }
 
@@ -55,7 +56,7 @@ export function Compare(req) {
  */
 export function Config() {
     return $Call.ByID(2989893290).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType2($result);
+        return $$createType3($result);
     }));
 }
 
@@ -65,8 +66,18 @@ export function Config() {
  */
 export function Footprint() {
     return $Call.ByID(2797434951).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType3($result);
+        return $$createType4($result);
     }));
+}
+
+/**
+ * InstallUpdate downloads the release CheckForUpdates found, verifies its SHA-256 and
+ * stages it beside the running binary. It blocks until staged or failed, so it must be
+ * called from a binding (its own goroutine), never the UI thread.
+ * @returns {$CancellablePromise<void>}
+ */
+export function InstallUpdate() {
+    return $Call.ByID(686526134);
 }
 
 /**
@@ -76,7 +87,7 @@ export function Footprint() {
  */
 export function ListTags(repo) {
     return $Call.ByID(3032348749, repo).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType4($result);
+        return $$createType5($result);
     }));
 }
 
@@ -86,7 +97,7 @@ export function ListTags(repo) {
  */
 export function Mode() {
     return $Call.ByID(1124674175).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType5($result);
+        return $$createType6($result);
     }));
 }
 
@@ -106,8 +117,16 @@ export function PodmanVersion() {
  */
 export function Rescore(rules) {
     return $Call.ByID(774845613, rules).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType7($result);
+        return $$createType8($result);
     }));
+}
+
+/**
+ * RestartToUpdate swaps the staged binary in and relaunches the app.
+ * @returns {$CancellablePromise<void>}
+ */
+export function RestartToUpdate() {
+    return $Call.ByID(3590870539);
 }
 
 /**
@@ -116,7 +135,7 @@ export function Rescore(rules) {
  */
 export function RulePresets() {
     return $Call.ByID(2708099262).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType9($result);
+        return $$createType10($result);
     }));
 }
 
@@ -127,7 +146,7 @@ export function RulePresets() {
  */
 export function Scan(req) {
     return $Call.ByID(3856738749, req).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType11($result);
+        return $$createType12($result);
     }));
 }
 
@@ -137,7 +156,7 @@ export function Scan(req) {
  */
 export function UpdateInfo() {
     return $Call.ByID(239256173).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType12($result);
+        return $$createType13($result);
     }));
 }
 
@@ -175,7 +194,7 @@ export function VEXExport(image, author, role) {
  */
 export function VEXImport(image, doc, markRest) {
     return $Call.ByID(494835202, image, doc, markRest).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType13($result);
+        return $$createType14($result);
     }));
 }
 
@@ -186,7 +205,7 @@ export function VEXImport(image, doc, markRest) {
  */
 export function VEXList(image) {
     return $Call.ByID(4047392387, image).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType15($result);
+        return $$createType16($result);
     }));
 }
 
@@ -222,24 +241,25 @@ export function VEXSave(image, author, role) {
  */
 export function VEXSet(image, e) {
     return $Call.ByID(847093897, image, e).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType14($result);
+        return $$createType15($result);
     }));
 }
 
 // Private type creation functions
-const $$createType0 = trivy$0.CompareResult.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $models.AppConfig.createFrom;
-const $$createType3 = $models.Footprint.createFrom;
-const $$createType4 = $Create.Array($Create.Any);
-const $$createType5 = $models.Mode.createFrom;
-const $$createType6 = trivy$0.Rescored.createFrom;
-const $$createType7 = $Create.Array($$createType6);
-const $$createType8 = trivy$0.Preset.createFrom;
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = trivy$0.ScanResult.createFrom;
-const $$createType11 = $Create.Nullable($$createType10);
-const $$createType12 = $models.UpdateInfo.createFrom;
-const $$createType13 = trivy$0.ImportReport.createFrom;
-const $$createType14 = trivy$0.VEXEntry.createFrom;
-const $$createType15 = $Create.Array($$createType14);
+const $$createType0 = $models.UpdateStatus.createFrom;
+const $$createType1 = trivy$0.CompareResult.createFrom;
+const $$createType2 = $Create.Nullable($$createType1);
+const $$createType3 = $models.AppConfig.createFrom;
+const $$createType4 = $models.Footprint.createFrom;
+const $$createType5 = $Create.Array($Create.Any);
+const $$createType6 = $models.Mode.createFrom;
+const $$createType7 = trivy$0.Rescored.createFrom;
+const $$createType8 = $Create.Array($$createType7);
+const $$createType9 = trivy$0.Preset.createFrom;
+const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = trivy$0.ScanResult.createFrom;
+const $$createType12 = $Create.Nullable($$createType11);
+const $$createType13 = $models.UpdateInfo.createFrom;
+const $$createType14 = trivy$0.ImportReport.createFrom;
+const $$createType15 = trivy$0.VEXEntry.createFrom;
+const $$createType16 = $Create.Array($$createType15);
