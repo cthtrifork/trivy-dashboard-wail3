@@ -12,6 +12,8 @@ RUNTIME   := $(or $(XDG_RUNTIME_DIR),/run/user/$(shell id -u))
 CACHE     ?= /tmp/trivy
 # Build tags for the production vet; the dev container (no GTK) sets this to server,production.
 VET_TAGS  ?= production
+# -race needs cgo, which pulls in GTK; the dev container sets RACE to empty.
+RACE      ?= -race
 SOCKET    ?= $(RUNTIME)/podman/podman.sock
 
 .DEFAULT_GOAL := help
@@ -25,7 +27,7 @@ help: ## List the targets
 ## Development -------------------------------------------------------------
 
 test: ## Run the tests as CI does (fixtures, no podman needed)
-	go test -race -count=1 ./...
+	go test $(RACE) -count=1 ./...
 
 fmt: ## Format the Go code
 	gofmt -w .
