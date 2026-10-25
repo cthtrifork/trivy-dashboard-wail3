@@ -19,8 +19,8 @@ env:
   GOTOOLCHAIN: local
 
 jobs:
-  # Fast, GTK-free checks. The slower jobs below wait for these so a trivial failure
-  # (formatting, stale bindings) is reported in about a minute instead of after the tests.
+  # lint, test and build run in parallel: wall time is the slowest job, not their sum.
+  # A trivial failure still shows up in lint first, but no longer holds the others back.
   lint:
     name: lint
     runs-on: ubuntu-24.04
@@ -85,40 +85,8 @@ jobs:
           # Headless: this job has no GTK, so lint the server-tag build (CGO off, like the headless build).
           CGO_ENABLED=0 "$RUNNER_TEMP/bin/golangci-lint" run --build-tags server ./...
 
-  vet:
-    name: vet
-    needs: lint
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      # Wails v3 builds against GTK4 + WebKitGTK 6 on Linux (package list from the Wails CI).
-      - name: Install Linux build dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
-
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version: '1.26' # go.mod requires 1.26.x (Wails v3)
-          check-latest: true # newest 1.26 patch release, so stdlib fixes are picked up
-          cache: true
-          cache-dependency-path: go.sum
-
-      # No frontend build: frontend/dist/.gitkeep satisfies go:embed, and nothing here reads the bundle.
-      - name: Vet
-        run: go vet ./...
-
-      - name: Vet (production tags)
-        run: go vet -tags production ./...
-
   test:
     name: test
-    needs: [lint, vet]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -147,13 +115,17 @@ jobs:
           pkg-config --modversion gtk4 webkitgtk-6.0 libsoup-3.0
 
       # No frontend build: frontend/dist/.gitkeep satisfies go:embed, and nothing here reads the bundle.
+      - name: Vet
+        run: go vet ./...
+
+      - name: Vet (production tags)
+        run: go vet -tags production ./...
+
       - name: Test
         run: go test -race -count=1 ./...
 
-  # Runs in parallel with test once lint and vet pass.
   build:
     name: build
-    needs: [lint, vet]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
