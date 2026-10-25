@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive } from "vue";
-import { result, vex, SEVERITIES, sevStyle } from "../store.js";
+import { result, vulns, vex, SEVERITIES, sevStyle } from "../store.js";
 import { tierStyle, pct } from "../lib/format.js";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
@@ -24,7 +24,7 @@ const COLUMNS = [
 ];
 
 const toggle = (sev) => (state.hidden.has(sev) ? state.hidden.delete(sev) : state.hidden.add(sev));
-const all = computed(() => result.value?.vulnerabilities ?? []);
+const all = computed(() => vulns.value);
 const rows = computed(() => {
   const q = state.filter.toLowerCase();
   const kept = all.value.filter(

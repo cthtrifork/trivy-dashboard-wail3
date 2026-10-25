@@ -1,6 +1,6 @@
 // Shared state and the calls into the Go ScanService. A plain module of refs instead of a store
 // library: the app has one scan result and a handful of settings.
-import { reactive, ref, shallowRef } from "vue";
+import { computed, reactive, ref, shallowRef } from "vue";
 import { Events } from "@wailsio/runtime";
 import { ScanService } from "../bindings/github.com/cthtrifork/trivy-dashboard-wail3";
 
@@ -28,11 +28,109 @@ export const lsSet = (k, v) => {
 
 // The latest scan. Shallow: the dependency graph holds thousands of read-only objects.
 export const result = shallowRef(null);
+// Findings of the latest scan by CVE id, one per VEX key (a finding repeated across image layers counts once),
+// so the VEX editor can offer the other components that carry the same CVE.
+export const findingsById = computed(() => {
+  const m = new Map();
+  for (const v of result.value?.vulnerabilities ?? []) {
+    const list = m.get(v.id) ?? m.set(v.id, new Map()).get(v.id);
+    if (!list.has(v.key)) list.set(v.key, v);
+  }
+  return m;
+});
+
+// The findings in the order the current scoring rules rank them: the scan result's own list when
+// the rules are the defaults, otherwise the same findings with the priority, tier and reasons
+// the Go side computed under the rules (see rerank).
+export const vulns = shallowRef([]);
 // Saved VEX assessments for the scanned image repo, finding key -> entry. Replaced, never mutated.
 export const vex = shallowRef(new Map());
 
 // Findings whose VEX editor the user has opened.
 export const openVex = new Set();
+
+// Scoring rules. `rules` is the live set the Go side applies; presets are named copies of it.
+// Built-in presets come from Go; the user's own live in localStorage next to the Trivy version.
+export const rules = reactive({});
+export const builtinPresets = ref([]);
+export const userPresets = ref([]);
+const RULES_KEY = "score-rules",
+  PRESETS_KEY = "score-presets";
+const lsJSON = (k, fallback) => {
+  try {
+    return JSON.parse(lsGet(k)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+const rulesJSON = (r) =>
+  JSON.stringify(
+    Object.keys(r)
+      .sort()
+      .map((k) => [k, r[k]]),
+  );
+export const allPresets = () => [...builtinPresets.value, ...userPresets.value];
+// The preset the live rules equal exactly, or null once the user has changed anything.
+export const activePreset = () => allPresets().find((p) => rulesJSON(p.rules) === rulesJSON(rules))?.name ?? null;
+
+let rankToken = 0;
+// rerank asks Go to rank the latest scan under the live rules. Calls that are superseded (the user
+// kept dragging a threshold, or rescanned) are dropped.
+export async function rerank() {
+  const r = result.value,
+    token = ++rankToken;
+  if (!r) return void (vulns.value = []);
+  if (!builtinPresets.value.length || rulesJSON(rules) === rulesJSON(builtinPresets.value[0].rules)) {
+    vulns.value = r.vulnerabilities; // the scan already used the default rules
+    return;
+  }
+  try {
+    const out = await ScanService.Rescore({ ...rules });
+    if (token !== rankToken || out.length !== r.vulnerabilities.length) return;
+    vulns.value = out.map((o) => ({
+      ...r.vulnerabilities[o.index],
+      priority: o.priority,
+      tier: o.tier,
+      tierWhy: o.tierWhy,
+      reasons: o.reasons,
+    }));
+  } catch (err) {
+    setStatus("Could not apply the scoring rules: " + errText(err), { err: true });
+  }
+}
+
+let rerankTimer;
+export function setRules(next) {
+  Object.assign(rules, next);
+  lsSet(RULES_KEY, JSON.stringify(rules));
+  clearTimeout(rerankTimer);
+  rerankTimer = setTimeout(rerank, 120); // typing a threshold fires once per pause, not per keystroke
+}
+
+export function savePreset(name, description = "") {
+  name = name.trim();
+  if (!name || builtinPresets.value.some((p) => p.name === name)) return false;
+  const entry = { name, description, rules: { ...rules } };
+  userPresets.value = [...userPresets.value.filter((p) => p.name !== name), entry];
+  lsSet(PRESETS_KEY, JSON.stringify(userPresets.value));
+  return true;
+}
+export function deletePreset(name) {
+  userPresets.value = userPresets.value.filter((p) => p.name !== name);
+  lsSet(PRESETS_KEY, JSON.stringify(userPresets.value));
+}
+
+async function initRules() {
+  try {
+    builtinPresets.value = (await ScanService.RulePresets()) || [];
+  } catch (err) {
+    return setStatus("Could not load scoring presets: " + errText(err), { err: true });
+  }
+  userPresets.value = lsJSON(PRESETS_KEY, []).filter((p) => p?.name && p.rules);
+  // Merge over the defaults so a rule added in a later version still has a value.
+  Object.assign(rules, builtinPresets.value[0].rules, lsJSON(RULES_KEY, {}));
+  rerank();
+}
 
 export const status = reactive({ msg: "", err: false, busy: false });
 export function setStatus(msg, { err = false, busy = false } = {}) {
@@ -102,6 +200,7 @@ export async function runScan() {
     });
     if (!cmpForm.repo) cmpForm.repo = r.image.replace(/@.*$/, "").replace(/:[^/:]*$/, "");
     result.value = r;
+    rerank();
     await loadVEX();
     setStatus(`Scan complete: ${r.vulnerabilities.length} vulnerabilities, ${r.components.length} components.`);
   } catch (err) {
@@ -133,6 +232,7 @@ export function init() {
     () => {},
   );
   refreshFootprint();
+  initRules();
   ScanService.PodmanVersion().then(
     (v) => setStatus(v),
     (err) => setStatus(errText(err), { err: true }),

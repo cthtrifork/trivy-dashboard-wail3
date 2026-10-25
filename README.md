@@ -7,7 +7,7 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
   CISA **KEV** (documented exploitation), **EPSS** (predicted 30-day exploitation probability), CVSS severity, attack vector/complexity/privileges/user interaction, and fix availability.
   Every card shows the points behind its rank and a plain-English attack-vector assessment. Tiers: Act now / Fix soon / Plan / Monitor (low-risk hidden by default).
 - **VEX editor** – on any finding choose `affected`, `not_affected`, `fixed` or `under_investigation`, add a justification / impact / action statement (validated per the OpenVEX rules),
-  and use **Edit/Create VEX** to export OpenVEX (v0.2.0) or **import** an existing OpenVEX file by pasting it: its statements are matched to the scan's findings (versionless PURLs such as `pkg:apk/alpine/zlib` apply to every version) and applied as assessments. Assessments are stored in `<user config dir>/trivy-scanner/vex.json` per image repository, so they carry over to later scans and tags; resolved findings are hidden from the shortlist.
+  and use **Edit/Create VEX** to export OpenVEX (v0.2.0) or **import** an existing OpenVEX file by pasting it: its statements are matched to the scan's findings (versionless PURLs such as `pkg:apk/alpine/zlib` apply to every version) and applied as assessments. Assessments are stored in `<user config dir>/trivy-scanner/vex.json` per image repository, so they carry over to later scans and tags; resolved findings are hidden from the shortlist. When a CVE appears in several components, the editor offers checkboxes to apply the same statement to the other components in one save. Each assessment can carry an author and a review-by date (kept locally, not part of the OpenVEX export); once the date has passed the finding is shown again, flagged `expired`. Findings hidden by VEX are listed in a collapsed **Suppressed by VEX** section under the shortlist, 25 CVEs per page, with a CVE that hits several components shown once and the components as children.
 - **Compare** – pick an image repository and two tags (*Load tags* asks the registry via `podman search --list-tags`; you can also type tags or `sha256:` digests). Both are scanned and diffed docker-scout style:
   side-by-side severity counts with deltas, a verdict, vulnerabilities **added / removed / unchanged** with the reason (package upgraded, package removed/new, newly disclosed), and package **added / removed / upgraded / downgraded** with per-package vulnerability counts.
 - **Vulnerabilities** – severity cards (click to filter), search, sortable table, click a row for details.
@@ -29,6 +29,8 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
 Without GTK, use the dev container: `make dev` gives hot reload for Vue and Go, see [`docs/devcontainer.md`](docs/devcontainer.md).
 
 Every normal run, `wails3 dev` included, uses the real podman. Nothing is faked unless you ask for it.
+Priority scoring is explainable and tunable (per-rule toggles, EPSS cutoff, fixed-only, tier thresholds, saved presets): [`docs/scoring.md`](docs/scoring.md).
+
 Quitting (closing the window) stops a running scan and removes its container, following Wails' lifecycle guide: [`docs/lifecycle.md`](docs/lifecycle.md).
 
 Running on a headless server that only has podman (no Go), reached from your browser over an SSH tunnel: [`docs/headless.md`](docs/headless.md).

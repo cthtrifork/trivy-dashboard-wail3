@@ -19,21 +19,16 @@ env:
   GOTOOLCHAIN: local
 
 jobs:
-  test:
-    name: test
+  # Fast, GTK-free checks. The slower jobs below wait for these so a trivial failure
+  # (formatting, stale bindings) is reported in about a minute instead of after the tests.
+  lint:
+    name: lint
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      # Wails v3 builds against GTK4 + WebKitGTK 6 on Linux (package list from the Wails CI).
-      - name: Install Linux build dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -41,12 +36,6 @@ jobs:
           check-latest: true # newest 1.26 patch release, so stdlib fixes are picked up
           cache: true
           cache-dependency-path: go.sum
-
-      # Record exactly which toolchain and GUI libraries a run used (as wails-build-action does with `go version`).
-      - name: Toolchain versions
-        run: |
-          go version
-          pkg-config --modversion gtk4 webkitgtk-6.0 libsoup-3.0
 
       # The Go binary embeds frontend/dist, so the Vue app is built first. The runner's Node
       # satisfies Vite's engines range (see frontend/package.json).
@@ -89,20 +78,126 @@ jobs:
           go mod tidy -diff
           go mod verify
 
-      - name: Vet
-        run: go vet ./...
-
-      - name: Vet (production tags)
-        run: go vet -tags production ./...
-
       # Config in .golangci.yml. Installed like the wails3 CLI above: pinned, built with the job's Go.
       - name: golangci-lint
         run: |
           (cd "$RUNNER_TEMP" && CGO_ENABLED=0 GOBIN="$RUNNER_TEMP/bin" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0)
           "$RUNNER_TEMP/bin/golangci-lint" run ./...
 
+  vet:
+    name: vet
+    needs: lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Wails v3 builds against GTK4 + WebKitGTK 6 on Linux (package list from the Wails CI).
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26' # go.mod requires 1.26.x (Wails v3)
+          check-latest: true # newest 1.26 patch release, so stdlib fixes are picked up
+          cache: true
+          cache-dependency-path: go.sum
+
+      # The Go binary embeds frontend/dist, so the Vue app is built first. The runner's Node
+      # satisfies Vite's engines range (see frontend/package.json).
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          node --version
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Vet (production tags)
+        run: go vet -tags production ./...
+
+  test:
+    name: test
+    needs: [lint, vet]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Wails v3 builds against GTK4 + WebKitGTK 6 on Linux (package list from the Wails CI).
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26' # go.mod requires 1.26.x (Wails v3)
+          check-latest: true # newest 1.26 patch release, so stdlib fixes are picked up
+          cache: true
+          cache-dependency-path: go.sum
+
+      # Record exactly which toolchain and GUI libraries a run used (as wails-build-action does with `go version`).
+      - name: Toolchain versions
+        run: |
+          go version
+          pkg-config --modversion gtk4 webkitgtk-6.0 libsoup-3.0
+
+      # The Go binary embeds frontend/dist, so the Vue app is built first. The runner's Node
+      # satisfies Vite's engines range (see frontend/package.json).
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          node --version
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+
       - name: Test
         run: go test -race -count=1 ./...
+
+  # Runs in parallel with test once lint and vet pass.
+  build:
+    name: build
+    needs: [lint, vet]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Wails v3 builds against GTK4 + WebKitGTK 6 on Linux (package list from the Wails CI).
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26' # go.mod requires 1.26.x (Wails v3)
+          check-latest: true # newest 1.26 patch release, so stdlib fixes are picked up
+          cache: true
+          cache-dependency-path: go.sum
+
+      # The Go binary embeds frontend/dist, so the Vue app is built first. The runner's Node
+      # satisfies Vite's engines range (see frontend/package.json).
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          node --version
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
 
       # Proves the GUI binary still links against GTK4/WebKitGTK (cgo), exactly as the release build does.
       # Same flags as the release build, so the binary reviewers download is what would ship.

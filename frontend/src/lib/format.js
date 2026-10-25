@@ -17,6 +17,10 @@ export const JUSTIFICATIONS = {
   inline_mitigations_already_exist: "Inline mitigations already exist",
 };
 export const RESOLVED = new Set(["not_affected", "fixed"]);
+// Expiry is a UTC date (YYYY-MM-DD) and the day itself still counts, mirroring VEXEntry.Expired in Go.
+export const isExpired = (e) => !!e?.expires && new Date().toISOString().slice(0, 10) > e.expires;
+// A resolved assessment hides its finding until it expires; after that it only annotates it.
+export const suppresses = (e) => !!e && RESOLVED.has(e.status) && !isExpired(e);
 
 export function bytes(n) {
   if (n < 1024) return n + " B";

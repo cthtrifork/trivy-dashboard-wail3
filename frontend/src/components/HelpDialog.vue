@@ -34,7 +34,7 @@ const glossary = [
       ],
       [
         "Priority tier",
-        "Act now, Fix soon, Plan or Monitor. Every score is a sum of readable reasons (KEV, EPSS, Severity, Vector, Fix), so you can see why a finding ranks where it does.",
+        "Act now, Fix soon, Plan or Monitor. Every score is a sum of readable reasons (KEV, EPSS, Severity, Vector, Fix), so you can see why a finding ranks where it does. Open Scoring rules to switch rules on or off, move thresholds and save presets.",
       ],
       [
         "Attack assessment",

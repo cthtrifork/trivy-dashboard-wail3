@@ -21,6 +21,7 @@ Sources:
 | Cache dependencies | guide's list of enhancements | `setup-go` cache |
 | Create the release when a tag is pushed | action's release step | `gh release create` in `release.yml`, instead of a third-party action |
 | Test job: GTK4 + WebKitGTK 6 build dependencies, `GOTOOLCHAIN: local`, cancel superseded PR runs | Wails v3 `build-and-test-v3.yml` | `ci.yml` |
+| Job graph: `lint` (gofmt, tidy, bindings; no GTK) → `vet` → `test` and `build` in parallel, so cheap failures surface before the slow race tests | this repo | `ci.yml` |
 
 ## What was left out, and why
 
