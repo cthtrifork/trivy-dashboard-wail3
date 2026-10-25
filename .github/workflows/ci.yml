@@ -38,20 +38,16 @@ jobs:
           cache-dependency-path: go.sum
 
       # The Go binary embeds frontend/dist, so the Vue app is built first. The runner's Node
-      # satisfies Vite's engines range (see frontend/package.json).
+      # satisfies Vite's engines range (see frontend/package.json). `make build` below does this
+      # itself in the build job.
       - name: Build frontend
-        working-directory: frontend
         run: |
           node --version
-          npm ci --ignore-scripts --no-audit --no-fund
-          npm run build
+          make frontend
 
       # ESLint (errors only, see frontend/eslint.config.js) and Prettier. Run `npm run format` to fix.
       - name: Lint and check formatting (frontend)
-        working-directory: frontend
-        run: |
-          npm run lint
-          npm run format:check
+        run: make lint-frontend
 
       # frontend/bindings is generated from the Go services and committed. Regenerate it with the
       # CLI version that matches go.mod and fail if the committed copy differs (run `make bindings`).
@@ -59,7 +55,8 @@ jobs:
         run: |
           version="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
           (cd "$RUNNER_TEMP" && CGO_ENABLED=0 GOBIN="$RUNNER_TEMP/bin" go install -tags server "github.com/wailsapp/wails/v3/cmd/wails3@${version}")
-          CGO_ENABLED=0 "$RUNNER_TEMP/bin/wails3" generate bindings -silent
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          PATH="$RUNNER_TEMP/bin:$PATH" make bindings
           if [ -n "$(git status --porcelain -- frontend/bindings)" ]; then
             git status --short -- frontend/bindings
             git diff -- frontend/bindings | head -80
@@ -67,23 +64,17 @@ jobs:
           fi
 
       - name: Check formatting
-        run: |
-          unformatted="$(gofmt -l .)"
-          if [ -n "$unformatted" ]; then
-            echo "These files need gofmt:"; echo "$unformatted"; exit 1
-          fi
+        run: make fmt-check
 
       - name: Check go.mod is tidy and modules verify
-        run: |
-          go mod tidy -diff
-          go mod verify
+        run: make mod-check
 
       # Config in .golangci.yml. Installed like the wails3 CLI above: pinned, built with the job's Go.
       - name: golangci-lint
         run: |
           (cd "$RUNNER_TEMP" && CGO_ENABLED=0 GOBIN="$RUNNER_TEMP/bin" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0)
           # Headless: this job has no GTK, so lint the server-tag build (CGO off, like the headless build).
-          CGO_ENABLED=0 "$RUNNER_TEMP/bin/golangci-lint" run --build-tags server ./...
+          PATH="$RUNNER_TEMP/bin:$PATH" make lint-go
 
   test:
     name: test
@@ -116,13 +107,10 @@ jobs:
 
       # No frontend build: frontend/dist/.gitkeep satisfies go:embed, and nothing here reads the bundle.
       - name: Vet
-        run: go vet ./...
-
-      - name: Vet (production tags)
-        run: go vet -tags production ./...
+        run: make vet
 
       - name: Test
-        run: go test -race -count=1 ./...
+        run: make test
 
   build:
     name: build
@@ -147,22 +135,12 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      # The Go binary embeds frontend/dist, so the Vue app is built first. The runner's Node
-      # satisfies Vite's engines range (see frontend/package.json).
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          node --version
-          npm ci --ignore-scripts --no-audit --no-fund
-          npm run build
-
       # Proves the GUI binary still links against GTK4/WebKitGTK (cgo), exactly as the release build does.
-      # Same flags as the release build, so the binary reviewers download is what would ship.
+      # `make build` builds the frontend first and uses the same flags as the release build, so the binary reviewers download is what would ship.
       - name: Build (production tags)
         run: |
           mkdir -p dist
-          go build -tags production -trimpath -buildvcs=false \
-            -ldflags "-w -s -X main.version=ci-${GITHUB_SHA::7}" -o dist/trivy-scanner .
+          make build VERSION="ci-${GITHUB_SHA::7}" OUT=dist/trivy-scanner
           chmod +x dist/trivy-scanner
           ls -l dist
 

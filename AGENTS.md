@@ -12,17 +12,17 @@ Read in this order, stopping when you have enough:
 
 ## Commands
 
-`make help` lists shortcuts (`make check` runs the GTK-free CI checks; `make headless*` manages the podman deployment). Underlying commands:
+`make help` lists shortcuts (`make check` runs the GTK-free CI checks; `make headless*` manages the podman deployment). The commands below are the Makefile targets; the `Makefile` has the underlying invocations.
 
 ```sh
-(cd frontend && npm ci && npm run build)           # Vue app -> frontend/dist; required before any `go build`/`go run`, not before vet/test
-go test -race -count=1 ./...                       # what CI runs; replays recorded fixtures, no podman needed
-go vet ./... && go vet -tags production ./...
-gofmt -l .                                         # must print nothing
-go mod tidy -diff                                  # must print nothing
-CGO_ENABLED=0 go build -tags server,production -trimpath -o trivy-scanner .   # headless build, no GTK
-TRIVY_SCANNER_FAKE_PODMAN=1 go run .               # demo mode on recorded data (dev builds only)
-scripts/screenshots.sh                             # rewrites docs/screenshots (needs Node + Playwright)
+make frontend                                      # Vue app -> frontend/dist; required before any build/run, not before vet/test
+make test                                          # what CI runs (go test -race -count=1 ./...); recorded fixtures, no podman needed
+make vet                                           # go vet, with and without -tags production
+make fmt-check                                     # must print nothing
+make mod-check                                     # go mod tidy -diff + verify; must print nothing
+make build-server                                  # headless build (CGO_ENABLED=0, -tags server,production), no GTK
+make demo                                          # demo mode on recorded data (dev builds only)
+make screenshots                                   # rewrites docs/screenshots (needs Node + Playwright)
 ```
 
 The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. Use the `server` tag with `CGO_ENABLED=0` there; without `CGO_ENABLED=0` you get `pkg-config: Package gtk4 was not found`.
@@ -39,7 +39,7 @@ The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. U
 - The Trivy scanner container is named `trivy-scanner-<random>` so cancel can `podman rm --force --ignore --time 0` it by name before signalling the client.
 - Pin GitHub Actions by commit SHA with a version comment, as the existing workflows do.
 
-- **Run the frontend lint before every push that touches `frontend/src`:** `(cd frontend && npx prettier --write src && npm run lint && npm run format:check)`. CI's `lint` job fails on unformatted Vue/JS/CSS and skips test/build/vet behind it.
+- **Run the frontend lint before every push that touches `frontend/src`:** `make format-frontend lint-frontend`. CI's `lint` job fails on unformatted Vue/JS/CSS and skips test/build/vet behind it.
 - **Frontend is Vue 3 + Vite** (decision 14). After changing an exported `ScanService` method or a type it exchanges, run `make bindings` (needs the `wails3` CLI) and commit `frontend/bindings`. `frontend/dist` is untracked build output except `.gitkeep`.
 
 ## Layout

@@ -28,13 +28,13 @@ Commit messages and PR bodies end with the attribution lines from the session's 
 ## Exercising the app headlessly
 
 ```sh
-CGO_ENABLED=0 go build -tags server -o /tmp/app .
+make build-server OUT=/tmp/app
 TRIVY_SCANNER_FAKE_PODMAN=1 TRIVY_SCANNER_VEX_FILE=/tmp/vex.json WAILS_SERVER_PORT=18080 /tmp/app &
 curl -s -o /dev/null -w '%{http_code}\n' localhost:18080/                      # 200
 curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: evil.example' localhost:18080/   # 403
 ```
 
-Build the frontend before the headless build above (`cd frontend && npm ci && npm run build`); the server embeds `frontend/dist`. For hot reload run `make dev-frontend` and start the app with `FRONTEND_DEVSERVER_URL=http://127.0.0.1:9245`.
+Build the frontend before the headless build above (`make frontend`; `make build-server` does it for you); the server embeds `frontend/dist`. For hot reload run `make dev-frontend` and start the app with `FRONTEND_DEVSERVER_URL=http://127.0.0.1:9245`.
 
 For UI work, `scripts/screenshots.sh` drives the real frontend with Playwright (Chromium is preinstalled; do not reinstall Playwright).
 

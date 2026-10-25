@@ -85,7 +85,7 @@ If Go is installed, you can skip the image:
 
 ```sh
 git pull origin main
-CGO_ENABLED=0 go build -tags server,production -trimpath -o trivy-scanner .
+make build-server
 ./trivy-scanner      # listens on localhost:8080
 ```
 

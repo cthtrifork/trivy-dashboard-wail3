@@ -107,20 +107,9 @@ jobs:
           go version
           pkg-config --modversion gtk4 webkitgtk-6.0 libsoup-3.0
 
-      # The Go binary embeds frontend/dist, so the Vue app is built first. The runner's Node
-      # satisfies Vite's engines range (see frontend/package.json).
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          node --version
-          npm ci --ignore-scripts --no-audit --no-fund
-          npm run build
-
       # Never ship something CI would have rejected.
       - name: Vet and test
-        run: |
-          go vet ./...
-          go test -race -count=1 ./...
+        run: make vet test
 
       - name: govulncheck
         run: |
@@ -136,9 +125,7 @@ jobs:
         run: |
           built="$RUNNER_TEMP/build/${APP}"
           mkdir -p "$(dirname "$built")"
-          go build -tags production -trimpath -buildvcs=false \
-            -ldflags "-w -s -X main.version=${VERSION}" \
-            -o "$built" .
+          make build OUT="$built"
           chmod +x "$built"
           # Demo mode replays bundled fixtures. It must never ship in a release.
           if grep -aqF "[fixtures] replaying" "$built"; then

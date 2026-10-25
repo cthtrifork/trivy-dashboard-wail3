@@ -10,6 +10,6 @@
 
 ## Checklist
 
-- [ ] gofmt, vet (also `-tags production`), `go test -race` clean
+- [ ] `make fmt-check vet test` clean (gofmt, vet also with `-tags production`, `go test -race`)
 - [ ] Docs / README updated
 - [ ] No fixtures or demo code reachable from a production build

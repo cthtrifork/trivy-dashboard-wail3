@@ -22,9 +22,9 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
 
 ## Run
     make frontend                             # once, and after UI changes: builds frontend/dist, which the binary embeds
-    go run .                                  # or: wails3 dev. Real podman, real scans
-    go build -tags production -trimpath .     # production build, always real podman
-    go test ./internal/...                    # replays the recorded fixtures, no podman needed
+    make run                                  # or: wails3 dev. Real podman, real scans
+    make build                                # production build, always real podman
+    make test                                 # replays the recorded fixtures, no podman needed
 
 Without GTK, use the dev container: `make dev` gives hot reload for Vue and Go, see [`docs/devcontainer.md`](docs/devcontainer.md).
 
@@ -43,7 +43,7 @@ Contributors and AI agents: start at [`AGENTS.md`](AGENTS.md) (rules, commands, 
 Recorded Trivy output for two real Traefik releases lives in [`internal/trivy/fixtures`](internal/trivy/fixtures/README.md).
 The Go tests replay it directly. To run the app itself on it, set a flag, in any **development** build (one without `-tags production`):
 
-    TRIVY_SCANNER_FAKE_PODMAN=1 go run .
+    make demo
     TRIVY_SCANNER_FAKE_PODMAN=1 wails3 dev
 
 A yellow banner says demo mode is on, the inputs are prefilled (`traefik:3.7.13`, Compare `3.7.13` → `3.7.16`) and EPSS/KEV lookups are turned off so the output is offline and deterministic.
@@ -51,7 +51,7 @@ Tags `3.7.13`, `3.7.16`, `3.7` and `latest` work; any other image gets an error 
 so the flag is ignored there (with a logged warning), and CI and the release workflow fail if a production binary ever contains demo-mode code.
 
 ### Screenshots
-`scripts/screenshots.sh` rebuilds the app in headless server mode, runs it with `TRIVY_SCANNER_FAKE_PODMAN=1` and a throwaway VEX store, drives the UI with Playwright and rewrites `docs/screenshots/`.
+`make screenshots` (it runs `scripts/screenshots.sh`) rebuilds the app in headless server mode, runs it with `TRIVY_SCANNER_FAKE_PODMAN=1` and a throwaway VEX store, drives the UI with Playwright and rewrites `docs/screenshots/`.
 It builds the Vue frontend too. It needs Go, Node 20.19+ (or 22.12+) and Playwright with Chromium (`npm install --no-save playwright && npx playwright install chromium`), and no GTK, podman or network.
 
 
