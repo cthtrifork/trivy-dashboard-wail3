@@ -7,6 +7,72 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * Footprint is what the app keeps on disk and in memory, for the footer note.
+ */
+export class Footprint {
+    /**
+     * Creates a new Footprint instance.
+     * @param {Partial<Footprint>} [$$source = {}] - The source object to create the Footprint.
+     */
+    constructor($$source = {}) {
+        if (!("cacheBytes" in $$source)) {
+            /**
+             * CacheBytes is the Trivy cache (vulnerability DB); -1 when it is a podman volume the app
+             * cannot measure. CacheLocation names the directory or volume.
+             * @member
+             * @type {number}
+             */
+            this["cacheBytes"] = 0;
+        }
+        if (!("cacheLocation" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["cacheLocation"] = "";
+        }
+        if (!("appCacheBytes" in $$source)) {
+            /**
+             * AppCacheBytes is the app's own cache (the KEV catalog).
+             * @member
+             * @type {number}
+             */
+            this["appCacheBytes"] = 0;
+        }
+        if (!("memoryBytes" in $$source)) {
+            /**
+             * MemoryBytes estimates the app's memory: the Go runtime's resident share, excluding the
+             * webview (see WebviewBytes) and the podman containers.
+             * @member
+             * @type {number}
+             */
+            this["memoryBytes"] = 0;
+        }
+        if (!("webviewBytes" in $$source)) {
+            /**
+             * WebviewBytes is the resident memory of the webview processes; -1 when unknown (not Linux,
+             * or no webview in server mode).
+             * @member
+             * @type {number}
+             */
+            this["webviewBytes"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Footprint instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {Footprint}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Footprint(/** @type {Partial<Footprint>} */($$parsedSource));
+    }
+}
+
+/**
  * Mode tells the UI whether scans are real. Fixtures is true in development
  * builds that replay recorded scans; the other fields are demo defaults for
  * the input boxes.

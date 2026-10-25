@@ -106,6 +106,10 @@ type PodmanEngine struct {
 	Cache string
 }
 
+// CacheSource is the Trivy cache source the engine mounts by default: a podman volume name or an
+// absolute host directory. An invalid $TRIVY_SCANNER_CACHE is reported as an error.
+func CacheSource() (string, error) { return (&PodmanEngine{}).cacheSource() }
+
 // cacheSource validates and returns the cache mount source.
 func (p *PodmanEngine) cacheSource() (string, error) {
 	src := p.Cache

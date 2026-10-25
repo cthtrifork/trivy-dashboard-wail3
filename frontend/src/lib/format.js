@@ -12,3 +12,11 @@ export const JUSTIFICATIONS = {
   inline_mitigations_already_exist: "Inline mitigations already exist",
 };
 export const RESOLVED = new Set(["not_affected", "fixed"]);
+
+export function bytes(n) {
+  if (n < 1024) return n + " B";
+  const u = ["KB", "MB", "GB"];
+  let i = -1;
+  do { n /= 1024; i++; } while (n >= 1024 && i < u.length - 1);
+  return n.toFixed(n >= 100 ? 0 : 1) + " " + u[i];
+}

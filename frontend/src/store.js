@@ -57,6 +57,9 @@ export const comparing = ref(false);
 
 export const mode = ref(null);
 export const appInfo = ref(null);
+export const footprint = ref(null);
+
+export const refreshFootprint = () => ScanService.Footprint().then((f) => (footprint.value = f), () => {});
 
 export async function loadVEX() {
   const m = new Map();
@@ -88,6 +91,7 @@ export async function runScan() {
     setStatus(errText(err), { err: true });
   } finally {
     scanning.value = false;
+    refreshFootprint(); // a scan may have downloaded the DB
   }
 }
 
@@ -105,5 +109,6 @@ export function init() {
     if (!cmpForm.a) cmpForm.a = m.tagA;
     if (!cmpForm.b) cmpForm.b = m.tagB;
   }, () => {});
+  refreshFootprint();
   ScanService.PodmanVersion().then((v) => setStatus(v), (err) => setStatus(errText(err), { err: true }));
 }
