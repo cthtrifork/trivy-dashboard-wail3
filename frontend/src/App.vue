@@ -132,20 +132,20 @@ onMounted(init);
   <div id="mode-banner" v-if="mode?.fixtures">{{ mode.detail }}</div>
 
   <nav>
-    <button :class="['tab', { active: tab === 'prio' }]" data-tab="prio" @click="tab = 'prio'">
+    <button type="button" :class="['tab', { active: tab === 'prio' }]" data-tab="prio" @click="tab = 'prio'">
       Priorities <span class="badge" id="prio-count" title="findings that need attention">{{ prio?.count ?? 0 }}</span>
     </button>
-    <button :class="['tab', { active: tab === 'vulns' }]" data-tab="vulns" @click="tab = 'vulns'">
+    <button type="button" :class="['tab', { active: tab === 'vulns' }]" data-tab="vulns" @click="tab = 'vulns'">
       Vulnerabilities <span class="badge" id="vuln-count">{{ counts.vulns }}</span>
     </button>
-    <button :class="['tab', { active: tab === 'deps' }]" data-tab="deps" @click="tab = 'deps'">
+    <button type="button" :class="['tab', { active: tab === 'deps' }]" data-tab="deps" @click="tab = 'deps'">
       Dependencies <span class="badge" id="dep-count">{{ counts.deps }}</span>
     </button>
-    <button :class="['tab', { active: tab === 'sbom' }]" data-tab="sbom" @click="tab = 'sbom'">
+    <button type="button" :class="['tab', { active: tab === 'sbom' }]" data-tab="sbom" @click="tab = 'sbom'">
       SBOM <span class="badge" id="sbom-count">{{ counts.sbom }}</span>
     </button>
-    <button :class="['tab', { active: tab === 'compare' }]" data-tab="compare" @click="tab = 'compare'">Compare</button>
-    <button :class="['tab', 'right', { active: tab === 'log' }]" data-tab="log" @click="tab = 'log'">Log</button>
+    <button type="button" :class="['tab', { active: tab === 'compare' }]" data-tab="compare" @click="tab = 'compare'">Compare</button>
+    <button type="button" :class="['tab', 'right', { active: tab === 'log' }]" data-tab="log" @click="tab = 'log'">Log</button>
   </nav>
 
   <main>

@@ -19,7 +19,7 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend format-frontend audit-frontend vet frontend bindings dev dev-frontend build build-server run demo screenshots \
+.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -41,15 +41,15 @@ mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
 	go mod tidy -diff
 	go mod verify
 
-lint: lint-go lint-frontend ## golangci-lint plus the frontend's ESLint and Prettier check (as CI runs them)
+lint: lint-go lint-frontend ## golangci-lint plus the frontend's Biome lint and format check (as CI runs them)
 
 lint-go: ## golangci-lint on the server-tag build (CGO off, no GTK needed)
 	CGO_ENABLED=0 golangci-lint run --build-tags server ./...
 
-lint-frontend: ## ESLint and the Prettier check for the Vue app (needs `make frontend` once for node_modules)
+lint-frontend: ## Biome lint and format check for the Vue app (needs `make frontend` once for node_modules)
 	cd frontend && npm run lint && npm run format:check
 
-format-frontend: ## Reformat the Vue app with Prettier
+format-frontend: ## Reformat the Vue app with Biome
 	cd frontend && npm run format
 
 audit-frontend: ## npm audit of the runtime dependencies (HIGH and above fails)
@@ -66,6 +66,9 @@ check: ## Everything CI checks that runs without GTK: gofmt, tidy, vet, tests, h
 
 frontend: ## Build the Vue app into frontend/dist (embedded by the Go binary)
 	cd frontend && npm ci --ignore-scripts --no-audit --no-fund && npm run build
+
+wails3-install: ## Install the wails3 CLI at the go.mod version into GOBIN (default: $$(go env GOPATH)/bin)
+	CGO_ENABLED=0 go install -tags server github.com/wailsapp/wails/v3/cmd/wails3@$$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
 
 bindings: ## Regenerate frontend/bindings from the Go services (needs the wails3 CLI)
 	CGO_ENABLED=0 wails3 generate bindings -silent

@@ -40,7 +40,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font:
-    14px/1.4 system-ui,
+    14px / 1.4 system-ui,
     sans-serif;
 }
 header {
@@ -278,7 +278,7 @@ tr.detail a {
   border-radius: 8px;
   padding: 12px;
   font:
-    12px/1.5 ui-monospace,
+    12px / 1.5 ui-monospace,
     monospace;
   white-space: pre-wrap;
 }
@@ -423,6 +423,10 @@ tr.detail a {
   word-break: break-all;
 }
 .link {
+  background: none;
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
   color: var(--accent);
   cursor: pointer;
   display: flex;
@@ -634,7 +638,7 @@ dialog::backdrop {
 }
 #vex-preview {
   font:
-    12px/1.4 ui-monospace,
+    12px / 1.4 ui-monospace,
     monospace;
 }
 [hidden] {

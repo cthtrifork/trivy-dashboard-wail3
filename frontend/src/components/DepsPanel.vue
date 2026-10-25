@@ -212,7 +212,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
   <div class="toolbar wrap">
     <input id="dep-filter" v-model="typed" placeholder="Find a package…" autocomplete="off" />
     <div class="seg" id="dep-cat">
-      <button
+      <button type="button"
         v-for="[cat, label] in [
           ['all', 'All'],
           ['OS', 'OS'],
@@ -236,7 +236,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
       </select>
     </label>
     <label class="chk"><input type="checkbox" id="dep-labels" v-model="dep.labels" /> All labels</label>
-    <button class="ghost" id="dep-fit" @click="graph?.fit()">Fit</button>
+    <button type="button" class="ghost" id="dep-fit" @click="graph?.fit()">Fit</button>
     <span id="dep-shown">{{ shown }}</span>
   </div>
   <div id="dep-split">
@@ -275,10 +275,10 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
           :key="title"
         >
           <h4>{{ title }} ({{ refs.length }})</h4>
-          <div v-for="[r, x] in links(refs)" :key="r" class="link" @click="select(r, true)">
+          <button v-for="[r, x] in links(refs)" :key="r" type="button" class="link" @click="select(r, true)">
             <span>{{ x.name }} {{ x.version }}</span>
             <SevBadges :own="x.ownCounts" :total="x.totalCounts" />
-          </div>
+          </button>
           <div v-if="more(refs.length)" class="kv">…and {{ more(refs.length) }} more</div>
           <div v-if="!refs.length" class="kv">none</div>
         </template>
