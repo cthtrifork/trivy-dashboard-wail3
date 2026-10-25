@@ -19,7 +19,7 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend format-frontend audit-frontend vet frontend bindings dev dev-frontend build build-server run demo screenshots \
+.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -66,6 +66,9 @@ check: ## Everything CI checks that runs without GTK: gofmt, tidy, vet, tests, h
 
 frontend: ## Build the Vue app into frontend/dist (embedded by the Go binary)
 	cd frontend && npm ci --ignore-scripts --no-audit --no-fund && npm run build
+
+wails3-install: ## Install the wails3 CLI at the go.mod version into GOBIN (default: $$(go env GOPATH)/bin)
+	CGO_ENABLED=0 go install -tags server github.com/wailsapp/wails/v3/cmd/wails3@$$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)
 
 bindings: ## Regenerate frontend/bindings from the Go services (needs the wails3 CLI)
 	CGO_ENABLED=0 wails3 generate bindings -silent

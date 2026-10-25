@@ -53,8 +53,7 @@ jobs:
       # CLI version that matches go.mod and fail if the committed copy differs (run `make bindings`).
       - name: Check Wails bindings are up to date
         run: |
-          version="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
-          (cd "$RUNNER_TEMP" && CGO_ENABLED=0 GOBIN="$RUNNER_TEMP/bin" go install -tags server "github.com/wailsapp/wails/v3/cmd/wails3@${version}")
+          GOBIN="$RUNNER_TEMP/bin" make wails3-install
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
           PATH="$RUNNER_TEMP/bin:$PATH" make bindings
           if [ -n "$(git status --porcelain -- frontend/bindings)" ]; then
