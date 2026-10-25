@@ -1,3 +1,4 @@
+import { Browser } from "@wailsio/runtime";
 export const pct = (x) => (x * 100 < 0.1 ? "<0.1%" : (x * 100).toFixed(x >= 0.1 ? 0 : 1) + "%");
 
 export const TIER_COLOR = { "Act now": "--CRITICAL", "Fix soon": "--HIGH", Plan: "--MEDIUM", Monitor: "--UNKNOWN" };
@@ -32,3 +33,14 @@ export function bytes(n) {
   } while (n >= 1024 && i < u.length - 1);
   return n.toFixed(n >= 100 ? 0 : 1) + " " + u[i];
 }
+
+// Details page for a finding: Trivy's primary URL, else NVD for CVE ids.
+export const detailUrl = (v) =>
+  /^https?:\/\//.test(v.url) ? v.url : /^CVE-\d{4}-\d+$/i.test(v.id) ? `https://nvd.nist.gov/vuln/detail/${v.id.toUpperCase()}` : "";
+export const openUrl = (url) => {
+  try {
+    Promise.resolve(Browser.OpenURL(url)).catch(() => window.open(url, "_blank", "noopener"));
+  } catch {
+    window.open(url, "_blank", "noopener");
+  }
+};

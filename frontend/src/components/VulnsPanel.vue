@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive } from "vue";
 import { result, vulns, vex, SEVERITIES, sevStyle } from "../store.js";
-import { tierStyle, pct } from "../lib/format.js";
+import { tierStyle, pct, detailUrl, openUrl as open } from "../lib/format.js";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
 import Chip from "./Chip.vue";
@@ -48,7 +48,6 @@ const rows = computed(() => {
 const emptyText = computed(() => (all.value.length ? "No vulnerabilities match the filter." : "No vulnerabilities found 🎉"));
 const rowKey = (v) => v.key + "|" + v.target;
 const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows, { key: (v) => rowKey(v) });
-const isLink = (url) => /^https?:\/\//.test(url);
 </script>
 
 <template>
@@ -100,7 +99,10 @@ const isLink = (url) => /^https?:\/\//.test(url);
           <td>
             <span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span>
           </td>
-          <td class="mono" style="white-space: nowrap">{{ v.id }}</td>
+          <td class="mono" style="white-space: nowrap">
+            <a v-if="detailUrl(v)" :href="detailUrl(v)" title="Open CVE details" @click.stop.prevent="open(detailUrl(v))">{{ v.id }}</a>
+            <template v-else>{{ v.id }}</template>
+          </td>
           <td class="mono">{{ v.package }}</td>
           <td class="mono">{{ v.installed }}</td>
           <td class="mono">{{ v.fixed || "—" }}</td>
@@ -116,8 +118,8 @@ const isLink = (url) => /^https?:\/\//.test(url);
           <td colspan="10">
             <p class="attack">{{ v.attack }}</p>
             {{ `Target: ${v.target}\nStatus: ${v.status || "—"}\n\n${v.description || "No description."}\n\n` }}
-            <template v-if="isLink(v.url)"
-              ><span class="mono">{{ v.url }}</span
+            <template v-if="detailUrl(v)"
+              ><a class="mono" :href="detailUrl(v)" @click.prevent="open(detailUrl(v))">{{ detailUrl(v) }}</a
               >{{ "\n" }}</template
             >
             <VexBox :v="v" />
