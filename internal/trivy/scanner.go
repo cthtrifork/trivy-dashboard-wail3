@@ -72,6 +72,7 @@ type ScanResult struct {
 	Components      []Component     `json:"components"`
 	ComponentTypes  map[string]int  `json:"componentTypes"`
 	SBOMFormat      string          `json:"sbomFormat"`
+	Summary         *SBOMSummary    `json:"summary"`
 	// Dependency graph. Nodes are keyed by CycloneDX bom-ref; DepRoots are the
 	// entry points to start navigating from.
 	DepNodes map[string]*DepNode `json:"depNodes"`
@@ -448,13 +449,14 @@ func parseSBOM(data []byte, res *ScanResult) error {
 			}
 		}
 		Components []struct {
-			BOMRef   string `json:"bom-ref"`
-			Type     string
-			Group    string
-			Name     string
-			Version  string
-			PURL     string `json:"purl"`
-			Licenses []struct {
+			BOMRef     string `json:"bom-ref"`
+			Type       string
+			Group      string
+			Properties []struct{ Name, Value string }
+			Name       string
+			Version    string
+			PURL       string `json:"purl"`
+			Licenses   []struct {
 				License    *struct{ ID, Name string }
 				Expression string
 			}
@@ -470,7 +472,20 @@ func parseSBOM(data []byte, res *ScanResult) error {
 	res.Components = []Component{}
 	res.ComponentTypes = map[string]int{}
 	res.DepNodes = map[string]*DepNode{}
+	apps := map[string]string{}
+	osFamily, osVersion := "", ""
 	for i, c := range bom.Components {
+		for _, p := range c.Properties {
+			if p.Name != "aquasecurity:trivy:Type" {
+				continue
+			}
+			switch c.Type {
+			case "application":
+				apps[c.Name] = p.Value
+			case "operating-system":
+				osFamily, osVersion = p.Value, c.Version
+			}
+		}
 		comp := Component{Name: c.Name, Version: c.Version, Type: c.Type, PURL: c.PURL, Group: c.Group, Licenses: []string{}}
 		for _, l := range c.Licenses {
 			switch {
@@ -501,6 +516,7 @@ func parseSBOM(data []byte, res *ScanResult) error {
 		}
 	}
 	sort.SliceStable(res.Components, func(i, j int) bool { return res.Components[i].Name < res.Components[j].Name })
+	res.Summary = summarize(res, apps, osFamily, osVersion)
 	buildDepGraph(res, bom.Metadata.Component.BOMRef, func(yield func(string, []string)) {
 		for _, d := range bom.Dependencies {
 			yield(d.Ref, d.DependsOn)
