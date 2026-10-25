@@ -102,7 +102,7 @@ Order inside the card goes from "what is it" to "what should I do", and the reas
 
 | State | Treatment |
 |---|---|
-| Empty (before first scan) | counts show 0; panels explain what will appear |
+| Empty (before first scan) | counts show 0 |
 | Busy | status line spinner, Scan replaced by Cancel |
 | Error | status line in error style (`.err`), message from the Go side verbatim |
 | Nothing to act on | summary line says so; Monitor items stay hidden but counted |
@@ -114,7 +114,7 @@ Order inside the card goes from "what is it" to "what should I do", and the reas
 - Text contrast uses `--text` on `--panel` and `--mute` only for non-essential text. Check any new token pair for 4.5:1.
 - Hover titles explain badges (`findings that need attention`).
 - Long lists use virtual scrolling (`lib/virtual.js`); keep row heights fixed so it keeps working.
-- Minimum comfortable window width is about 900 px; stat cards and the header wrap below that.
+- Stat cards and the header form wrap (`flex-wrap`) when the window narrows.
 
 ## Do and don't
 
