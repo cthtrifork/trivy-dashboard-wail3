@@ -31,7 +31,7 @@ func main() {
 	// helper) and before Run, as the Wails self-update tutorial prescribes.
 	svc.initUpdater(app)
 
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Trivy Scanner",
 		Width:     1200,
 		Height:    800,
@@ -39,6 +39,8 @@ func main() {
 		MinHeight: 500,
 		URL:       "/",
 	})
+
+	addTray(app, window)
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
