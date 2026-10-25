@@ -27,11 +27,11 @@ Sources:
 
 - **Per-distro WebKit package and build tag** (the action picks `libwebkit2gtk-4.0` or `4.1` plus `-tags webkit2_41` by Ubuntu release). That is a Wails v2 / GTK3 concern. This app targets Wails v3's default GTK4 + WebKitGTK 6 backend only. A GTK3 build would be a separate asset and has not been asked for.
 - **arm64 cross-compilation** (`gcc-aarch64-linux-gnu`), **Windows and macOS** matrix entries, **code signing and notarisation**: only a Linux amd64 binary is published. Provenance is covered by a build attestation and SHA-256 checksums instead.
-- **The `wails build` CLI, obfuscation, Deno/Node build steps, `NODE_OPTIONS`**: the app is built with `go build`. The frontend is built first with `npm ci && npm run build` (Vite, see decision 14), using the runner's preinstalled Node instead of a `setup-node` action; the Go side only embeds `frontend/dist`. A separate step regenerates `frontend/bindings` with the `wails3` CLI at the go.mod version and fails on any diff.
+- **The `wails build` CLI, obfuscation, Deno/Node build steps, `NODE_OPTIONS`**: the app is built with `go build`. The frontend is built first with `make frontend` (`npm ci && npm run build`, Vite, see decision 14), using the runner's preinstalled Node instead of a `setup-node` action; the Go side only embeds `frontend/dist`. A separate step regenerates `frontend/bindings` with the `wails3` CLI at the go.mod version and fails on any diff.
 
 ## Lint and format checks
 
-`ci.yml` also runs, in the `test` job: `npm run lint` (ESLint, `essential` Vue rules, errors only) and `npm run format:check` (Prettier) in `frontend/`, and `golangci-lint run ./...` with the config in `.golangci.yml` (default linters; staticcheck's tagged-switch quick fixes and unchecked `Close`/test-helper writes are excluded). golangci-lint is `go install`ed at a pinned version, like the `wails3` CLI, rather than through a third-party action. `make lint` runs the same checks locally; `make fmt` and `npm run format` fix formatting.
+`ci.yml` also runs, in the `test` job: `make lint-frontend` (ESLint with the `essential` Vue rules, errors only, and the Prettier check) and `make lint-go` (golangci-lint with the config in `.golangci.yml`: default linters; staticcheck's tagged-switch quick fixes and unchecked `Close`/test-helper writes are excluded). golangci-lint is `go install`ed at a pinned version, like the `wails3` CLI, rather than through a third-party action. `make lint` runs both locally; `make fmt` and `make format-frontend` fix formatting.
 
 ## Screenshots
 
@@ -43,4 +43,4 @@ Sources:
 - **No loop:** pushes made by `github-actions[bot]` are ignored (`github.actor` check). Without it the bot's commit re-triggers the workflow, and because rendering is never perfectly identical between runs, each run would commit again.
 - The script is made as reproducible as it reasonably can be: it waits for the force-directed graph to rest instead of sleeping, pins the OpenVEX timestamps, disables animations, and the graph's tie-breaking random numbers are seeded. Fonts on the runner can differ from your machine, so let the workflow regenerate the images rather than committing locally generated ones.
 
-`security.yml` also runs `npm audit --omit=dev --audit-level=high` in `frontend/` (weekly, and when the frontend lockfile changes): runtime dependencies only, HIGH and above. It is deliberately not part of `ci.yml`, so a newly published advisory cannot block unrelated pull requests.
+`security.yml` also runs `make audit-frontend` (`npm audit --omit=dev --audit-level=high` in `frontend/`; weekly, and when the frontend lockfile changes): runtime dependencies only, HIGH and above. It is deliberately not part of `ci.yml`, so a newly published advisory cannot block unrelated pull requests.

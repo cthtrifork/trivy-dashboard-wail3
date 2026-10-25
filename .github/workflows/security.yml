@@ -100,5 +100,4 @@ jobs:
       # build tooling, and an advisory there should not fail the weekly run; Dependabot and the
       # Trivy scan above still report it. HIGH and above fails, lower severities are left to Dependabot.
       - name: Audit production dependencies
-        working-directory: frontend
-        run: npm audit --omit=dev --audit-level=high
+        run: make audit-frontend

@@ -15,9 +15,11 @@ VET_TAGS  ?= production
 # -race needs cgo, which pulls in GTK; the dev container sets RACE to empty.
 RACE      ?= -race
 SOCKET    ?= $(RUNTIME)/podman/podman.sock
+# OUT: where `make build` and `make build-server` write the binary.
+OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt lint vet frontend bindings dev dev-frontend build build-server run demo screenshots \
+.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend format-frontend audit-frontend vet frontend bindings dev dev-frontend build build-server run demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -32,16 +34,33 @@ test: ## Run the tests as CI does (fixtures, no podman needed)
 fmt: ## Format the Go code
 	gofmt -w .
 
-lint: ## golangci-lint plus the frontend's ESLint and Prettier check (as CI runs them)
+fmt-check: ## Fail if any Go file needs gofmt
+	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "These files need gofmt:"; echo "$$unformatted"; exit 1; fi
+
+mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
+	go mod tidy -diff
+	go mod verify
+
+lint: lint-go lint-frontend ## golangci-lint plus the frontend's ESLint and Prettier check (as CI runs them)
+
+lint-go: ## golangci-lint on the server-tag build (CGO off, no GTK needed)
 	CGO_ENABLED=0 golangci-lint run --build-tags server ./...
+
+lint-frontend: ## ESLint and the Prettier check for the Vue app (needs `make frontend` once for node_modules)
 	cd frontend && npm run lint && npm run format:check
+
+format-frontend: ## Reformat the Vue app with Prettier
+	cd frontend && npm run format
+
+audit-frontend: ## npm audit of the runtime dependencies (HIGH and above fails)
+	cd frontend && npm audit --omit=dev --audit-level=high
 
 vet: ## go vet, with and without the production tag
 	go vet ./...
 	go vet -tags $(VET_TAGS) ./...
 
 check: ## Everything CI checks that runs without GTK: gofmt, tidy, vet, tests, headless build
-	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "needs gofmt:"; echo "$$unformatted"; exit 1; fi
+	$(MAKE) fmt-check
 	go mod tidy -diff
 	$(MAKE) vet test build-server
 
@@ -58,10 +77,10 @@ dev-frontend: ## Vite dev server with hot reload; then run: FRONTEND_DEVSERVER_U
 	cd frontend && npm run dev
 
 build: frontend ## Desktop release build (needs GTK4 + WebKitGTK 6)
-	go build -tags production -trimpath -ldflags "-w -s -X main.version=$(VERSION)" -o trivy-scanner .
+	go build -tags production -trimpath -buildvcs=false -ldflags "-w -s -X main.version=$(VERSION)" -o $(OUT) .
 
 build-server: frontend ## Headless server build, no GTK needed
-	CGO_ENABLED=0 go build -tags server,production -trimpath -ldflags "-w -s -X main.version=$(VERSION)" -o trivy-scanner .
+	CGO_ENABLED=0 go build -tags server,production -trimpath -buildvcs=false -ldflags "-w -s -X main.version=$(VERSION)" -o $(OUT) .
 
 run: frontend ## Run the desktop app with real podman
 	go run .

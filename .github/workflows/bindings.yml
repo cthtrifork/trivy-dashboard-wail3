@@ -48,7 +48,7 @@ jobs:
         run: |
           version="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
           (cd "$RUNNER_TEMP" && CGO_ENABLED=0 GOBIN="$RUNNER_TEMP/bin" go install -tags server "github.com/wailsapp/wails/v3/cmd/wails3@${version}")
-          CGO_ENABLED=0 "$RUNNER_TEMP/bin/wails3" generate bindings -silent
+          PATH="$RUNNER_TEMP/bin:$PATH" make bindings
 
       - name: Commit and push
         env:

@@ -49,7 +49,7 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Generate screenshots
-        run: scripts/screenshots.sh
+        run: make screenshots
 
       - name: Commit and push
         env:
