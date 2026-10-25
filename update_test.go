@@ -20,8 +20,14 @@ func TestNonReleaseBuildsCannotUpdate(t *testing.T) {
 		if info.Enabled || info.Reason == "" || info.Version != v {
 			t.Errorf("version %q: %+v", v, info)
 		}
-		if err := s.CheckForUpdates(); err == nil || !strings.Contains(err.Error(), "development build") {
-			t.Errorf("version %q: CheckForUpdates() = %v, want the reason it is disabled", v, err)
+		for name, err := range map[string]error{
+			"CheckForUpdates": func() error { _, err := s.CheckForUpdates(); return err }(),
+			"InstallUpdate":   s.InstallUpdate(),
+			"RestartToUpdate": s.RestartToUpdate(),
+		} {
+			if err == nil || !strings.Contains(err.Error(), "development build") {
+				t.Errorf("version %q: %s() = %v, want the reason it is disabled", v, name, err)
+			}
 		}
 	}
 }

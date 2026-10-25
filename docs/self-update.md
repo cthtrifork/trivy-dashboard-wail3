@@ -6,13 +6,14 @@ adapted to this app. Open **Options → Check for updates…**.
 
 ## What happens
 
-1. The app asks the GitHub API for the latest release of `cthtrifork/trivy-dashboard-wail3`.
-2. If it is newer, the **Software Update** window shows the release notes and downloads the binary.
-3. The download is checked against `SHA256SUMS` from the same release. Nothing is installed if it does not match.
-4. **Restart & Apply** swaps the running binary for the new one and relaunches. The binary re-executes itself in a
+1. **Check for updates…** asks the GitHub API for the latest release of `cthtrifork/trivy-dashboard-wail3`. It only
+   looks; the button then becomes **Download vX.Y.Z** if the release is newer.
+2. **Download** fetches the binary and checks it against `SHA256SUMS` from the same release. Nothing is installed if
+   it does not match. The button becomes **Restart & apply**.
+3. **Restart & apply** swaps the running binary for the new one and relaunches. The binary re-executes itself in a
    helper mode for the swap, so no separate helper executable is shipped.
 
-Updates only ever run when you click: there is no background polling (`CheckInterval` is unset), so the app contacts
+Every step runs only when you click it: there is no background polling (`CheckInterval` is unset), so the app contacts
 `api.github.com` only on that click.
 
 ## When it is available
@@ -22,7 +23,7 @@ The button is disabled, with the reason as its tooltip, when:
 - the build is not a release (`dev`, or the `ci-<sha>` binaries CI uploads): the updater compares versions with
   `x/mod/semver`, where an invalid string such as `dev` sorts *below every release*, so such a build would otherwise
   offer to replace itself with the newest release;
-- the app runs in headless server mode (the updater needs a native window).
+- the app runs in headless server mode (the updater restarts the native app).
 
 Clicking it also refuses, before downloading anything, when the directory holding the executable is not writable.
 The new binary is staged beside the old one, so a copy installed by a package manager (`/usr/bin`) should be updated
