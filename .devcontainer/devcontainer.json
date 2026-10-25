@@ -1,10 +1,8 @@
 {
   "name": "Trivy Scanner",
   "build": { "dockerfile": "Dockerfile" },
-  "features": {
-    "ghcr.io/devcontainers/features/go:1": { "version": "1.26" },
-    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
-  },
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
   // Rootless podman runs inside this container (the app starts Trivy with it), which needs
   // the container to be privileged. Podman's images live in a volume so rebuilds keep them.
   "privileged": true,

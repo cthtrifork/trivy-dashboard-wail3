@@ -2,6 +2,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# A clone owned by another uid (rootful Docker, Codespaces) would make git refuse to run.
+git config --global --add safe.directory "$PWD"
+
 # Rootless podman networking (pasta) opens /dev/net/tun; some hosts create it root-only.
 [ -c /dev/net/tun ] && sudo chmod 0666 /dev/net/tun || true
 
