@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "trivy-scanner": {
+      "type": "http",
+      "url": "http://127.0.0.1:9099/mcp"
+    }
+  }
+}

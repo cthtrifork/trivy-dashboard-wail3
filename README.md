@@ -35,6 +35,8 @@ Quitting (closing the window) stops a running scan and removes its container, fo
 
 Running on a headless server that only has podman (no Go), reached from your browser over an SSH tunnel: [`docs/headless.md`](docs/headless.md).
 
+Let an LLM agent drive the running app through Wails' built-in MCP server (development only, never in releases): [`docs/mcp.md`](docs/mcp.md).
+
 Visual and interaction conventions (tokens, components, states) for anyone touching the UI: [`docs/ux-design-sheet.md`](docs/ux-design-sheet.md).
 
 `make help` lists common tasks (`make check`, `make test`, `make headless`, ...).
