@@ -13,7 +13,7 @@ CACHE     ?= /tmp/trivy
 SOCKET    ?= $(RUNTIME)/podman/podman.sock
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt vet frontend bindings dev-frontend build build-server run demo screenshots \
+.PHONY: help test check fmt vet frontend bindings dev dev-frontend build build-server run demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -42,6 +42,9 @@ frontend: ## Build the Vue app into frontend/dist (embedded by the Go binary)
 
 bindings: ## Regenerate frontend/bindings from the Go services (needs the wails3 CLI)
 	CGO_ENABLED=0 wails3 generate bindings -silent
+
+dev: ## Hot reload: Vite HMR + rebuild-on-save Go server (http://localhost:8080)
+	scripts/dev.sh
 
 dev-frontend: ## Vite dev server with hot reload; then run: FRONTEND_DEVSERVER_URL=http://127.0.0.1:9245 go run .
 	cd frontend && npm run dev

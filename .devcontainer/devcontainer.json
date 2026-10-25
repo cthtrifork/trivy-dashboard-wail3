@@ -1,0 +1,32 @@
+{
+  "name": "Trivy Scanner",
+  "build": { "dockerfile": "Dockerfile" },
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": { "version": "1.26" },
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+  },
+  "containerEnv": {
+    // The app talks to podman through this socket; see docs/devcontainer.md to mount one.
+    "CONTAINER_HOST": "unix:///run/podman/podman.sock",
+    "WAILS_SERVER_PORT": "8080",
+    "WAILS_VITE_PORT": "9245"
+  },
+  // Installs the frontend deps, the Go reloader and the wails3 CLI (for `make bindings`).
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": { "label": "Trivy Scanner (make dev)", "onAutoForward": "openBrowser" }
+  },
+  // Uncomment on Linux to run real scans on the host's rootless podman. Run
+  // `systemctl --user enable --now podman.socket` on the host first.
+  // "mounts": [
+  //   "source=${localEnv:XDG_RUNTIME_DIR}/podman/podman.sock,target=/run/podman/podman.sock,type=bind"
+  // ],
+  // "runArgs": ["--security-opt", "label=disable"],
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go", "Vue.volar"],
+      "settings": { "go.buildTags": "server" }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+# Go hot reload for `make dev` (see scripts/dev.sh). Server mode, dev build, no GTK.
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "CGO_ENABLED=0 go build -tags server -o ./tmp/trivy-scanner ."
+  bin = "./tmp/trivy-scanner"
+  include_ext = ["go"]
+  exclude_dir = ["frontend", "tmp", "docs", "scripts", ".git", ".devcontainer"]
+  exclude_regex = ["_test\\.go$"]
+  delay = 300
+  stop_on_error = true
+  send_interrupt = true
+  kill_delay = "500ms"
+
+[log]
+  time = false

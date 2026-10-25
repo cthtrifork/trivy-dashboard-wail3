@@ -106,3 +106,6 @@ desktop.ini
 .claude/settings.local.json
 .claude/scratch/
 
+
+# Go hot reload output (air)
+/tmp/

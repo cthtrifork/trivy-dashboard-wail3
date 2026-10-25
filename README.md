@@ -26,6 +26,8 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
     go build -tags production -trimpath .     # production build, always real podman
     go test ./internal/...                    # replays the recorded fixtures, no podman needed
 
+Without GTK, use the dev container: `make dev` gives hot reload for Vue and Go, see [`docs/devcontainer.md`](docs/devcontainer.md).
+
 Every normal run, `wails3 dev` included, uses the real podman. Nothing is faked unless you ask for it.
 Quitting (closing the window) stops a running scan and removes its container, following Wails' lifecycle guide: [`docs/lifecycle.md`](docs/lifecycle.md).
 
