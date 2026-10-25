@@ -423,6 +423,10 @@ tr.detail a {
   word-break: break-all;
 }
 .link {
+  background: none;
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
   color: var(--accent);
   cursor: pointer;
   display: flex;

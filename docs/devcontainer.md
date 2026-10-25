@@ -12,7 +12,7 @@ A dev container with Go and Node (both baked into the `Dockerfile`, copied from 
 
 The container installs the Go, Biome, MDX and Vue extensions. The Go tools (`goimports`, `golangci-lint`) come from `post-create.sh`. `.vscode/settings.json` is committed: format on save (`goimports` for Go, Biome for JS, Vue, CSS, HTML and JSON; Markdown is left alone) and `golangci-lint` on save.
 
-Frontend checks: `make lint-frontend` (`npm run lint` and `npm run format:check`) and `make format-frontend` (`npm run format`); Biome, config in `biome.json`, generated `bindings/` and `dist/` are ignored. Biome has no equivalent of eslint-plugin-vue, so Vue-specific template rules are not linted.
+Frontend checks: `make lint-frontend` (`npm run lint` and `npm run format:check`) and `make format-frontend` (`npm run format`); Biome, config in `biome.json`, generated `bindings/` and `dist/` are ignored. Biome has no equivalent of eslint-plugin-vue, so Vue-specific template rules are not linted. The a11y rules are on; the `noUnusedVariables` rule is off for `.vue` files because template-only bindings such as `ref="scroller"` look unused to Biome.
 
 `.editorconfig` sets UTF-8, LF, a final newline, tabs for Go and the Makefile and two spaces elsewhere. `.gitattributes` normalises text to LF and marks `frontend/bindings` and the lockfile as generated.
 

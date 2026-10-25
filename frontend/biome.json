@@ -9,10 +9,19 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "a11y": "off",
       "style": "off",
       "complexity": { "noImportantStyles": "off" },
       "suspicious": { "noAssignInExpressions": "off", "useIterableCallbackReturn": "off" }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/HelpDialog.vue", "**/VexBox.vue"],
+      "linter": { "rules": { "a11y": { "useKeyWithClickEvents": "off", "noStaticElementInteractions": "off" } } }
+    },
+    {
+      "includes": ["**/*.vue"],
+      "linter": { "rules": { "correctness": { "noUnusedVariables": "off" } } }
+    }
+  ]
 }
