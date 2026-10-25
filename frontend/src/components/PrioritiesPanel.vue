@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive } from "vue";
+import { computed, reactive, ref } from "vue";
 import { result, vex } from "../store.js";
 import { suppresses, isExpired, JUSTIFICATIONS, TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
 import Chip from "./Chip.vue";
@@ -16,9 +16,13 @@ const isResolved = (v) => suppresses(vex.value.get(v.key));
 const all = computed(() => result.value?.vulnerabilities ?? []);
 const hidden = computed(() => all.value.filter((v) => prio.hideResolved && isResolved(v)));
 const open = computed(() => all.value.filter((v) => !(prio.hideResolved && isResolved(v)) && (!prio.fixableOnly || v.fixed)));
-// The suppressed list is not virtualised, so cap it; the full set is in the VEX dialog.
-const SUPPRESSED_MAX = 100;
-const suppressedShown = computed(() => hidden.value.slice(0, SUPPRESSED_MAX));
+// The suppressed list is not virtualised, so it is paged to keep the DOM small.
+const SUPPRESSED_PAGE = 25;
+const supPage = ref(0);
+const supPages = computed(() => Math.max(1, Math.ceil(hidden.value.length / SUPPRESSED_PAGE)));
+// Clamp instead of resetting: removing the last row of a page must not jump back to page 1.
+const supCurrent = computed(() => Math.min(supPage.value, supPages.value - 1));
+const suppressedShown = computed(() => hidden.value.slice(supCurrent.value * SUPPRESSED_PAGE, (supCurrent.value + 1) * SUPPRESSED_PAGE));
 const lowN = computed(() => open.value.filter((v) => v.tier === "Monitor").length);
 const pool = computed(() => (prio.includeLow ? open.value : open.value.filter((v) => v.tier !== "Monitor")));
 const list = computed(() => (prio.top ? pool.value.slice(0, prio.top) : pool.value));
@@ -120,7 +124,11 @@ defineExpose({ count: computed(() => pool.value.length) });
           </div>
           <VexBox :v="v" />
         </div>
-        <div v-if="hidden.length > suppressedShown.length" class="kv">{{ hidden.length - suppressedShown.length }} more suppressed findings not listed.</div>
+        <div v-if="supPages > 1" class="row pager">
+          <button type="button" class="ghost" :disabled="supCurrent === 0" @click="supPage = supCurrent - 1">Previous</button>
+          <span class="kv">Page {{ supCurrent + 1 }} of {{ supPages }}</span>
+          <button type="button" class="ghost" :disabled="supCurrent >= supPages - 1" @click="supPage = supCurrent + 1">Next</button>
+        </div>
       </details>
     </template>
   </div>
