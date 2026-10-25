@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 
 	"github.com/cthtrifork/trivy-dashboard-wail3/internal/trivy"
@@ -36,21 +37,15 @@ type AppConfig struct {
 	Env      []ConfigEnv  `json:"env"`
 }
 
-// envDocs lists the variables worth showing. Dev-only ones are included only in dev builds.
-var envDocs = []ConfigEnv{
-	{Name: "TRIVY_SCANNER_CACHE", Desc: "Trivy cache source: a podman volume name or an absolute directory on the podman host.", Default: "user cache dir, or volume trivy-cache with a remote podman or on Windows"},
-	{Name: "TRIVY_SCANNER_VEX_FILE", Desc: "Where VEX assessments are stored.", Default: "<user config dir>/trivy-scanner/vex.json"},
-	{Name: "TRIVY_SCANNER_EPSS_URL", Desc: "EPSS API endpoint, for an air-gapped mirror.", Default: trivy.DefaultEPSSURL},
-	{Name: "TRIVY_SCANNER_KEV_URL", Desc: "CISA KEV feed URL, for an air-gapped mirror.", Default: trivy.DefaultKEVURL},
-	{Name: "TRIVY_DB_REPOSITORY", Desc: "Trivy vulnerability DB mirror, forwarded into the scanner container when set.", Default: "Trivy default"},
-	{Name: "TRIVY_JAVA_DB_REPOSITORY", Desc: "Trivy Java DB mirror, forwarded into the scanner container when set.", Default: "Trivy default"},
-	{Name: "PODMAN", Desc: "Path of the podman binary.", Default: "podman"},
-	{Name: "CONTAINER_HOST", Desc: "Remote podman socket. Switches the cache default to a named volume.", Default: "local podman"},
-	{Name: "DOCKER_HOST", Desc: "Same effect as CONTAINER_HOST.", Default: "local podman"},
-	{Name: "WAILS_SERVER_HOST", Desc: "Listen address in server mode. Keep it on loopback.", Default: "127.0.0.1"},
-	{Name: "WAILS_SERVER_PORT", Desc: "Listen port in server mode.", Default: "8080"},
-	{Name: "XDG_CACHE_HOME", Desc: "Moves the user cache dir (Linux).", Default: "~/.cache"},
-	{Name: "XDG_CONFIG_HOME", Desc: "Moves the user config dir (Linux).", Default: "~/.config"},
+// envDocs lists the documented variables, read from the desc and def tags on settings.
+func envDocs() []ConfigEnv {
+	var docs []ConfigEnv
+	for _, f := range reflect.VisibleFields(reflect.TypeFor[settings]()) {
+		if desc := f.Tag.Get("desc"); desc != "" {
+			docs = append(docs, ConfigEnv{Name: f.Tag.Get("env"), Desc: desc, Default: f.Tag.Get("def")})
+		}
+	}
+	return docs
 }
 
 // Config resolves the app's paths and environment for the help dialog.
@@ -86,7 +81,7 @@ func (s *ScanService) Config() AppConfig {
 	}
 	add("EPSS / KEV cache", enrichCacheDir(), "Downloaded EPSS data and kev.json, reused between scans")
 	add("VEX assessments", vexFile(), "Saved per image repository")
-	for _, e := range envDocs {
+	for _, e := range envDocs() {
 		e.Value, e.Set = os.LookupEnv(e.Name)
 		c.Env = append(c.Env, e)
 	}

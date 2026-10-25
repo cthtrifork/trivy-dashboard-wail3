@@ -70,20 +70,21 @@ const (
 	CacheEnv = "TRIVY_SCANNER_CACHE"
 )
 
-// engineEnv is the environment the engine reads. CacheEnv must match the Cache tag. The two DB
-// mirror variables are forwarded into the scanner container when set.
-type engineEnv struct {
-	Cache            string `env:"TRIVY_SCANNER_CACHE"`
-	Podman           string `env:"PODMAN"`
-	ContainerHost    string `env:"CONTAINER_HOST"`
-	DockerHost       string `env:"DOCKER_HOST"`
-	DBRepository     string `env:"TRIVY_DB_REPOSITORY"`
-	JavaDBRepository string `env:"TRIVY_JAVA_DB_REPOSITORY"`
+// Env is the environment the engine reads. The desc and def tags document each variable for the
+// help dialog (def is prose, not applied). The two DB mirrors are forwarded into the scanner
+// container when set.
+type Env struct {
+	Cache            string `env:"TRIVY_SCANNER_CACHE" desc:"Trivy cache source: a podman volume name or an absolute directory on the podman host." def:"user cache dir, or volume trivy-cache with a remote podman or on Windows"`
+	DBRepository     string `env:"TRIVY_DB_REPOSITORY" desc:"Trivy vulnerability DB mirror, forwarded into the scanner container when set." def:"Trivy default"`
+	JavaDBRepository string `env:"TRIVY_JAVA_DB_REPOSITORY" desc:"Trivy Java DB mirror, forwarded into the scanner container when set." def:"Trivy default"`
+	Podman           string `env:"PODMAN" desc:"Path of the podman binary." def:"podman"`
+	ContainerHost    string `env:"CONTAINER_HOST" desc:"Remote podman socket. Switches the cache default to a named volume." def:"local podman"`
+	DockerHost       string `env:"DOCKER_HOST" desc:"Same effect as CONTAINER_HOST." def:"local podman"`
 }
 
 // loadEnv reads the environment on each call so tests can change it with t.Setenv.
-func loadEnv() engineEnv {
-	e, _ := env.ParseAs[engineEnv]()
+func loadEnv() Env {
+	e, _ := env.ParseAs[Env]()
 	return e
 }
 
