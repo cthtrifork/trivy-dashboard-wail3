@@ -10,6 +10,8 @@ VERSION   ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo de
 RUNTIME   := $(or $(XDG_RUNTIME_DIR),/run/user/$(shell id -u))
 # CACHE: directory on the server (the podman host) that holds Trivy's cache; overridable.
 CACHE     ?= /tmp/trivy
+# Build tags for the production vet; the dev container (no GTK) sets this to server,production.
+VET_TAGS  ?= production
 SOCKET    ?= $(RUNTIME)/podman/podman.sock
 
 .DEFAULT_GOAL := help
@@ -30,7 +32,7 @@ fmt: ## Format the Go code
 
 vet: ## go vet, with and without the production tag
 	go vet ./...
-	go vet -tags production ./...
+	go vet -tags $(VET_TAGS) ./...
 
 check: ## Everything CI checks that runs without GTK: gofmt, tidy, vet, tests, headless build
 	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "needs gofmt:"; echo "$$unformatted"; exit 1; fi

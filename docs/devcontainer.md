@@ -36,7 +36,9 @@ then in `devcontainer.json` add the mount `source=${localEnv:XDG_RUNTIME_DIR}/po
 
 ## Checks
 
-`make check` (gofmt, `go mod tidy -diff`, vet, race tests, headless build) works in the container. The GUI build and `wails3 dev` do not (no GTK).
+The container is headless only: `CGO_ENABLED=0` and `GOFLAGS=-tags=server` are set, so plain `go build`, `go test`, `go vet` and `go run .` all work without GTK, and `make vet` uses `VET_TAGS=server,production`.
+
+`make check` (gofmt, `go mod tidy -diff`, vet, race tests, headless build) works in the container. The desktop GUI build and `wails3 dev` are not supported here.
 
 ## Troubleshooting
 
