@@ -70,10 +70,6 @@ const paths = computed(() => [
 const behaviour = computed(() => [
   ["Mode", mode.value?.fixtures ? "Demo (recorded data)" : "Real podman"],
   ["Scanner", mode.value?.trivyImage || "default"],
-  ["Network lookups", mode.value?.fixtures ? "Off in demo mode" : "EPSS and KEV; degrade gracefully when offline"],
-  ["Listening", "Server mode on loopback only; no authentication"],
-  ["Self-update", "Only on click, SHA-256 verified; disabled in dev and server builds"],
-  ["Credentials", "Passed to Trivy as environment variables, never on the command line"],
 ]);
 
 function open() { dlg.value.showModal(); }
