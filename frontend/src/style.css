@@ -10,6 +10,7 @@
   --MEDIUM: #f5b800;
   --LOW: #3e9bd6;
   --UNKNOWN: #7b8494;
+  --ok: #3fb97a;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -18,6 +19,7 @@
     --line: #dde1e8;
     --text: #1c2330;
     --mute: #5e6878;
+    --ok: #1a7f45;
   }
 }
 * {
@@ -1051,16 +1053,59 @@ code.rule {
 
 /* VEX assess drawer: a modal dialog docked to the right edge */
 .vexbtn {
+  --t: var(--accent);
   align-self: flex-start;
-  padding: 6px 12px;
-  border: 1px solid var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 99px;
+  font-size: 13px;
+  color: var(--text);
+  background: none;
+}
+.vexbtn.add {
+  border: 1px dashed var(--mute);
+}
+.vexbtn.add:hover {
+  border-style: solid;
+  border-color: var(--accent);
   color: var(--accent);
 }
-.vexbtn:hover {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-}
 .vexbtn.set {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  --t: var(--accent);
+  padding-right: 5px;
+  border: 1px solid var(--t);
+  background: color-mix(in srgb, var(--t) 14%, transparent);
+  color: var(--t);
+  font-weight: 600;
+}
+.vexbtn.ok {
+  --t: var(--ok);
+}
+.vexbtn.warm {
+  --t: var(--HIGH);
+}
+.vexbtn.set:hover {
+  background: color-mix(in srgb, var(--t) 24%, transparent);
+}
+.vexedit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--panel);
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 dialog.drawer {
   position: fixed;
