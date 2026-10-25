@@ -95,7 +95,9 @@ defineExpose({ count: computed(() => pool.value.length) });
         <div class="rank">{{ index + 1 }}</div>
         <div class="pbody">
           <div class="phead">
-            <a v-if="detailUrl(v)" class="id" :href="detailUrl(v)" title="Open CVE details" @click.prevent="openUrl(detailUrl(v))">{{ v.id }}</a>
+            <a v-if="detailUrl(v)" class="id" :href="detailUrl(v)" title="Open CVE details" @click.prevent="openUrl(detailUrl(v))">{{
+              v.id
+            }}</a>
             <span v-else class="id">{{ v.id }}</span>
             <span class="sev tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }}</span>
             <span class="mono">{{ v.package }} {{ v.installed }}</span>
