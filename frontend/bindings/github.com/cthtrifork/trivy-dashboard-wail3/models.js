@@ -42,7 +42,7 @@ export class Footprint {
         if (!("memoryBytes" in $$source)) {
             /**
              * MemoryBytes estimates the app's memory: the Go runtime's resident share, excluding the
-             * webview and the podman containers.
+             * webview (see WebviewBytes) and the podman containers.
              * @member
              * @type {number}
              */
