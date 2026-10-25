@@ -143,7 +143,8 @@ type Footprint struct {
 	// cannot measure. CacheLocation names the directory or volume.
 	CacheBytes    int64  `json:"cacheBytes"`
 	CacheLocation string `json:"cacheLocation"`
-	// AppCacheBytes is the app's own cache (the KEV catalog).
+	// AppCacheBytes is the size of the KEV catalog file. Not the whole cache directory: the Trivy
+	// cache is a subdirectory of it and is reported separately in CacheBytes.
 	AppCacheBytes int64 `json:"appCacheBytes"`
 	// MemoryBytes estimates the app's memory: the Go runtime's resident share, excluding the
 	// webview (see WebviewBytes) and the podman containers.
@@ -163,7 +164,9 @@ func (s *ScanService) Footprint() Footprint {
 		}
 	}
 	if s.scanner.Enricher != nil {
-		f.AppCacheBytes = dirSize(s.scanner.Enricher.CacheDir)
+		if st, err := os.Stat(s.scanner.Enricher.KEVCacheFile()); err == nil {
+			f.AppCacheBytes = st.Size()
+		}
 	}
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
