@@ -105,6 +105,14 @@ Observed by running the headless server in demo mode (`TRIVY_SCANNER_FAKE_PODMAN
 
 Stat cards come in three colorings: tier colors (Priorities), severity colors (Vulnerabilities), accent (SBOM).
 
+Interactions checked by running them:
+
+- **Vulnerabilities**: clicking a row expands it in place (what it means, target, status, description, advisory link, Add VEX assessment); the text filter and the severity cards combine, and a toggled-off card dims (`off`) and updates "n shown".
+- **Dependencies**: clicking a node dims the rest of the graph, highlights its edges, and fills the inspector (vulnerability counts by severity, Depends on, Required by); a caption above the canvas names the selection.
+- **Compare**: Base and Target summary cards with per-severity deltas (green when lower), a green verdict banner ("The target is better: ..."), a Vulnerabilities / Packages segmented control, added/removed/unchanged filters with `+` `-` `=` glyph badges, and a diff table.
+- **VEX drawer**: modal docked to the right; header with CVE, severity chip, tier chip and "Full advisory"; plain-language summary with four facts (Attack from, Needs, Impact, Fix); "Applies to" list with Select all; four status buttons; Cancel (ghost) and Save assessment (disabled until a status is chosen).
+- **Help**: centered modal with Glossary and App config tabs.
+
 Options popover contents: Ignore unfixed, registry username, registry password/token, Trivy version or image, app version with Check for updates.
 
 ## Known inconsistencies
@@ -113,7 +121,9 @@ Found while running the UI; not fixed by this sheet.
 
 - **Vulnerabilities CVE links use the browser default blue** (`rgb(0,0,238)`) instead of `--accent`, which is close to unreadable on the dark background. Priorities links use `--accent`. Links should share one style.
 - **Options placeholder is clipped** ("Trivy version or image (default t…") at the 260 px popover width.
-- **At 800 px** the demo banner wraps and the open Options popover covers the right-hand tabs. Usable, but untested below 800 px.
+- **At 800 px** the demo banner wraps and the open Options popover covers the right-hand tabs. Usable.
+- **At 500 px** the tab bar is clipped (Compare and Log are off-screen), the page scrolls horizontally, the Priorities toolbar overflows, and the Scoring rules card leaves a large blank gap. 700 px has no horizontal scroll.
+- **Vulnerabilities links** also affected the VEX drawer (CVE link, Full advisory); both are fixed by PR #44 (`a { color: var(--accent) }`).
 
 ## Key flows
 
@@ -153,5 +163,5 @@ Found while running the UI; not fixed by this sheet.
 
 ## Open questions
 
-- Layout below 800 px is untested; the tab bar has no overflow handling.
+- Below about 700 px the tab bar and toolbars have no overflow handling.
 - No documented keyboard shortcuts beyond Enter to scan.
