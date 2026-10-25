@@ -1,0 +1,29 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/cthtrifork/trivy-dashboard-wail3/internal/trivy"
+)
+
+func TestFootprintMeasuresTheTrivyCache(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "db"), make([]byte, 100), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(trivy.CacheEnv, dir)
+
+	f := (&ScanService{scanner: &trivy.Scanner{}}).Footprint()
+	if f.CacheBytes != 100 || f.CacheLocation != dir {
+		t.Errorf("cache = %d bytes at %q, want 100 at %q", f.CacheBytes, f.CacheLocation, dir)
+	}
+}
+
+func TestFootprintCannotMeasureAPodmanVolume(t *testing.T) {
+	t.Setenv(trivy.CacheEnv, "trivy-cache")
+	if got := (&ScanService{scanner: &trivy.Scanner{}}).Footprint().CacheBytes; got != -1 {
+		t.Errorf("volume cache = %d, want -1 (unmeasurable)", got)
+	}
+}

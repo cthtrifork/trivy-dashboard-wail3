@@ -8,6 +8,9 @@ export {
 };
 
 export {
+    AppConfig,
+    ConfigEnv,
+    ConfigPath,
     Footprint,
     Mode,
     UpdateInfo
