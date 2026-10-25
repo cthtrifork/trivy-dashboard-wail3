@@ -23,7 +23,7 @@ One page describing how the UI looks and behaves, so new screens and components 
 ```
 
 - Single window, no routing. The active tab is one `ref`; panels stay mounted and are shown/hidden, so filters and scroll survive tab switches.
-- Header: monospace image input grows to fill; **Scan** turns into a red **Cancel** while a scan runs. Secondary settings sit in the **Options** popover (260 px wide, right-aligned). **?** opens Help (glossary, configuration).
+- Header: monospace image input grows to fill; **Scan** is disabled while a scan runs and a red **Cancel** appears next to it. Secondary settings sit in the **Options** popover (260 px wide, right-aligned). **?** opens Help (glossary, configuration).
 - Tabs carry count badges (findings that need attention, vulnerabilities, components). **Log** is pushed to the far right because it is diagnostic.
 - Panels use 12 px / 16 px padding and a 12 px gap between blocks.
 
@@ -58,7 +58,7 @@ Rules: never use a new hex in a component, add a token. Color is never the only 
 
 - Body `14px / 1.4 system-ui`. Small/meta text 12 px in `--mute`. Stat numbers 22 px bold. Card labels 12 px uppercase, `0.04em` tracking.
 - Monospace (`ui-monospace`) for anything copied or compared literally: image references, package names and versions, CVE-adjacent identifiers.
-- Spacing steps in use: 4, 8, 12, 16. Radius 6 px for controls, 8 px for cards and popovers, 10 px for badges and chips.
+- Spacing steps in use: 4, 8, 12, 16. Radius 6 px for controls, 8 px for cards and popovers, 10 px for badges and chips (badges 12 px text, chips 11 px).
 - Popover shadow `0 8px 24px #0006`. No other shadows.
 
 ## Components
@@ -73,9 +73,9 @@ Rules: never use a new hex in a component, add a token. Color is never the only 
 | Tab | text button, 2 px bottom border; active = `--text` + `--accent` underline | |
 | Badge | `--line` pill with count | |
 | Stat card | 4 px left border in tier/severity color, big number over uppercase label | clickable; `off` = 40% opacity when its filter is disabled |
-| Chip | outlined pill, 12 px | facts about a finding: severity + CVSS, attack vector, fix versions |
+| Chip | outlined pill, 11 px, `--mute` text; kinds: `hot` (solid red, KEV), `warm` (orange outline: EPSS ≥ 10%, network vector, expired VEX), `vex` (accent outline, VEX status) | facts about a finding: severity + CVSS, KEV, EPSS, attack vector, fix versions |
 | Tier pill | filled pill, top right of a finding card | |
-| Disclosure (`details`) | `▸` summary in `--mute` | Scoring rules, Score · why, Options |
+| Disclosure (`details`) | `▸` summary in `--mute` | Scoring rules, Score · why, Suppressed by VEX (n), Options |
 | Banner | full-width strip under the header | demo mode warning only |
 
 ### Finding card (Priorities)
@@ -83,19 +83,19 @@ Rules: never use a new hex in a component, add a token. Color is never the only 
 1. Rank `#n` and CVE link (accent, opens the advisory) · tier pill right-aligned
 2. Title (bold)
 3. Package and version (monospace)
-4. Chips: severity + CVSS, attack vector, fix versions
+4. Chips: severity + CVSS, KEV, EPSS, attack vector, fix versions (or "No fix yet"), VEX status
 5. **What it means**: one plain-language paragraph on a tinted band; says when the finding only matters (running and reachable)
 6. `Score N · why` disclosure listing each fired rule with its points
-7. `+ Add VEX assessment`
+7. VEX box: dashed `+ Add VEX assessment` chip, which becomes a status chip once assessed
 
 Order inside the card goes from "what is it" to "what should I do", and the reasoning stays collapsed until asked for.
 
 ## Key flows
 
-- **Scan**: type an image, Enter or Scan. Status line shows progress; Cancel is always available and removes the container. Results land on Priorities.
+- **Scan**: type an image, Enter or Scan. Status line shows progress; Cancel is available while it runs and removes the container. Results land on Priorities.
 - **Triage**: stat cards summarise tiers; toolbar filters (`Show top 10`, Hide resolved by VEX, Include low-risk, Only with a fix) re-filter without rescanning. A summary line states the effect ("29 findings → 0 worth acting on · 8 low-risk not shown").
 - **Tune**: Scoring rules disclosure re-ranks immediately; the header shows the active preset name, or `custom`.
-- **Record a decision**: Add VEX assessment on a card, then Edit/Create VEX (n) to review and export OpenVEX.
+- **Record a decision**: Add VEX assessment on a card, (opens a docked drawer), then Edit/Create VEX (n) to review and export OpenVEX.
 - **Explore**: Vulnerabilities (filterable table, row details), Dependencies (canvas graph: select, focus, all components), SBOM list, Compare two scans.
 
 ## States
@@ -103,7 +103,8 @@ Order inside the card goes from "what is it" to "what should I do", and the reas
 | State | Treatment |
 |---|---|
 | Empty (before first scan) | counts show 0 |
-| Busy | status line spinner, Scan replaced by Cancel |
+| Filtered to nothing | list shows "Nothing left to show with these filters." |
+| Busy | status line spinner, Scan disabled, Cancel shown |
 | Error | status line in error style (`.err`), message from the Go side verbatim |
 | Nothing to act on | summary line says so; Monitor items stay hidden but counted |
 | Demo mode | persistent banner; only in non-production builds |
@@ -113,7 +114,7 @@ Order inside the card goes from "what is it" to "what should I do", and the reas
 - Everything is keyboard reachable with a visible 2 px focus ring; icon-only controls need `aria-label` (Help has one).
 - Text contrast uses `--text` on `--panel` and `--mute` only for non-essential text. Check any new token pair for 4.5:1.
 - Hover titles explain badges (`findings that need attention`).
-- Long lists use virtual scrolling (`lib/virtual.js`); keep row heights fixed so it keeps working.
+- Long lists use virtual scrolling (`lib/virtual.js`); rows may vary in height; they are measured after render (`useVirtualList`, 10 px gap), so avoid layout that changes height outside interaction or resize.
 - Stat cards and the header form wrap (`flex-wrap`) when the window narrows.
 
 ## Do and don't
