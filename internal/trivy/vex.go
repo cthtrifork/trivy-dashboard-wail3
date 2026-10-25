@@ -272,7 +272,7 @@ type ImportReport struct {
 	Warnings []string `json:"warnings"`
 }
 
-// ParseOpenVEX turns an OpenVEX document (v0.2.0, v0.0.1 or CSAF VEX, as read by go-vex) into assessments for the given findings. A statement with
+// ParseOpenVEX turns an OpenVEX document (v0.2.0, as read by go-vex) into assessments for the given findings. A statement with
 // subcomponents applies to findings whose PURL (or name@version) matches one;
 // a statement without applies to every finding with that vulnerability id.
 // When several statements hit one finding the newest timestamp wins.
@@ -344,25 +344,14 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 	return out, rep, nil
 }
 
-// openVEXDoc reads a document with go-vex's format detection, which accepts
-// OpenVEX v0.2.0, the legacy v0.0.1 layout (string-valued vulnerabilities)
-// and CSAF VEX. go-vex only opens files, so the bytes go through a temp file.
+// openVEXDoc decodes an OpenVEX v0.2.0 document with go-vex.
 func openVEXDoc(data []byte) (*vex.VEX, error) {
-	if !json.Valid(data) {
-		return nil, errors.New("not valid JSON")
-	}
-	dir, err := os.MkdirTemp("", "openvex-")
+	doc, err := vex.Parse(data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("not valid JSON: %w", err)
 	}
-	defer os.RemoveAll(dir)
-	path := filepath.Join(dir, "doc.json")
-	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return nil, err
-	}
-	doc, err := vex.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("not an OpenVEX document: %w", err)
+	if !strings.Contains(doc.Context, "openvex") {
+		return nil, errors.New("not an OpenVEX document (missing openvex @context)")
 	}
 	return doc, nil
 }
