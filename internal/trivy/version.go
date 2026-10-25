@@ -7,7 +7,7 @@ import (
 	deb "github.com/knqyf263/go-deb-version"
 	rpm "github.com/knqyf263/go-rpm-version"
 
-	"github.com/hashicorp/go-version"
+	"github.com/aquasecurity/go-version/pkg/version"
 )
 
 // compareVersions orders a and b by the version scheme of the package URL's type
@@ -35,8 +35,8 @@ func compareVersions(purl, a, b string) int {
 			return va.Compare(vb)
 		}
 	default:
-		va, ea := version.NewVersion(a)
-		vb, eb := version.NewVersion(b)
+		va, ea := version.Parse(a)
+		vb, eb := version.Parse(b)
 		switch {
 		case ea == nil && eb == nil:
 			return va.Compare(vb)
