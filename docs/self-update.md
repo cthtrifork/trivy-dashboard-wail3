@@ -6,13 +6,14 @@ adapted to this app. Open **Options → Check for updates…**.
 
 ## What happens
 
-1. The app asks the GitHub API for the latest release of `cthtrifork/trivy-dashboard-wail3`.
-2. If it is newer, the **Software Update** window shows the release notes and downloads the binary.
-3. The download is checked against `SHA256SUMS` from the same release. Nothing is installed if it does not match.
-4. **Restart & Apply** swaps the running binary for the new one and relaunches. The binary re-executes itself in a
+1. **Check for updates…** asks the GitHub API for the latest release of `cthtrifork/trivy-dashboard-wail3`. It only
+   looks; the button then becomes **Download vX.Y.Z** if the release is newer.
+2. **Download** fetches the binary and checks it against `SHA256SUMS` from the same release. Nothing is installed if
+   it does not match. The button becomes **Restart & apply**.
+3. **Restart & apply** swaps the running binary for the new one and relaunches. The binary re-executes itself in a
    helper mode for the swap, so no separate helper executable is shipped.
 
-Updates only ever run when you click: there is no background polling (`CheckInterval` is unset), so the app contacts
+Every step runs only when you click it: there is no background polling (`CheckInterval` is unset), so the app contacts
 `api.github.com` only on that click.
 
 ## When it is available
@@ -22,7 +23,7 @@ The button is disabled, with the reason as its tooltip, when:
 - the build is not a release (`dev`, or the `ci-<sha>` binaries CI uploads): the updater compares versions with
   `x/mod/semver`, where an invalid string such as `dev` sorts *below every release*, so such a build would otherwise
   offer to replace itself with the newest release;
-- the app runs in headless server mode (the updater needs a native window).
+- the app runs in headless server mode (the updater restarts the native app).
 
 Clicking it also refuses, before downloading anything, when the directory holding the executable is not writable.
 The new binary is staged beside the old one, so a copy installed by a package manager (`/usr/bin`) should be updated
@@ -38,6 +39,10 @@ The updater picks assets by name, so the names are an interface. `scripts/packag
 | `trivy-scanner_linux_amd64` | the updater | the raw binary; the only asset it installs |
 | `trivy-scanner_<version>_linux_amd64.tar.gz` | people | binary + `README.md` + `LICENSE` |
 | `SHA256SUMS` | the updater and people | digests of both files above; the name must stay fixed |
+
+The release also carries the `.deb`, the `.rpm` and the public key that signed them (see
+[releasing](releasing.md#packages)). `SHA256SUMS` lists those too, but the updater never installs them: it skips
+`.deb` and `.rpm` as it does archives, and a packaged install should be updated through the package instead.
 
 Why two downloads of the same program: the updater installs a single file, or an archive with **exactly one top-level
 entry**. The tarball has three, so it would be rejected, and the default asset matcher would pick it whenever GitHub

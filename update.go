@@ -38,6 +38,9 @@ func (s *ScanService) initUpdater(app *application.App) {
 			// The tutorial passes the version without the leading "v".
 			CurrentVersion: strings.TrimPrefix(version, "v"),
 			Providers:      []updater.Provider{provider},
+			// The UI drives check, download and restart as separate clicks; the built-in
+			// window would download as soon as a check finds a release.
+			Window: updater.WindowNone,
 		})
 	}
 	if err != nil {
@@ -50,10 +53,30 @@ func (s *ScanService) initUpdater(app *application.App) {
 // UpdateInfo reports the running version and whether it can update itself.
 func (s *ScanService) UpdateInfo() UpdateInfo { return s.update }
 
-// CheckForUpdates opens the updater window, which checks GitHub Releases, downloads the
-// binary, verifies its SHA-256 and offers "Restart & Apply". It blocks until the update
-// is staged or fails, so it must be called from a binding (its own goroutine), never the UI thread.
-func (s *ScanService) CheckForUpdates() error {
+// UpdateStatus is what a check found.
+type UpdateStatus struct {
+	Available bool   `json:"available"`
+	Version   string `json:"version"`
+	Notes     string `json:"notes"`
+}
+
+// CheckForUpdates asks GitHub Releases whether a newer release exists. It only looks:
+// nothing is downloaded until InstallUpdate is called.
+func (s *ScanService) CheckForUpdates() (UpdateStatus, error) {
+	if !s.update.Enabled {
+		return UpdateStatus{}, errors.New(s.update.Reason)
+	}
+	rel, err := s.app.Updater.Check(context.Background())
+	if err != nil || rel == nil {
+		return UpdateStatus{}, err
+	}
+	return UpdateStatus{Available: true, Version: rel.Version, Notes: rel.Notes}, nil
+}
+
+// InstallUpdate downloads the release CheckForUpdates found, verifies its SHA-256 and
+// stages it beside the running binary. It blocks until staged or failed, so it must be
+// called from a binding (its own goroutine), never the UI thread.
+func (s *ScanService) InstallUpdate() error {
 	if !s.update.Enabled {
 		return errors.New(s.update.Reason)
 	}
@@ -64,5 +87,13 @@ func (s *ScanService) CheckForUpdates() error {
 			return err
 		}
 	}
-	return s.app.Updater.CheckAndInstall(context.Background())
+	return s.app.Updater.DownloadAndInstall(context.Background())
+}
+
+// RestartToUpdate swaps the staged binary in and relaunches the app.
+func (s *ScanService) RestartToUpdate() error {
+	if !s.update.Enabled {
+		return errors.New(s.update.Reason)
+	}
+	return s.app.Updater.Restart(context.Background())
 }
