@@ -45,7 +45,7 @@ jobs:
           node --version
           make frontend
 
-      # ESLint (errors only, see frontend/eslint.config.js) and Prettier. Run `npm run format` to fix.
+      # Biome lint (see frontend/biome.json) and format check. Run `npm run format` to fix.
       - name: Lint and check formatting (frontend)
         run: make lint-frontend
 
