@@ -13,5 +13,6 @@ export {
     ConfigPath,
     Footprint,
     Mode,
-    UpdateInfo
+    UpdateInfo,
+    UpdateStatus
 } from "./models.js";
