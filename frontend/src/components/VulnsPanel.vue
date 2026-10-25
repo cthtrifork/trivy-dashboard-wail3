@@ -3,6 +3,7 @@ import { computed, reactive } from "vue";
 import { result, vex, SEVERITIES, sevStyle } from "../store.js";
 import { TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
+import { useVirtualList } from "../lib/virtual.js";
 import Chip from "./Chip.vue";
 import SummaryCard from "./SummaryCard.vue";
 import VexBox from "./VexBox.vue";
@@ -29,6 +30,7 @@ const rows = computed(() => {
 });
 const emptyText = computed(() => (all.value.length ? "No vulnerabilities match the filter." : "No vulnerabilities found 🎉"));
 const rowKey = (v) => v.key + "|" + v.target;
+const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows, { key: (v) => rowKey(v) });
 const isLink = (url) => /^https?:\/\//.test(url);
 </script>
 
@@ -44,13 +46,17 @@ const isLink = (url) => /^https?:\/\//.test(url);
     <input id="vuln-filter" v-model="state.filter" placeholder="Filter by CVE, package, title…" autocomplete="off">
     <span id="vuln-shown">{{ rows.length }} shown</span>
   </div>
-  <div class="table-wrap">
-    <table id="vuln-table">
+  <div class="table-wrap" ref="scroller">
+    <table id="vuln-table" class="vt">
+      <colgroup>
+        <col style="width:110px"><col style="width:90px"><col style="width:140px"><col style="width:16%"><col style="width:100px">
+        <col style="width:100px"><col style="width:56px"><col style="width:60px"><col style="width:150px"><col>
+      </colgroup>
       <thead>
         <tr><th v-for="[col, label] in COLUMNS" :key="col" :class="sortClass(state, col)" @click="sortBy(state, col)">{{ label }}</th></tr>
       </thead>
-      <tbody>
-        <template v-for="v in rows" :key="rowKey(v)">
+      <tbody class="pad"><tr :style="{ height: before + 'px' }"><td colspan="10"></td></tr></tbody>
+      <tbody v-for="{ item: v } in visible" :key="rowKey(v)" v-measure="rowKey(v)">
           <tr class="row" @click="expanded.has(rowKey(v)) ? expanded.delete(rowKey(v)) : expanded.add(rowKey(v))">
             <td><span class="sev tier" :style="tierStyle(v.tier)">{{ v.tier }} {{ v.priority }}</span></td>
             <td><span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span></td>
@@ -74,8 +80,8 @@ const isLink = (url) => /^https?:\/\//.test(url);
               <VexBox :v="v" />
             </td>
           </tr>
-        </template>
       </tbody>
+      <tbody class="pad"><tr :style="{ height: after + 'px' }"><td colspan="10"></td></tr></tbody>
     </table>
     <div v-if="!rows.length" class="empty" id="vuln-empty">{{ result ? emptyText : "Run a scan to see vulnerabilities." }}</div>
   </div>

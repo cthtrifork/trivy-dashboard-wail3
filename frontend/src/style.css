@@ -118,7 +118,7 @@ dialog::backdrop{background:#0009}
 .verdict{flex:none;padding:10px 14px;border-radius:8px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,var(--accent))}
 .chg{display:inline-block;min-width:22px;text-align:center;font-weight:700;border-radius:4px;padding:0 6px;color:#fff;background:var(--c)}
 .cmp-controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;flex:none}
-.cmp-table{flex:none;overflow:visible}
+.cmp-table{flex:1;min-height:240px}
 
 .graph-wrap{position:relative;min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 #dep-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
@@ -133,3 +133,11 @@ dialog::backdrop{background:#0009}
 .opts-update{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
 .opts-update button:disabled{cursor:not-allowed}
 .opts-update button,.opts-update .kv{white-space:nowrap}
+
+/* Windowed tables (lib/virtual.js): fixed column widths so scrolling never reflows the columns,
+   and spacer rows that stand in for the rows that are not rendered. */
+.vt{table-layout:fixed}
+.vt td{overflow-wrap:anywhere}
+.vt tbody.pad td{padding:0;border:0}
+.vt tbody.pad tr{pointer-events:none}
+.scroll>.pad{flex:none}

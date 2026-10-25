@@ -2,6 +2,7 @@
 import { computed, reactive } from "vue";
 import { result } from "../store.js";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
+import { useVirtualList } from "../lib/virtual.js";
 import SummaryCard from "./SummaryCard.vue";
 
 const state = reactive({ filter: "", sort: "name", dir: 1, hidden: new Set() });
@@ -17,6 +18,7 @@ const rows = computed(() => {
   );
   return sortRows(kept, state, (c, k) => (k === "licenses" ? c.licenses.join(", ") : c[k] ?? ""));
 });
+const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows, { key: (_, i) => i });
 </script>
 
 <template>
@@ -33,13 +35,15 @@ const rows = computed(() => {
     <input id="sbom-filter" v-model="state.filter" placeholder="Filter by name, version, license, purl…" autocomplete="off">
     <span id="sbom-shown">{{ rows.length }} shown<template v-if="result"> · {{ result.sbomFormat }}</template></span>
   </div>
-  <div class="table-wrap">
-    <table id="sbom-table">
+  <div class="table-wrap" ref="scroller">
+    <table id="sbom-table" class="vt">
+      <colgroup><col style="width:28%"><col style="width:14%"><col style="width:10%"><col style="width:14%"><col></colgroup>
       <thead>
         <tr><th v-for="[col, label] in COLUMNS" :key="col" :class="sortClass(state, col)" @click="sortBy(state, col)">{{ label }}</th></tr>
       </thead>
-      <tbody>
-        <tr v-for="(c, i) in rows" :key="i">
+      <tbody class="pad"><tr :style="{ height: before + 'px' }"><td colspan="5"></td></tr></tbody>
+      <tbody v-for="{ item: c, index } in visible" :key="index" v-measure="index">
+        <tr>
           <td class="mono">{{ (c.group ? c.group + "/" : "") + c.name }}</td>
           <td class="mono">{{ c.version || "—" }}</td>
           <td>{{ c.type }}</td>
@@ -47,6 +51,7 @@ const rows = computed(() => {
           <td class="mono">{{ c.purl || "—" }}</td>
         </tr>
       </tbody>
+      <tbody class="pad"><tr :style="{ height: after + 'px' }"><td colspan="5"></td></tr></tbody>
     </table>
     <div v-if="!rows.length" class="empty" id="sbom-empty">{{ result ? "No components match the filter." : "Run a scan to see the SBOM." }}</div>
   </div>

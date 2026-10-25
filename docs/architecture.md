@@ -18,6 +18,10 @@ frontend (Vue 3)     ──Wails bindings──►  ScanService (service.go)
 
 `frontend/` is a Vue 3 + Vite app. `src/App.vue` is the shell (scan form, tabs, status); each tab is a component in `src/components/`. `src/store.js` holds the shared state (the scan result, saved VEX assessments, options) and the log/status plumbing. The UI calls the Go `ScanService` through generated bindings in `frontend/bindings` (`wails3 generate bindings`, run it via `make bindings`), and listens for `scan:log` events with `@wailsio/runtime`. `src/lib/graph.js` is the canvas dependency graph. `npm run build` writes `frontend/dist`, which `main.go` embeds.
 
+### Large scans
+
+Long lists never put every row in the DOM. `src/lib/virtual.js` (`useVirtualList`) renders only the rows near the scroll viewport, between two spacers; it measures the rows it has rendered (rows differ in height: wrapped text, an expanded detail, an open VEX editor) and assumes the average for the rest. It backs the Vulnerabilities, SBOM and Compare tables and the Priorities cards, so the DOM stays around a thousand nodes whether a scan has 30 or 6,000 findings. The tables use fixed column widths so scrolling never reflows them. The log keeps its last ~300 kB, and the dependency detail pane lists at most 100 entries per section. The scan result itself stays in memory as a shallow (non-reactive) object. To re-measure, amplify the demo response in Playwright (route `/wails/runtime`) and compare `document.querySelectorAll('*').length` and the JS heap before and after.
+
 ## Build modes (tags)
 
 | Build | Command | Notes |

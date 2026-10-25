@@ -5,6 +5,7 @@ import { RESOLVED, TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/forma
 import Chip from "./Chip.vue";
 import SummaryCard from "./SummaryCard.vue";
 import VexBox from "./VexBox.vue";
+import { useVirtualList } from "../lib/virtual.js";
 
 const emit = defineEmits(["export"]);
 const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false, includeLow: false });
@@ -38,6 +39,11 @@ const signals = computed(() => {
     (en.warnings?.length ? " ⚠ " + en.warnings.join("; ") + " — ranking uses CVSS only for the missing signals." : "")
   );
 });
+// "all" can be thousands of cards: render only the ones in view. The list is a flex column with a
+// 10px gap, so a spacer stands in for its rows minus the one gap the flexbox adds next to it.
+const GAP = 10;
+const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(list, { key: (v) => cardKey(v), estimate: 250, gap: GAP });
+const cardKey = (v) => v.key + "|" + v.target;
 const attackVector = (v) => /AV:([NALP])/.exec(v.vector)?.[1];
 
 defineExpose({ count: computed(() => pool.value.length) });
@@ -59,13 +65,14 @@ defineExpose({ count: computed(() => pool.value.length) });
     <button class="ghost" id="vex-export-btn" @click="emit('export')">Export OpenVEX ({{ vex.size }})</button>
     <span id="prio-note">{{ note }}</span>
   </div>
-  <div id="prio-list" class="scroll">
+  <div id="prio-list" class="scroll" ref="scroller">
     <div v-if="!result" class="empty">Run a scan to see what matters most.</div>
     <div v-else-if="!all.length" class="empty">No vulnerabilities found 🎉</div>
     <template v-else>
       <div class="kv">{{ signals }}</div>
-      <div v-for="(v, i) in list" :key="v.key + '|' + v.target" class="pcard" :style="tierStyle(v.tier)">
-        <div class="rank">{{ i + 1 }}</div>
+      <div v-if="before > 0" class="pad" :style="{ height: before - GAP + 'px' }"></div>
+      <div v-for="{ item: v, index } in visible" :key="cardKey(v)" v-measure="cardKey(v)" class="pcard" :style="tierStyle(v.tier)">
+        <div class="rank">{{ index + 1 }}</div>
         <div class="pbody">
           <div class="phead">
             <span class="id">{{ v.id }}</span>
@@ -92,6 +99,7 @@ defineExpose({ count: computed(() => pool.value.length) });
         </div>
         <div class="score"><b>{{ v.priority }}</b>score</div>
       </div>
+      <div v-if="after > 0" class="pad" :style="{ height: after - GAP + 'px' }"></div>
       <div v-if="!list.length" class="empty">Nothing left to show with these filters.</div>
       <div v-else-if="pool.length > list.length" class="kv">{{ pool.length - list.length }} more findings not shown — they rank lower.</div>
     </template>

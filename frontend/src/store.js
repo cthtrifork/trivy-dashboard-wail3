@@ -28,9 +28,13 @@ export function setStatus(msg, { err = false, busy = false } = {}) {
 }
 
 export const logText = ref("");
+// Trivy can be chatty on big images: keep the tail only, so the log <pre> stays bounded.
+const LOG_MAX = 400_000, LOG_KEEP = 300_000;
 Events.On("scan:log", (ev) => {
   const line = Array.isArray(ev.data) ? ev.data[0] : ev.data;
-  logText.value += line + "\n";
+  let text = logText.value + line + "\n";
+  if (text.length > LOG_MAX) text = text.slice(text.indexOf("\n", text.length - LOG_KEEP) + 1);
+  logText.value = text;
   if (scanning.value) setStatus(String(line).slice(0, 200), { busy: true });
 });
 

@@ -3,6 +3,7 @@ import { computed, reactive, ref, shallowRef } from "vue";
 import { ScanService, SEVERITIES, sevStyle, opts, cmpForm, scanning, comparing, logText, setStatus, errText, lsSet, cancel } from "../store.js";
 import { pct } from "../lib/format.js";
 import Chip from "./Chip.vue";
+import { useVirtualList } from "../lib/virtual.js";
 
 const CHG_COLOR = { added: "var(--CRITICAL)", removed: "#2fb344", unchanged: "var(--UNKNOWN)", upgraded: "var(--accent)", downgraded: "var(--HIGH)" };
 const CHG_SIGN = { added: "+", removed: "−", unchanged: "=", upgraded: "↑", downgraded: "↓" };
@@ -62,7 +63,10 @@ const pkgRows = computed(() => {
   const q = filter.value.toLowerCase();
   return data.value.packages.filter((x) => show.has(x.change) && (!q || x.name.toLowerCase().includes(q)));
 });
-const rowCount = computed(() => (view.value === "vulns" ? vulnRows.value : pkgRows.value).length);
+const current = computed(() => (!data.value ? [] : view.value === "vulns" ? vulnRows.value : pkgRows.value));
+const rowCount = computed(() => current.value.length);
+// Both tables can run to thousands of rows (a big base-image bump): render only the visible ones.
+const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(current, { key: (_, i) => i });
 
 const arrow = (a, b) => (a && b ? `${a} → ${b}` : a || b || "—");
 const delta = (a, b) => {
@@ -110,16 +114,20 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
         </label>
         <input v-model="filter" placeholder="Filter…" autocomplete="off">
       </div>
-      <div class="table-wrap cmp-table" id="cmp-table">
-        <table>
+      <div class="table-wrap cmp-table" id="cmp-table" ref="scroller">
+        <table class="vt">
+          <colgroup v-if="view === 'vulns'"><col style="width:40px"><col style="width:90px"><col style="width:140px"><col style="width:20%"><col style="width:18%"><col><col style="width:130px"></colgroup>
+          <colgroup v-else><col style="width:40px"><col style="width:30%"><col style="width:12%"><col style="width:22%"><col></colgroup>
           <thead v-if="view === 'vulns'">
             <tr><th v-for="h in ['', 'Severity', 'ID', 'Package', 'Version', 'Why', 'Signals']" :key="h" style="cursor:default">{{ h }}</th></tr>
           </thead>
           <thead v-else>
             <tr><th v-for="h in ['', 'Package', 'Kind', 'Version', 'Vulnerabilities']" :key="h" style="cursor:default">{{ h }}</th></tr>
           </thead>
-          <tbody v-if="view === 'vulns'">
-            <tr v-for="(x, i) in vulnRows" :key="i">
+          <tbody class="pad"><tr :style="{ height: before + 'px' }"><td :colspan="view === 'vulns' ? 7 : 5"></td></tr></tbody>
+          <template v-if="view === 'vulns'">
+          <tbody v-for="{ item: x, index } in visible" :key="index" v-measure="index">
+            <tr>
               <td><span class="chg" :style="chgStyle(x.change)" :title="x.change">{{ CHG_SIGN[x.change] }}</span></td>
               <td><span class="sev" :style="sevStyle(x.vuln.severity)">{{ x.vuln.severity }}</span></td>
               <td class="mono">{{ x.vuln.id }}</td>
@@ -132,8 +140,10 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
               </td>
             </tr>
           </tbody>
-          <tbody v-else>
-            <tr v-for="(x, i) in pkgRows" :key="i">
+          </template>
+          <template v-else>
+          <tbody v-for="{ item: x, index } in visible" :key="index" v-measure="index">
+            <tr>
               <td><span class="chg" :style="chgStyle(x.change)" :title="x.change">{{ CHG_SIGN[x.change] }}</span></td>
               <td class="mono">{{ x.name }}</td>
               <td>{{ x.category === "OS" ? "OS" : x.type }}</td>
@@ -141,6 +151,8 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
               <td>{{ x.vulnsA }} → {{ x.vulnsB }} <span :class="['delta', delta(x.vulnsA, x.vulnsB).cls]">{{ delta(x.vulnsA, x.vulnsB).text }}</span></td>
             </tr>
           </tbody>
+          </template>
+          <tbody class="pad"><tr :style="{ height: after + 'px' }"><td :colspan="view === 'vulns' ? 7 : 5"></td></tr></tbody>
         </table>
         <div v-if="!rowCount" class="empty">Nothing to show with these filters.</div>
       </div>

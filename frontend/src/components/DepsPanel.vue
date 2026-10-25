@@ -17,6 +17,10 @@ let depth = null; // ref -> hops from the image root, for the layer bands
 const nodes = computed(() => result.value?.depNodes ?? {});
 const selectedNode = computed(() => (dep.selected && nodes.value[dep.selected]) || null);
 const selectedVulns = computed(() => (selectedNode.value ? selectedNode.value.own.map((i) => result.value.vulnerabilities[i]) : []));
+const shownVulns = computed(() => selectedVulns.value.slice(0, LIST_MAX));
+// A hub such as stdlib can have hundreds of dependants or findings: list the first few.
+const LIST_MAX = 100;
+const more = (n) => (n > LIST_MAX ? n - LIST_MAX : 0);
 const count = computed(() => Object.keys(nodes.value).length);
 
 const total = (n) => SEVERITIES.reduce((t, s) => t + (n.totalCounts[s] || 0), 0);
@@ -142,7 +146,7 @@ watch(result, () => {
 });
 onMounted(renderGraph);
 
-const links = (refs) => refs.map((r) => [r, nodes.value[r]]);
+const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
 </script>
 
 <template>
@@ -180,11 +184,12 @@ const links = (refs) => refs.map((r) => [r, nodes.value[r]]);
         <div class="kv">{{ selectedNode.category }} · {{ selectedNode.type }}</div>
         <div class="kv mono">{{ selectedNode.purl }}</div>
         <h4>Vulnerabilities ({{ selectedVulns.length }}{{ total(selectedNode) > selectedVulns.length ? `, ${total(selectedNode)} incl. dependencies` : "" }})</h4>
-        <div v-for="v in selectedVulns" :key="v.key + '|' + v.target" class="vrow">
+        <div v-for="v in shownVulns" :key="v.key + '|' + v.target" class="vrow">
           <span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span>
           <span class="mono">{{ v.id }}</span>
           <span class="kv">{{ v.fixed ? `fixed in ${v.fixed}` : "no fix" }}</span>
         </div>
+        <div v-if="more(selectedVulns.length)" class="kv">…and {{ more(selectedVulns.length) }} more</div>
         <div v-if="!selectedVulns.length" class="kv">none in this package</div>
         <template v-for="[title, refs] in [['Depends on', selectedNode.children], ['Required by', selectedNode.parents]]" :key="title">
           <h4>{{ title }} ({{ refs.length }})</h4>
@@ -192,6 +197,7 @@ const links = (refs) => refs.map((r) => [r, nodes.value[r]]);
             <span>{{ x.name }} {{ x.version }}</span>
             <SevBadges :own="x.ownCounts" :total="x.totalCounts" />
           </div>
+          <div v-if="more(refs.length)" class="kv">…and {{ more(refs.length) }} more</div>
           <div v-if="!refs.length" class="kv">none</div>
         </template>
       </template>
