@@ -15,7 +15,9 @@ export class Graph {
     this.edges = [];
     this.byId = new Map();
     this.pos = new Map(); // id -> {x,y}, remembered across setData calls
-    this.k = 1; this.tx = 0; this.ty = 0;
+    this.k = 1;
+    this.tx = 0;
+    this.ty = 0;
     this.alpha = 0;
     this.autoFit = true;
     this.selected = null;
@@ -28,7 +30,9 @@ export class Graph {
     canvas.addEventListener("pointerdown", (e) => this.down(e));
     canvas.addEventListener("pointermove", (e) => this.move(e));
     canvas.addEventListener("pointerup", (e) => this.up(e));
-    canvas.addEventListener("pointerleave", () => { if (!this.drag) this.setHover(null); });
+    canvas.addEventListener("pointerleave", () => {
+      if (!this.drag) this.setHover(null);
+    });
     canvas.addEventListener("wheel", (e) => this.wheel(e), { passive: false });
     canvas.addEventListener("dblclick", () => this.fit());
   }
@@ -55,7 +59,12 @@ export class Graph {
     this.edges = edges.filter(([a, b]) => this.byId.has(a) && this.byId.has(b)).map(([a, b]) => [this.byId.get(a), this.byId.get(b)]);
     this.adj = this.nodes.map(() => new Set());
     this.deg = this.nodes.map(() => 0);
-    for (const [a, b] of this.edges) { this.adj[a].add(b); this.adj[b].add(a); this.deg[a]++; this.deg[b]++; }
+    for (const [a, b] of this.edges) {
+      this.adj[a].add(b);
+      this.adj[b].add(a);
+      this.deg[a]++;
+      this.deg[b]++;
+    }
     this.autoFit = true;
     this.seed = 1;
     this.alpha = 1;
@@ -86,7 +95,9 @@ export class Graph {
     return { x: r.left + n.x * this.k + this.tx, y: r.top + n.y * this.k + this.ty };
   }
 
-  size() { return { w: this.c.clientWidth, h: this.c.clientHeight }; }
+  size() {
+    return { w: this.c.clientWidth, h: this.c.clientHeight };
+  }
 
   resize() {
     const dpr = window.devicePixelRatio || 1;
@@ -102,12 +113,18 @@ export class Graph {
     if (!this.nodes.length) return;
     const { w, h } = this.size();
     if (!w || !h) return;
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    let x0 = Infinity,
+      y0 = Infinity,
+      x1 = -Infinity,
+      y1 = -Infinity;
     for (const n of this.nodes) {
-      x0 = Math.min(x0, n.x - n.r); x1 = Math.max(x1, n.x + n.r);
-      y0 = Math.min(y0, n.y - n.r); y1 = Math.max(y1, n.y + n.r);
+      x0 = Math.min(x0, n.x - n.r);
+      x1 = Math.max(x1, n.x + n.r);
+      y0 = Math.min(y0, n.y - n.r);
+      y1 = Math.max(y1, n.y + n.r);
     }
-    const pad = 50, bottom = 40; // extra room at the bottom for the legend
+    const pad = 50,
+      bottom = 40; // extra room at the bottom for the legend
     this.k = Math.min(1.6, (w - pad * 2) / Math.max(x1 - x0, 1), (h - pad * 2 - bottom) / Math.max(y1 - y0, 1));
     this.tx = w / 2 - ((x0 + x1) / 2) * this.k;
     this.ty = (h - bottom) / 2 - ((y0 + y1) / 2) * this.k;
@@ -131,55 +148,85 @@ export class Graph {
   }
 
   step() {
-    const ns = this.nodes, a = this.alpha;
+    const ns = this.nodes,
+      a = this.alpha;
     for (let i = 0; i < ns.length; i++) {
       const p = ns[i];
       for (let j = i + 1; j < ns.length; j++) {
         const q = ns[j];
-        let dx = p.x - q.x, dy = p.y - q.y;
+        let dx = p.x - q.x,
+          dy = p.y - q.y;
         let d2 = dx * dx + dy * dy;
         if (d2 > 90000) continue;
-        if (d2 < 1) { dx = this.rand() - 0.5; dy = this.rand() - 0.5; d2 = 1; }
+        if (d2 < 1) {
+          dx = this.rand() - 0.5;
+          dy = this.rand() - 0.5;
+          d2 = 1;
+        }
         const d = Math.sqrt(d2);
         const f = (2600 / Math.max(d2, 400)) * a;
-        const fx = (dx / d) * f, fy = (dy / d) * f;
-        p.vx += fx; p.vy += fy; q.vx -= fx; q.vy -= fy;
+        const fx = (dx / d) * f,
+          fy = (dy / d) * f;
+        p.vx += fx;
+        p.vy += fy;
+        q.vx -= fx;
+        q.vy -= fy;
       }
     }
     for (const [ai, bi] of this.edges) {
-      const p = ns[ai], q = ns[bi];
-      const dx = q.x - p.x, dy = q.y - p.y;
+      const p = ns[ai],
+        q = ns[bi];
+      const dx = q.x - p.x,
+        dy = q.y - p.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
       const rest = 70 + p.r + q.r;
       const f = (d - rest) * 0.05 * a;
-      const fx = (dx / d) * f, fy = (dy / d) * f;
+      const fx = (dx / d) * f,
+        fy = (dy / d) * f;
       // Weight by degree (as d3-force does): the endpoint with more links moves less.
       // Without this a hub with hundreds of links receives all of their force at once and
       // is flung to infinity, which is what real Go-module graphs (one root, ~350 children) do.
       const sum = this.deg[ai] + this.deg[bi];
-      const wp = this.deg[bi] / sum, wq = this.deg[ai] / sum;
-      p.vx += fx * wp; p.vy += fy * wp; q.vx -= fx * wq; q.vy -= fy * wq;
+      const wp = this.deg[bi] / sum,
+        wq = this.deg[ai] / sum;
+      p.vx += fx * wp;
+      p.vy += fy * wp;
+      q.vx -= fx * wq;
+      q.vy -= fy * wq;
     }
     for (const n of ns) {
-      if (n.fixed) { n.vx = n.vy = 0; continue; }
+      if (n.fixed) {
+        n.vx = n.vy = 0;
+        continue;
+      }
       n.vy += ((n.depth || 0) * LEVEL - n.y) * 0.02 * a; // layer bands
       n.vx += -n.x * 0.002 * a;
-      n.vx *= 0.8; n.vy *= 0.8;
+      n.vx *= 0.8;
+      n.vy *= 0.8;
       const speed = Math.hypot(n.vx, n.vy);
-      if (speed > MAX_SPEED) { n.vx *= MAX_SPEED / speed; n.vy *= MAX_SPEED / speed; }
-      n.x += n.vx; n.y += n.vy;
-      if (!Number.isFinite(n.x) || !Number.isFinite(n.y)) { n.x = n.y = n.vx = n.vy = 0; } // never let one bad node blank the canvas
+      if (speed > MAX_SPEED) {
+        n.vx *= MAX_SPEED / speed;
+        n.vy *= MAX_SPEED / speed;
+      }
+      n.x += n.vx;
+      n.y += n.vy;
+      if (!Number.isFinite(n.x) || !Number.isFinite(n.y)) {
+        n.x = n.y = n.vx = n.vy = 0;
+      } // never let one bad node blank the canvas
     }
   }
 
   // ---- drawing ----
   draw() {
-    const ctx = this.ctx, dpr = window.devicePixelRatio || 1;
+    const ctx = this.ctx,
+      dpr = window.devicePixelRatio || 1;
     const { w, h } = this.size();
     if (!w || !h) return;
     const css = getComputedStyle(document.documentElement);
     const col = (v) => css.getPropertyValue(v).trim();
-    const text = col("--text"), mute = col("--mute"), accent = col("--accent");
+    const text = col("--text"),
+      mute = col("--mute"),
+      accent = col("--accent");
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
@@ -187,22 +234,35 @@ export class Graph {
 
     const sel = this.selected != null ? this.byId.get(this.selected) : undefined;
     const focus = new Set();
-    if (sel !== undefined) { focus.add(sel); this.adj[sel].forEach((i) => focus.add(i)); }
+    if (sel !== undefined) {
+      focus.add(sel);
+      this.adj[sel].forEach((i) => focus.add(i));
+    }
     const hov = this.hover != null ? this.byId.get(this.hover) : undefined;
     const active = (i) => sel === undefined || focus.has(i);
 
     // edges
     for (const [ai, bi] of this.edges) {
-      const p = this.nodes[ai], q = this.nodes[bi];
+      const p = this.nodes[ai],
+        q = this.nodes[bi];
       const hot = sel !== undefined && (ai === sel || bi === sel);
       ctx.globalAlpha = hot ? 1 : sel !== undefined ? 0.1 : 0.45;
       ctx.strokeStyle = hot ? accent : mute;
       ctx.fillStyle = ctx.strokeStyle;
       ctx.lineWidth = (hot ? 2 : 1) / this.k;
-      const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
-      const ux = dx / d, uy = dy / d;
-      const sx = p.x + ux * p.r, sy = p.y + uy * p.r, ex = q.x - ux * (q.r + 1), ey = q.y - uy * (q.r + 1);
-      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+      const dx = q.x - p.x,
+        dy = q.y - p.y,
+        d = Math.hypot(dx, dy) || 1;
+      const ux = dx / d,
+        uy = dy / d;
+      const sx = p.x + ux * p.r,
+        sy = p.y + uy * p.r,
+        ex = q.x - ux * (q.r + 1),
+        ey = q.y - uy * (q.r + 1);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.stroke();
       const s = Math.max(5, 7 / this.k);
       ctx.beginPath();
       ctx.moveTo(ex, ey);
@@ -218,7 +278,12 @@ export class Graph {
     this.nodes.forEach((n, i) => {
       const on = active(i);
       ctx.globalAlpha = on ? 1 : 0.3;
-      if (n.hl) { ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 7, 0, 7); ctx.fillStyle = "#f5b80060"; ctx.fill(); }
+      if (n.hl) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r + 7, 0, 7);
+        ctx.fillStyle = "#f5b80060";
+        ctx.fill();
+      }
       ctx.beginPath();
       if (n.shape === "square") ctx.roundRect(n.x - n.r, n.y - n.r, n.r * 2, n.r * 2, 3);
       else ctx.arc(n.x, n.y, n.r, 0, 7);
@@ -228,7 +293,8 @@ export class Graph {
       ctx.strokeStyle = n.ring || mute;
       ctx.stroke();
       if (i === sel || i === hov) {
-        ctx.lineWidth = 2 / this.k; ctx.strokeStyle = text;
+        ctx.lineWidth = 2 / this.k;
+        ctx.strokeStyle = text;
         ctx.beginPath();
         if (n.shape === "square") ctx.roundRect(n.x - n.r - 3, n.y - n.r - 3, n.r * 2 + 6, n.r * 2 + 6, 4);
         else ctx.arc(n.x, n.y, n.r + 3, 0, 7);
@@ -239,7 +305,8 @@ export class Graph {
 
     ctx.globalAlpha = 1;
     ctx.font = `${12 / Math.min(Math.max(this.k, 0.6), 1.4)}px system-ui, sans-serif`;
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
     const bg = col("--panel");
     // Selected/hovered labels always show in full. The rest are shortened and skipped
     // when they would overlap one already placed, so a dense graph stays readable.
@@ -251,12 +318,16 @@ export class Graph {
     for (const n of labelled) {
       const important = rank(n) === 0;
       const t = important ? n.label + (n.sub ? " " + n.sub : "") : shorten(n.label);
-      const w = ctx.measureText(t).width, y = n.y + n.r + 4;
+      const w = ctx.measureText(t).width,
+        y = n.y + n.r + 4;
       const box = [n.x - w / 2 - 2, y - 1, n.x + w / 2 + 2, y + fontPx + 1];
       if (!important && placed.some((r) => box[0] < r[2] && box[2] > r[0] && box[1] < r[3] && box[3] > r[1])) continue;
       placed.push(box);
-      ctx.lineWidth = 3 / this.k; ctx.strokeStyle = bg; ctx.strokeText(t, n.x, y);
-      ctx.fillStyle = text; ctx.fillText(t, n.x, y);
+      ctx.lineWidth = 3 / this.k;
+      ctx.strokeStyle = bg;
+      ctx.strokeText(t, n.x, y);
+      ctx.fillStyle = text;
+      ctx.fillText(t, n.x, y);
     }
   }
 
@@ -265,14 +336,20 @@ export class Graph {
     const r = this.c.getBoundingClientRect();
     return { sx: e.clientX - r.left, sy: e.clientY - r.top };
   }
-  world(sx, sy) { return { x: (sx - this.tx) / this.k, y: (sy - this.ty) / this.k }; }
+  world(sx, sy) {
+    return { x: (sx - this.tx) / this.k, y: (sy - this.ty) / this.k };
+  }
 
   hit(sx, sy) {
     const { x, y } = this.world(sx, sy);
-    let best = -1, bd = Infinity;
+    let best = -1,
+      bd = Infinity;
     this.nodes.forEach((n, i) => {
       const d = Math.hypot(n.x - x, n.y - y);
-      if (d <= n.r + 4 / this.k && d < bd) { best = i; bd = d; }
+      if (d <= n.r + 4 / this.k && d < bd) {
+        best = i;
+        bd = d;
+      }
     });
     return best;
   }

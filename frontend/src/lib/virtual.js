@@ -15,7 +15,10 @@ export function useVirtualList(items, { key, estimate = 40, gap = 0, overscan = 
   const heights = new Map(); // key -> measured height including `gap`
   const nodes = new Map(); // key -> rendered element
   const keyOf = new WeakMap(); // element -> key it is registered under
-  let measured = 0, total = 0, raf = 0, cleanup = null;
+  let measured = 0,
+    total = 0,
+    raf = 0,
+    cleanup = null;
 
   const average = () => (measured ? total / measured : estimate);
 
@@ -32,7 +35,8 @@ export function useVirtualList(items, { key, estimate = 40, gap = 0, overscan = 
   // Separate computeds so a scroll only re-renders when the window actually moves.
   const first = computed(() => {
     const o = offsets.value;
-    let lo = 0, hi = o.length - 1;
+    let lo = 0,
+      hi = o.length - 1;
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
       o[mid + 1] > scrollTop.value ? (hi = mid) : (lo = mid + 1);
@@ -40,7 +44,9 @@ export function useVirtualList(items, { key, estimate = 40, gap = 0, overscan = 
     return Math.max(0, lo - overscan);
   });
   const last = computed(() => {
-    const o = offsets.value, n = o.length - 1, bottom = scrollTop.value + viewport.value;
+    const o = offsets.value,
+      n = o.length - 1,
+      bottom = scrollTop.value + viewport.value;
     let i = first.value;
     while (i < n && o[i] < bottom) i++;
     return Math.min(n, i + overscan);
@@ -57,18 +63,33 @@ export function useVirtualList(items, { key, estimate = 40, gap = 0, overscan = 
       const h = node.getBoundingClientRect().height;
       if (!h) continue; // hidden panel: nothing to learn
       const prev = heights.get(k);
-      if (prev === undefined) { measured++; total += h; }
-      if (prev === undefined || Math.abs(prev - (h + gap)) > 0.5) { heights.set(k, h + gap); changed = true; }
+      if (prev === undefined) {
+        measured++;
+        total += h;
+      }
+      if (prev === undefined || Math.abs(prev - (h + gap)) > 0.5) {
+        heights.set(k, h + gap);
+        changed = true;
+      }
     }
     if (changed) version.value++;
   }
-  const schedule = () => { raf ||= requestAnimationFrame(measure); };
+  const schedule = () => {
+    raf ||= requestAnimationFrame(measure);
+  };
 
   const vMeasure = {
-    mounted(el, b) { keyOf.set(el, b.value); nodes.set(b.value, el); },
+    mounted(el, b) {
+      keyOf.set(el, b.value);
+      nodes.set(b.value, el);
+    },
     updated(el, b) {
       const prev = keyOf.get(el);
-      if (prev !== b.value) { nodes.delete(prev); keyOf.set(el, b.value); nodes.set(b.value, el); }
+      if (prev !== b.value) {
+        nodes.delete(prev);
+        keyOf.set(el, b.value);
+        nodes.set(b.value, el);
+      }
     },
     beforeUnmount(el) {
       const k = keyOf.get(el);

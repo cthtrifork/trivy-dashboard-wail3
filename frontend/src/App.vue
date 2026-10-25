@@ -1,8 +1,23 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import {
-  ScanService, result, image, opts, saveTrivyImage, scanning, comparing, status, logText, mode, appInfo, footprint,
-  runScan, cancel, init, setStatus, errText,
+  ScanService,
+  result,
+  image,
+  opts,
+  saveTrivyImage,
+  scanning,
+  comparing,
+  status,
+  logText,
+  mode,
+  appInfo,
+  footprint,
+  runScan,
+  cancel,
+  init,
+  setStatus,
+  errText,
 } from "./store.js";
 import { bytes } from "./lib/format.js";
 import PrioritiesPanel from "./components/PrioritiesPanel.vue";
@@ -18,7 +33,9 @@ const vexDialog = ref(null);
 const logEl = ref(null);
 
 const trivyPlaceholder = computed(() =>
-  mode.value?.trivyImage ? "Trivy version or image (default " + mode.value.trivyImage.split("/").pop() + ")" : "Trivy version or image (default)"
+  mode.value?.trivyImage
+    ? "Trivy version or image (default " + mode.value.trivyImage.split("/").pop() + ")"
+    : "Trivy version or image (default)",
 );
 const meta = computed(() => (result.value ? `${result.value.image}${result.value.os ? " · " + result.value.os : ""}` : ""));
 const counts = computed(() => ({
@@ -31,9 +48,10 @@ const footprintNote = computed(() => {
   const f = footprint.value;
   if (!f) return "";
   const cache = f.cacheBytes < 0 ? `Trivy cache in podman volume ${f.cacheLocation}` : `Trivy cache ${bytes(f.cacheBytes)}`;
-  const mem = f.webviewBytes < 0
-    ? `~${bytes(f.memoryBytes)} app memory (excl. webview and podman)`
-    : `~${bytes(f.memoryBytes)} app + ~${bytes(f.webviewBytes)} webview memory (excl. podman)`;
+  const mem =
+    f.webviewBytes < 0
+      ? `~${bytes(f.memoryBytes)} app memory (excl. webview and podman)`
+      : `~${bytes(f.memoryBytes)} app + ~${bytes(f.webviewBytes)} webview memory (excl. podman)`;
   return `Footprint: ${cache} · KEV cache ${bytes(f.appCacheBytes)} · ${mem}`;
 });
 
@@ -62,23 +80,43 @@ onMounted(init);
 <template>
   <header>
     <form id="scan-form" @submit.prevent="runScan">
-      <input id="image" v-model="image" placeholder="Container image, e.g. docker.io/library/nginx:1.27" autocomplete="off" spellcheck="false" required>
+      <input
+        id="image"
+        v-model="image"
+        placeholder="Container image, e.g. docker.io/library/nginx:1.27"
+        autocomplete="off"
+        spellcheck="false"
+        required
+      />
       <button id="scan-btn" type="submit" :disabled="scanning">Scan</button>
       <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
       <details id="opts">
         <summary>Options</summary>
         <div class="opts-body">
-          <label><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed"> Ignore unfixed</label>
-          <input id="username" v-model="opts.username" placeholder="Registry username" autocomplete="off">
-          <input id="password" v-model="opts.password" type="password" placeholder="Registry password / token" autocomplete="off">
+          <label><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed" /> Ignore unfixed</label>
+          <input id="username" v-model="opts.username" placeholder="Registry username" autocomplete="off" />
+          <input id="password" v-model="opts.password" type="password" placeholder="Registry password / token" autocomplete="off" />
           <input
-            id="trivy-image" v-model="opts.trivyImage" :placeholder="trivyPlaceholder" autocomplete="off" spellcheck="false"
+            id="trivy-image"
+            v-model="opts.trivyImage"
+            :placeholder="trivyPlaceholder"
+            autocomplete="off"
+            spellcheck="false"
             title="Empty uses the default version. Enter a version such as 0.77.0, or a full image reference."
             @change="saveTrivyImage"
-          >
+          />
           <div class="opts-update">
             <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>
-            <button type="button" class="ghost" id="update-btn" :disabled="!appInfo?.enabled" :title="appInfo?.enabled ? '' : appInfo?.reason" @click="checkForUpdates">Check for updates…</button>
+            <button
+              type="button"
+              class="ghost"
+              id="update-btn"
+              :disabled="!appInfo?.enabled"
+              :title="appInfo?.enabled ? '' : appInfo?.reason"
+              @click="checkForUpdates"
+            >
+              Check for updates…
+            </button>
           </div>
         </div>
       </details>
@@ -89,21 +127,33 @@ onMounted(init);
   <div id="mode-banner" v-if="mode?.fixtures">{{ mode.detail }}</div>
 
   <nav>
-    <button :class="['tab', { active: tab === 'prio' }]" data-tab="prio" @click="tab = 'prio'">Priorities <span class="badge" id="prio-count" title="findings that need attention">{{ prio?.count ?? 0 }}</span></button>
-    <button :class="['tab', { active: tab === 'vulns' }]" data-tab="vulns" @click="tab = 'vulns'">Vulnerabilities <span class="badge" id="vuln-count">{{ counts.vulns }}</span></button>
-    <button :class="['tab', { active: tab === 'deps' }]" data-tab="deps" @click="tab = 'deps'">Dependencies <span class="badge" id="dep-count">{{ counts.deps }}</span></button>
-    <button :class="['tab', { active: tab === 'sbom' }]" data-tab="sbom" @click="tab = 'sbom'">SBOM <span class="badge" id="sbom-count">{{ counts.sbom }}</span></button>
+    <button :class="['tab', { active: tab === 'prio' }]" data-tab="prio" @click="tab = 'prio'">
+      Priorities <span class="badge" id="prio-count" title="findings that need attention">{{ prio?.count ?? 0 }}</span>
+    </button>
+    <button :class="['tab', { active: tab === 'vulns' }]" data-tab="vulns" @click="tab = 'vulns'">
+      Vulnerabilities <span class="badge" id="vuln-count">{{ counts.vulns }}</span>
+    </button>
+    <button :class="['tab', { active: tab === 'deps' }]" data-tab="deps" @click="tab = 'deps'">
+      Dependencies <span class="badge" id="dep-count">{{ counts.deps }}</span>
+    </button>
+    <button :class="['tab', { active: tab === 'sbom' }]" data-tab="sbom" @click="tab = 'sbom'">
+      SBOM <span class="badge" id="sbom-count">{{ counts.sbom }}</span>
+    </button>
     <button :class="['tab', { active: tab === 'compare' }]" data-tab="compare" @click="tab = 'compare'">Compare</button>
     <button :class="['tab', 'right', { active: tab === 'log' }]" data-tab="log" @click="tab = 'log'">Log</button>
   </nav>
 
   <main>
-    <section id="tab-prio" class="panel" :class="{ active: tab === 'prio' }"><PrioritiesPanel ref="prio" @export="vexDialog.open()" /></section>
+    <section id="tab-prio" class="panel" :class="{ active: tab === 'prio' }">
+      <PrioritiesPanel ref="prio" @export="vexDialog.open()" />
+    </section>
     <section id="tab-vulns" class="panel" :class="{ active: tab === 'vulns' }"><VulnsPanel /></section>
     <section id="tab-deps" class="panel" :class="{ active: tab === 'deps' }"><DepsPanel /></section>
     <section id="tab-sbom" class="panel" :class="{ active: tab === 'sbom' }"><SbomPanel /></section>
     <section id="tab-compare" class="panel" :class="{ active: tab === 'compare' }"><ComparePanel /></section>
-    <section id="tab-log" class="panel" :class="{ active: tab === 'log' }"><pre id="log" ref="logEl">{{ logText }}</pre></section>
+    <section id="tab-log" class="panel" :class="{ active: tab === 'log' }">
+      <pre id="log" ref="logEl">{{ logText }}</pre>
+    </section>
   </main>
 
   <VexDialog ref="vexDialog" />

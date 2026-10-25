@@ -1,11 +1,30 @@
 <script setup>
 import { computed, reactive, ref, shallowRef } from "vue";
-import { ScanService, SEVERITIES, sevStyle, opts, cmpForm, scanning, comparing, logText, setStatus, errText, lsSet, cancel } from "../store.js";
+import {
+  ScanService,
+  SEVERITIES,
+  sevStyle,
+  opts,
+  cmpForm,
+  scanning,
+  comparing,
+  logText,
+  setStatus,
+  errText,
+  lsSet,
+  cancel,
+} from "../store.js";
 import { pct } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import { useVirtualList } from "../lib/virtual.js";
 
-const CHG_COLOR = { added: "var(--CRITICAL)", removed: "#2fb344", unchanged: "var(--UNKNOWN)", upgraded: "var(--accent)", downgraded: "var(--HIGH)" };
+const CHG_COLOR = {
+  added: "var(--CRITICAL)",
+  removed: "#2fb344",
+  unchanged: "var(--UNKNOWN)",
+  upgraded: "var(--accent)",
+  downgraded: "var(--HIGH)",
+};
 const CHG_SIGN = { added: "+", removed: "−", unchanged: "=", upgraded: "↑", downgraded: "↓" };
 const chgStyle = (c) => ({ "--c": CHG_COLOR[c] });
 
@@ -28,8 +47,12 @@ async function loadTags() {
 
 async function run() {
   const req = {
-    repo: cmpForm.repo, tagA: cmpForm.a, tagB: cmpForm.b,
-    username: opts.username, password: opts.password, ignoreUnfixed: opts.ignoreUnfixed,
+    repo: cmpForm.repo,
+    tagA: cmpForm.a,
+    tagB: cmpForm.b,
+    username: opts.username,
+    password: opts.password,
+    ignoreUnfixed: opts.ignoreUnfixed,
     trivyImage: opts.trivyImage.trim(),
   };
   for (const k of ["repo", "a", "b"]) lsSet("cmp-" + k, cmpForm[k]);
@@ -57,7 +80,9 @@ const counts = computed(() => {
 });
 const vulnRows = computed(() => {
   const q = filter.value.toLowerCase();
-  return data.value.vulns.filter((x) => show.has(x.change) && (!q || [x.vuln.id, x.vuln.package, x.cause, x.vuln.title].join(" ").toLowerCase().includes(q)));
+  return data.value.vulns.filter(
+    (x) => show.has(x.change) && (!q || [x.vuln.id, x.vuln.package, x.cause, x.vuln.title].join(" ").toLowerCase().includes(q)),
+  );
 });
 const pkgRows = computed(() => {
   const q = filter.value.toLowerCase();
@@ -78,10 +103,21 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
 
 <template>
   <form id="cmp-form" class="toolbar wrap" @submit.prevent="run">
-    <input id="cmp-repo" v-model="cmpForm.repo" placeholder="Image repository, e.g. docker.io/library/nginx" autocomplete="off" spellcheck="false" required>
-    <label class="chk">Base <input id="cmp-a" v-model="cmpForm.a" list="cmp-tags" placeholder="tag, e.g. 1.26" autocomplete="off" required></label>
+    <input
+      id="cmp-repo"
+      v-model="cmpForm.repo"
+      placeholder="Image repository, e.g. docker.io/library/nginx"
+      autocomplete="off"
+      spellcheck="false"
+      required
+    />
+    <label class="chk"
+      >Base <input id="cmp-a" v-model="cmpForm.a" list="cmp-tags" placeholder="tag, e.g. 1.26" autocomplete="off" required
+    /></label>
     <span class="kv">→</span>
-    <label class="chk">Target <input id="cmp-b" v-model="cmpForm.b" list="cmp-tags" placeholder="tag, e.g. 1.27" autocomplete="off" required></label>
+    <label class="chk"
+      >Target <input id="cmp-b" v-model="cmpForm.b" list="cmp-tags" placeholder="tag, e.g. 1.27" autocomplete="off" required
+    /></label>
     <datalist id="cmp-tags"><option v-for="t in tags" :key="t" :value="t"></option></datalist>
     <button class="ghost" id="cmp-load" type="button" @click="loadTags">Load tags</button>
     <button id="cmp-go" type="submit" :disabled="comparing">Compare</button>
@@ -89,16 +125,29 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
     <span id="cmp-note" class="kv">{{ note }}</span>
   </form>
   <div id="cmp-out" class="scroll">
-    <div v-if="!data" class="empty">Pick two tags of an image to see what changed: vulnerabilities added and removed, and package changes.</div>
+    <div v-if="!data" class="empty">
+      Pick two tags of an image to see what changed: vulnerabilities added and removed, and package changes.
+    </div>
     <template v-else>
       <div class="sides">
-        <div v-for="[title, s, other, isTarget] in [['Base', data.a, data.b, false], ['Target', data.b, data.a, true]]" :key="title" class="side">
+        <div
+          v-for="[title, s, other, isTarget] in [
+            ['Base', data.a, data.b, false],
+            ['Target', data.b, data.a, true],
+          ]"
+          :key="title"
+          class="side"
+        >
           <h4>{{ title }}: {{ s.ref }}</h4>
-          <div class="kv">{{ s.os || "unknown OS" }} · {{ s.packages }} packages · {{ s.total }} vulnerabilities{{ s.kev ? ` · ${s.kev} KEV` : "" }}</div>
+          <div class="kv">
+            {{ s.os || "unknown OS" }} · {{ s.packages }} packages · {{ s.total }} vulnerabilities{{ s.kev ? ` · ${s.kev} KEV` : "" }}
+          </div>
           <div v-for="sev in SEVERITIES" :key="sev" class="sevrow">
             <span class="sev" :style="sevStyle(sev)">{{ sev }}</span>
             <span class="n">{{ s.counts[sev] || 0 }}</span>
-            <span v-if="isTarget" :class="['delta', delta(other.counts[sev] || 0, s.counts[sev] || 0).cls]">{{ delta(other.counts[sev] || 0, s.counts[sev] || 0).text }}</span>
+            <span v-if="isTarget" :class="['delta', delta(other.counts[sev] || 0, s.counts[sev] || 0).cls]">{{
+              delta(other.counts[sev] || 0, s.counts[sev] || 0).text
+            }}</span>
           </div>
         </div>
       </div>
@@ -109,50 +158,86 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
           <button type="button" :class="{ on: view === 'pkgs' }" @click="view = 'pkgs'">Packages ({{ data.packages.length }})</button>
         </div>
         <label v-for="k in kinds" :key="k" class="chk">
-          <input type="checkbox" :checked="show.has(k)" @change="toggle(k)">
-          <span class="chg" :style="chgStyle(k)">{{ CHG_SIGN[k] }}</span>{{ k }} ({{ counts[k] || 0 }})
+          <input type="checkbox" :checked="show.has(k)" @change="toggle(k)" />
+          <span class="chg" :style="chgStyle(k)">{{ CHG_SIGN[k] }}</span
+          >{{ k }} ({{ counts[k] || 0 }})
         </label>
-        <input v-model="filter" placeholder="Filter…" autocomplete="off">
+        <input v-model="filter" placeholder="Filter…" autocomplete="off" />
       </div>
       <div class="table-wrap cmp-table" id="cmp-table" ref="scroller">
         <table class="vt">
-          <colgroup v-if="view === 'vulns'"><col style="width:40px"><col style="width:90px"><col style="width:140px"><col style="width:20%"><col style="width:18%"><col><col style="width:130px"></colgroup>
-          <colgroup v-else><col style="width:40px"><col style="width:30%"><col style="width:12%"><col style="width:22%"><col></colgroup>
+          <colgroup v-if="view === 'vulns'">
+            <col style="width: 40px" />
+            <col style="width: 90px" />
+            <col style="width: 140px" />
+            <col style="width: 20%" />
+            <col style="width: 18%" />
+            <col />
+            <col style="width: 130px" />
+          </colgroup>
+          <colgroup v-else>
+            <col style="width: 40px" />
+            <col style="width: 30%" />
+            <col style="width: 12%" />
+            <col style="width: 22%" />
+            <col />
+          </colgroup>
           <thead v-if="view === 'vulns'">
-            <tr><th v-for="h in ['', 'Severity', 'ID', 'Package', 'Version', 'Why', 'Signals']" :key="h" style="cursor:default">{{ h }}</th></tr>
+            <tr>
+              <th v-for="h in ['', 'Severity', 'ID', 'Package', 'Version', 'Why', 'Signals']" :key="h" style="cursor: default">{{ h }}</th>
+            </tr>
           </thead>
           <thead v-else>
-            <tr><th v-for="h in ['', 'Package', 'Kind', 'Version', 'Vulnerabilities']" :key="h" style="cursor:default">{{ h }}</th></tr>
-          </thead>
-          <tbody class="pad"><tr :style="{ height: before + 'px' }"><td :colspan="view === 'vulns' ? 7 : 5"></td></tr></tbody>
-          <template v-if="view === 'vulns'">
-          <tbody v-for="{ item: x, index } in visible" :key="index" v-measure="index">
             <tr>
-              <td><span class="chg" :style="chgStyle(x.change)" :title="x.change">{{ CHG_SIGN[x.change] }}</span></td>
-              <td><span class="sev" :style="sevStyle(x.vuln.severity)">{{ x.vuln.severity }}</span></td>
-              <td class="mono">{{ x.vuln.id }}</td>
-              <td class="mono">{{ x.vuln.package }}</td>
-              <td class="mono">{{ arrow(x.versionA, x.versionB) }}</td>
-              <td>{{ x.cause }}</td>
-              <td>
-                <Chip v-if="x.vuln.kev" kind="hot">KEV</Chip>{{ " " }}
-                <Chip v-if="x.vuln.hasEpss && x.vuln.epss >= 0.1" kind="warm">EPSS {{ pct(x.vuln.epss) }}</Chip>
-              </td>
+              <th v-for="h in ['', 'Package', 'Kind', 'Version', 'Vulnerabilities']" :key="h" style="cursor: default">{{ h }}</th>
+            </tr>
+          </thead>
+          <tbody class="pad">
+            <tr :style="{ height: before + 'px' }">
+              <td :colspan="view === 'vulns' ? 7 : 5"></td>
             </tr>
           </tbody>
+          <template v-if="view === 'vulns'">
+            <tbody v-for="{ item: x, index } in visible" :key="index" v-measure="index">
+              <tr>
+                <td>
+                  <span class="chg" :style="chgStyle(x.change)" :title="x.change">{{ CHG_SIGN[x.change] }}</span>
+                </td>
+                <td>
+                  <span class="sev" :style="sevStyle(x.vuln.severity)">{{ x.vuln.severity }}</span>
+                </td>
+                <td class="mono">{{ x.vuln.id }}</td>
+                <td class="mono">{{ x.vuln.package }}</td>
+                <td class="mono">{{ arrow(x.versionA, x.versionB) }}</td>
+                <td>{{ x.cause }}</td>
+                <td>
+                  <Chip v-if="x.vuln.kev" kind="hot">KEV</Chip>{{ " " }}
+                  <Chip v-if="x.vuln.hasEpss && x.vuln.epss >= 0.1" kind="warm">EPSS {{ pct(x.vuln.epss) }}</Chip>
+                </td>
+              </tr>
+            </tbody>
           </template>
           <template v-else>
-          <tbody v-for="{ item: x, index } in visible" :key="index" v-measure="index">
-            <tr>
-              <td><span class="chg" :style="chgStyle(x.change)" :title="x.change">{{ CHG_SIGN[x.change] }}</span></td>
-              <td class="mono">{{ x.name }}</td>
-              <td>{{ x.category === "OS" ? "OS" : x.type }}</td>
-              <td class="mono">{{ arrow(x.versionA, x.versionB) }}</td>
-              <td>{{ x.vulnsA }} → {{ x.vulnsB }} <span :class="['delta', delta(x.vulnsA, x.vulnsB).cls]">{{ delta(x.vulnsA, x.vulnsB).text }}</span></td>
+            <tbody v-for="{ item: x, index } in visible" :key="index" v-measure="index">
+              <tr>
+                <td>
+                  <span class="chg" :style="chgStyle(x.change)" :title="x.change">{{ CHG_SIGN[x.change] }}</span>
+                </td>
+                <td class="mono">{{ x.name }}</td>
+                <td>{{ x.category === "OS" ? "OS" : x.type }}</td>
+                <td class="mono">{{ arrow(x.versionA, x.versionB) }}</td>
+                <td>
+                  {{ x.vulnsA }} → {{ x.vulnsB }}
+                  <span :class="['delta', delta(x.vulnsA, x.vulnsB).cls]">{{ delta(x.vulnsA, x.vulnsB).text }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </template>
+          <tbody class="pad">
+            <tr :style="{ height: after + 'px' }">
+              <td :colspan="view === 'vulns' ? 7 : 5"></td>
             </tr>
           </tbody>
-          </template>
-          <tbody class="pad"><tr :style="{ height: after + 'px' }"><td :colspan="view === 'vulns' ? 7 : 5"></td></tr></tbody>
         </table>
         <div v-if="!rowCount" class="empty">Nothing to show with these filters.</div>
       </div>

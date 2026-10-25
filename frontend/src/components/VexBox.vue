@@ -25,11 +25,20 @@ function onToggle(ev) {
 
 async function save() {
   err.value = "";
-  if (!form.status) { err.value = "Choose a status."; return; }
+  if (!form.status) {
+    err.value = "Choose a status.";
+    return;
+  }
   try {
     const saved = await ScanService.VEXSet(result.value.image, {
-      vulnerability: props.v.id, package: props.v.package, version: props.v.installed, purl: props.v.purl,
-      status: form.status, justification: form.justification, impact: form.impact, action: form.action,
+      vulnerability: props.v.id,
+      package: props.v.package,
+      version: props.v.installed,
+      purl: props.v.purl,
+      status: form.status,
+      justification: form.justification,
+      impact: form.impact,
+      action: form.action,
     });
     openKeys.add(props.v.key);
     vex.value = new Map(vex.value).set(saved.key, saved);
@@ -51,23 +60,35 @@ async function clear() {
   <details class="vexbox" :open="open" @toggle="onToggle" @click.stop>
     <summary>{{ existing ? `VEX assessment: ${STATUS_LABEL[existing.status]}` : "Assess this finding (VEX)" }}</summary>
     <div class="vexform">
-      <label>Status
+      <label
+        >Status
         <select v-model="form.status">
           <option value="">— select status —</option>
           <option v-for="(label, k) in STATUS_LABEL" :key="k" :value="k">{{ label }}</option>
         </select>
       </label>
-      <label v-show="form.status === 'not_affected'">Justification (required unless an impact statement is given)
+      <label v-show="form.status === 'not_affected'"
+        >Justification (required unless an impact statement is given)
         <select v-model="form.justification">
           <option value="">— select justification —</option>
           <option v-for="(label, k) in JUSTIFICATIONS" :key="k" :value="k">{{ label }}</option>
         </select>
       </label>
-      <label v-show="form.status">Impact statement
-        <textarea v-model="form.impact" rows="2" placeholder="Explain why (e.g. the service is not exposed, the code path is never loaded)"></textarea>
+      <label v-show="form.status"
+        >Impact statement
+        <textarea
+          v-model="form.impact"
+          rows="2"
+          placeholder="Explain why (e.g. the service is not exposed, the code path is never loaded)"
+        ></textarea>
       </label>
-      <label v-show="form.status === 'affected'">Action statement (required for affected)
-        <textarea v-model="form.action" rows="2" placeholder="What will be done about it (e.g. upgrade to 3.1 in the next release)"></textarea>
+      <label v-show="form.status === 'affected'"
+        >Action statement (required for affected)
+        <textarea
+          v-model="form.action"
+          rows="2"
+          placeholder="What will be done about it (e.g. upgrade to 3.1 in the next release)"
+        ></textarea>
       </label>
       <div class="row">
         <button type="button" @click="save">Save</button>

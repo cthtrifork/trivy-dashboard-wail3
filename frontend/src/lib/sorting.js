@@ -5,7 +5,8 @@ export function sortRows(rows, state, key) {
     return typeof v === "string" ? v.toLowerCase() : v;
   };
   return [...rows].sort((a, b) => {
-    const x = val(a), y = val(b);
+    const x = val(a),
+      y = val(b);
     return (x < y ? -1 : x > y ? 1 : 0) * state.dir;
   });
 }
