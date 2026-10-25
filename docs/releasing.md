@@ -64,5 +64,5 @@ gh attestation verify trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboar
   --predicate-type https://cyclonedx.org/bom
 ```
 
-The SBOM (`trivy-scanner_<version>.sbom.cdx.json`) lists the Go modules compiled into the binary, generated with
-`cyclonedx-gomod`. It has no os/arch in its name so the in-app updater never considers it as the binary.
+The SBOM (`trivy-scanner_<version>.sbom.cdx.json`) lists the Go modules and npm packages the binary is built from (from `go.mod` and `frontend/package-lock.json`), generated with Trivy (`format: cyclonedx`).
+It has no os/arch in its name so the in-app updater never considers it as the binary.

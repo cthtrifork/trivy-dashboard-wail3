@@ -148,15 +148,25 @@ jobs:
           # The layout matters: see scripts/package-release.sh and internal/selfupdate.
           scripts/package-release.sh "$built" "${VERSION}" dist
 
-      # SBOM of the Go modules compiled into the binary. Named without os/arch so the in-app updater's
-      # asset matcher cannot mistake it for the binary.
-      - name: Generate SBOM
+      # CycloneDX SBOM from the lockfiles (go.mod/go.sum and frontend/package-lock.json), i.e. the Go
+      # modules and the npm packages bundled into the binary. Named without os/arch so the in-app
+      # updater's asset matcher cannot mistake it for the binary. No vulnerability scanner runs here;
+      # security.yml already does that.
+      - name: Generate SBOM with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: cyclonedx
+          scanners: license
+          output: ${{ runner.temp }}/sbom.cdx.json
+          skip-dirs: internal/trivy/fixtures,frontend/node_modules,dist
+
+      - name: Add SBOM to the release files
         env:
           VERSION: ${{ steps.meta.outputs.version }}
         run: |
-          go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.12.0
-          cyclonedx-gomod app -json -licenses=false -main . -tags production \
-            -output "dist/${APP}_${VERSION}.sbom.cdx.json"
+          cp "$RUNNER_TEMP/sbom.cdx.json" "dist/${APP}_${VERSION}.sbom.cdx.json"
           # SHA256SUMS lists every asset, so regenerate it with the SBOM included.
           (cd dist && sha256sum "${APP}_linux_amd64" "${APP}_${VERSION}_linux_amd64.tar.gz" \
             "${APP}_${VERSION}.sbom.cdx.json" > SHA256SUMS)
