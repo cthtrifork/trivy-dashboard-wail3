@@ -224,17 +224,15 @@ jobs:
             echo
             echo "Rendered from the recorded fixtures at ${HEAD_SHA::7}. Not committed to this branch; after merge a bot PR from \`main\` updates \`docs/screenshots\`. Images are run artifacts: you must be logged in to see them, and they expire after 14 days."
             echo
-            echo "<details open><summary>${have} images</summary>"
-            echo
             jq -r 'to_entries[] | select(.key | startswith("shot-")) | "\(.key[5:])\t\(.value.outputs["artifact-url"])"' <<<"$STEPS" |
               while IFS=$'\t' read -r name url; do
-                # A bare artifact URL on its own line is rendered inline by GitHub; an <img src> is not.
-                echo "**${name}**"
+                # As in homeserver-bootc's screenshot action: a heading, then the bare artifact URL as
+                # its own paragraph, with no HTML wrapper, which GitHub renders inline.
+                echo "#### ${name}"
                 echo
                 echo "${url}"
                 echo
               done
-            echo "</details>"
           } > "$body"
 
           id="$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
