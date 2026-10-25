@@ -54,8 +54,9 @@ The version is stamped into the binary with `-ldflags "-X main.version=<tag>"` (
 - **Integrity, not authenticity.** `SHA256SUMS` comes from the same release as the binary. It detects a corrupted or
   truncated download, but someone who can publish to the repository can publish a matching pair. The tutorial's answer
   is an Ed25519 signature checked against a public key embedded in the app. The built-in GitHub provider does not fetch
-  signatures, so that needs a custom provider (or keygen.sh) and is **not implemented here**. Releases do carry a
-  build-provenance attestation, which you can verify by hand with `gh attestation verify`.
+  signatures, so that needs a custom provider (or keygen.sh) and is **not implemented here**. Releases do carry
+  signed attestations (build provenance, plus a CycloneDX SBOM bound to the binary); see
+  [releasing](releasing.md#verifying-a-release).
 - **No redirecting the source.** Development builds read `TRIVY_SCANNER_UPDATE_API_URL` (for tests and GitHub
   Enterprise); production builds ignore it and only use `api.github.com`.
 

@@ -21,7 +21,7 @@ Standing rules for this repository. They come from the maintainer's instructions
 
 10. **No unauthenticated network exposure.** Server mode listens on loopback; access is by SSH tunnel. Do not bind `0.0.0.0` or publish ports in docs or defaults.
 11. **Least surprise for updates.** The self-updater runs only when the user clicks, verifies SHA-256, and is disabled in dev and headless builds.
-12. **Supply chain.** Pin Actions by SHA, keep `GOTOOLCHAIN=local` in CI, run `govulncheck` and Trivy on the repo, publish checksums and a build attestation.
+12. **Supply chain.** Pin Actions by SHA, keep `GOTOOLCHAIN=local` in CI, run `govulncheck` and Trivy on the repo, publish checksums, an SBOM and signed build attestations.
 
 ## Code
 
