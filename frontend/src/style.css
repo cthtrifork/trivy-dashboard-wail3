@@ -92,6 +92,9 @@ button:disabled {
 details {
   position: relative;
 }
+a {
+  color: var(--accent);
+}
 summary {
   cursor: pointer;
   color: var(--mute);
