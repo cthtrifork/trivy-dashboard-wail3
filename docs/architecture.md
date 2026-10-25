@@ -30,6 +30,8 @@ Long lists never put every row in the DOM. `src/lib/virtual.js` (`useVirtualList
 | Desktop release | `go build -tags production` | GTK4 + WebKitGTK 6; updater on; no fixtures |
 | Server (headless) | `-tags server` (+ `production`) | No window, HTTP on `WAILS_SERVER_HOST:PORT` (default `localhost:8080`); `headless=true` disables the updater; OpenVEX save falls back to a browser download |
 
+Linux desktop builds add a tray icon (`tray_linux.go`, art in `tray_icon.png`, same as `frontend/public/favicon.svg`; StatusNotifier; GNOME needs the AppIndicator extension). Click or "Show Trivy Scanner" raises the window, "Quit" quits. Closing the window still quits, so a scan is never left running unseen. Other platforms and server mode compile `tray_other.go`, a no-op.
+
 Build with `CGO_ENABLED=0` for server mode to avoid GTK.
 
 ## Podman engine
