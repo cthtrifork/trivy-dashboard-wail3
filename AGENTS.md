@@ -30,8 +30,8 @@ The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. U
 ## Rules that are easy to get wrong
 
 - **Real podman by default.** Fake data exists only for Go tests and screenshots, behind `TRIVY_SCANNER_FAKE_PODMAN=1`, and only in builds *without* `-tags production`. Never make fixtures reachable from a production build; CI checks the binary for demo code.
-- **Never wait for CI** after opening a PR unless asked. Open it, report, stop.
-- **Work in a new branch from `main` and open a PR** for every change. Do not push to `main`.
+- **Always open a PR** for every change, without being asked, from a new branch off `main`. Do not push to `main`. If the session names a branch to develop on, use it, but still open the PR.
+- **Do not watch CI or subscribe to PR activity** after opening a PR unless the user says to. Open it, report the link and what you verified, stop.
 - **Be honest about verification.** Say what you ran, and list what you could not test (see `docs/principles.md`).
 - Final answers to the user are in English.
 - Wails `application.New` must be called before `initUpdater`, which runs before `app.Run` (self-update tutorial order).
