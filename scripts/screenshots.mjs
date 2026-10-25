@@ -25,6 +25,15 @@ const { chromium } = loadPlaywright();
 mkdirSync(outDir, { recursive: true });
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+// system-ui resolves to whatever sans font the machine has, so the PNGs differed between a laptop
+// and CI on every run. Pin it to Inter (CI installs fonts-inter); monospace is DejaVu Sans Mono.
+await page.addInitScript(() => {
+  document.addEventListener("DOMContentLoaded", () => {
+    const style = document.createElement("style");
+    style.textContent = "body{font-family:Inter,sans-serif !important}";
+    document.head.append(style);
+  });
+});
 const problems = [];
 page.on("pageerror", (e) => problems.push("page error: " + e.message));
 
