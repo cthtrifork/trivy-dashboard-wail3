@@ -18,7 +18,7 @@ const glossary = [
   { group: "Prioritisation signals", items: [
     ["KEV", "CISA's Known Exploited Vulnerabilities catalog: CVEs with documented exploitation in the wild. The strongest signal; a ransomware flag adds more."],
     ["EPSS", "Exploit Prediction Scoring System (FIRST): the probability that a CVE is exploited in the next 30 days. The percentile compares it with all CVEs."],
-    ["Priority tier", "Act now, Fix soon, Plan or Monitor. Every score is a sum of readable reasons (KEV, EPSS, Severity, Vector, Fix), so you can see why a finding ranks where it does."],
+    ["Priority tier", "Act now, Fix soon, Plan or Monitor. Every score is a sum of readable reasons (KEV, EPSS, Severity, Vector, Fix), so you can see why a finding ranks where it does. Open Scoring rules to switch rules on or off, move thresholds and save presets."],
     ["Attack assessment", "A plain-English reading of the CVSS vector and advisory wording: how it is attacked and what the likely outcome is."],
   ]},
   { group: "VEX (exploitability statements)", items: [
