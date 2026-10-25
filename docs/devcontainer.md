@@ -8,6 +8,10 @@ A dev container with Go and Node (both baked into the `Dockerfile`, copied from 
 2. Open the repo and choose **Reopen in Container**. The first start runs `.devcontainer/post-create.sh` (`npm ci`, `go mod download`, installs `air` and `wails3`).
 3. In the container terminal: `make dev`, then open <http://localhost:8080> (port 8080 is forwarded).
 
+## Editor
+
+The container installs the Go, ESLint, Prettier, MDX and Vue extensions. The Go tools (`goimports`, `golangci-lint`) are installed by `post-create.sh`. `.vscode/settings.json` is committed and turns on format on save (`goimports` for Go) and `golangci-lint` on save. The repo has no ESLint or Prettier config yet, so those two extensions use their defaults until one is added.
+
 ## File ownership
 
 The container user is `vscode` with `updateRemoteUserUID` on, so on Linux it takes your host uid and your clone stays writable (`node_modules`, `tmp/`, Go caches, podman storage all belong to you). `post-create.sh` also marks the workspace as a git `safe.directory` for setups where the owner still differs, and `.gitattributes` keeps `*.sh` on LF so a Windows clone still runs.

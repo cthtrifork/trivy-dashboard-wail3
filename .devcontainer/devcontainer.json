@@ -28,7 +28,13 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": ["golang.go", "Vue.volar"],
+      "extensions": [
+        "golang.go",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "unifiedjs.vscode-mdx",
+        "Vue.volar"
+      ],
       "settings": { "go.toolsEnvVars": { "CGO_ENABLED": "0", "GOFLAGS": "-tags=server" } }
     }
   }
