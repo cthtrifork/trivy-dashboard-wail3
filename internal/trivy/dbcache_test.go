@@ -121,6 +121,9 @@ func TestRunArgsDBOnlyJobAndMirrorEnv(t *testing.T) {
 	if args[len(args)-1] != "--download-db-only" {
 		t.Errorf("an empty image must not become an argument: %v", args)
 	}
+	if !slices.Contains(args, "--skip-version-check") {
+		t.Errorf("Trivy's version check must be off: %v", args)
+	}
 	if !slices.Contains(args, "TRIVY_DB_REPOSITORY") || slices.Contains(args, "TRIVY_JAVA_DB_REPOSITORY") {
 		t.Errorf("only set mirror variables are forwarded: %v", args)
 	}
