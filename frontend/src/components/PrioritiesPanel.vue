@@ -1,10 +1,11 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import { result, vex } from "../store.js";
-import { suppresses, isExpired, JUSTIFICATIONS, TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
+import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import SummaryCard from "./SummaryCard.vue";
 import VexBox from "./VexBox.vue";
+import SuppressedRow from "./SuppressedRow.vue";
 import { useVirtualList } from "../lib/virtual.js";
 
 const emit = defineEmits(["export"]);
@@ -17,12 +18,19 @@ const all = computed(() => result.value?.vulnerabilities ?? []);
 const hidden = computed(() => all.value.filter((v) => prio.hideResolved && isResolved(v)));
 const open = computed(() => all.value.filter((v) => !(prio.hideResolved && isResolved(v)) && (!prio.fixableOnly || v.fixed)));
 // The suppressed list is not virtualised, so it is paged to keep the DOM small.
+// One CVE hits several components (a module and its sub-packages, a library bundled twice): group by
+// id so it appears once with the components as children. Pages count groups, not findings.
 const SUPPRESSED_PAGE = 25;
 const supPage = ref(0);
-const supPages = computed(() => Math.max(1, Math.ceil(hidden.value.length / SUPPRESSED_PAGE)));
+const supGroups = computed(() => {
+  const m = new Map();
+  for (const v of hidden.value) (m.get(v.id) ?? m.set(v.id, []).get(v.id)).push(v);
+  return [...m].map(([id, items]) => ({ id, items }));
+});
+const supPages = computed(() => Math.max(1, Math.ceil(supGroups.value.length / SUPPRESSED_PAGE)));
 // Clamp instead of resetting: removing the last row of a page must not jump back to page 1.
 const supCurrent = computed(() => Math.min(supPage.value, supPages.value - 1));
-const suppressedShown = computed(() => hidden.value.slice(supCurrent.value * SUPPRESSED_PAGE, (supCurrent.value + 1) * SUPPRESSED_PAGE));
+const suppressedShown = computed(() => supGroups.value.slice(supCurrent.value * SUPPRESSED_PAGE, (supCurrent.value + 1) * SUPPRESSED_PAGE));
 const lowN = computed(() => open.value.filter((v) => v.tier === "Monitor").length);
 const pool = computed(() => (prio.includeLow ? open.value : open.value.filter((v) => v.tier !== "Monitor")));
 const list = computed(() => (prio.top ? pool.value.slice(0, prio.top) : pool.value));
@@ -111,19 +119,16 @@ defineExpose({ count: computed(() => pool.value.length) });
       <div v-else-if="pool.length > list.length" class="kv">{{ pool.length - list.length }} more findings not shown — they rank lower.</div>
       <details v-if="hidden.length" id="prio-suppressed" class="suppressed">
         <summary>Suppressed by VEX ({{ hidden.length }})</summary>
-        <div v-for="v in suppressedShown" :key="cardKey(v)" class="sup">
-          <div class="phead">
-            <span class="id">{{ v.id }}</span>
-            <span class="mono">{{ v.package }} {{ v.installed }}</span>
-            <Chip kind="vex">{{ STATUS_LABEL[vex.get(v.key).status] }}</Chip>
-            <Chip v-if="vex.get(v.key).expires" title="The finding reappears after this date">until {{ vex.get(v.key).expires }}</Chip>
-            <Chip v-if="vex.get(v.key).author">{{ vex.get(v.key).author }}</Chip>
-          </div>
-          <div class="kv">
-            {{ [JUSTIFICATIONS[vex.get(v.key).justification], vex.get(v.key).impact].filter(Boolean).join(" — ") }}
-          </div>
-          <VexBox :v="v" />
-        </div>
+        <template v-for="g in suppressedShown" :key="g.id">
+          <SuppressedRow v-if="g.items.length === 1" :v="g.items[0]" />
+          <details v-else class="sup supgroup">
+            <summary>
+              <span class="id">{{ g.id }}</span>
+              <Chip>{{ g.items.length }} components</Chip>
+            </summary>
+            <SuppressedRow v-for="v in g.items" :key="cardKey(v)" :v="v" child />
+          </details>
+        </template>
         <div v-if="supPages > 1" class="row pager">
           <button type="button" class="ghost" :disabled="supCurrent === 0" @click="supPage = supCurrent - 1">Previous</button>
           <span class="kv">Page {{ supCurrent + 1 }} of {{ supPages }}</span>

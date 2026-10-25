@@ -168,3 +168,6 @@ details.suppressed{margin-top:12px;border:1px solid var(--line);border-radius:8p
 details.suppressed summary{cursor:pointer;color:var(--mute)}
 .suppressed .sup{padding:8px 0;border-top:1px dashed var(--line);margin-top:8px}
 .pager{display:flex;gap:8px;align-items:center;margin-top:10px}
+.supgroup>summary{display:flex;gap:8px;align-items:center;cursor:pointer}
+.supgroup>summary .id{font-weight:600}
+.suppressed .sup.child{border-left:2px solid var(--line);margin-left:6px;padding-left:12px}
