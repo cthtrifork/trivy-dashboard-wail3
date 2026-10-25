@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import { result, vulns, vex } from "../store.js";
-import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
+import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import SummaryCard from "./SummaryCard.vue";
 import RulesEditor from "./RulesEditor.vue";
@@ -95,10 +95,12 @@ defineExpose({ count: computed(() => pool.value.length) });
         <div class="rank">{{ index + 1 }}</div>
         <div class="pbody">
           <div class="phead">
-            <span class="id">{{ v.id }}</span>
+            <a v-if="detailUrl(v)" class="id" :href="detailUrl(v)" title="Open CVE details" @click.prevent="openUrl(detailUrl(v))">{{ v.id }}</a>
+            <span v-else class="id">{{ v.id }}</span>
             <span class="sev tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }}</span>
             <span class="mono">{{ v.package }} {{ v.installed }}</span>
           </div>
+          <div v-if="v.title" class="ptitle">{{ v.title }}</div>
           <div class="chips">
             <Chip title="CVSS severity">{{ v.severity }}{{ v.score ? ` ${v.score.toFixed(1)}` : "" }}</Chip>
             <Chip v-if="v.kev" kind="hot" :title="`Added to CISA KEV on ${v.kevAdded}; due ${v.kevDue}. ${v.kevAction}`"
@@ -120,7 +122,6 @@ defineExpose({ count: computed(() => pool.value.length) });
             >
           </div>
           <p class="attack">{{ v.attack }}</p>
-          <div v-if="v.title" class="kv">{{ v.title }}</div>
           <ul class="why">
             <li v-for="(r, j) in v.reasons" :key="j">
               <span :class="['pts', { pos: r.points > 0 }]">{{ r.points > 0 ? "+" : "" }}{{ r.points }}</span>

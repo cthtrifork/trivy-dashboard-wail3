@@ -1055,3 +1055,8 @@ code.rule {
   margin-top: 2px;
   color: var(--text);
 }
+
+.ptitle {
+  font-weight: 600;
+  margin: 2px 0 6px;
+}

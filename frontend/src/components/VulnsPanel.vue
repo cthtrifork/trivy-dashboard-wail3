@@ -1,8 +1,7 @@
 <script setup>
 import { computed, reactive } from "vue";
-import { Browser } from "@wailsio/runtime";
 import { result, vulns, vex, SEVERITIES, sevStyle } from "../store.js";
-import { tierStyle, pct } from "../lib/format.js";
+import { tierStyle, pct, detailUrl, openUrl as open } from "../lib/format.js";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
 import Chip from "./Chip.vue";
@@ -49,15 +48,6 @@ const rows = computed(() => {
 const emptyText = computed(() => (all.value.length ? "No vulnerabilities match the filter." : "No vulnerabilities found 🎉"));
 const rowKey = (v) => v.key + "|" + v.target;
 const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows, { key: (v) => rowKey(v) });
-const isLink = (url) => /^https?:\/\//.test(url);
-const detailUrl = (v) => (isLink(v.url) ? v.url : /^CVE-\d{4}-\d+$/i.test(v.id) ? `https://nvd.nist.gov/vuln/detail/${v.id.toUpperCase()}` : "");
-const open = (url) => {
-  try {
-    Promise.resolve(Browser.OpenURL(url)).catch(() => window.open(url, "_blank", "noopener"));
-  } catch {
-    window.open(url, "_blank", "noopener");
-  }
-};
 </script>
 
 <template>
