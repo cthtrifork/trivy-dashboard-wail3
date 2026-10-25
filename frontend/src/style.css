@@ -160,3 +160,5 @@ dialog::backdrop{background:#0009}
 .help-body dd{margin:0}
 .help-body code{font:12px ui-monospace,monospace;word-break:break-all}
 @media(max-width:560px){.help-body dl{grid-template-columns:1fr;gap:0}.help-body dd{margin-bottom:10px}}
+.help-body .envstate{margin-right:6px;font-size:11px;padding:1px 6px;border:1px solid var(--line);border-radius:8px;color:var(--mute)}
+.envstate.on{color:var(--accent);border-color:var(--accent)}

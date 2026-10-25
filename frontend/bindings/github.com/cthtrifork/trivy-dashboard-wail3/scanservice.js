@@ -50,6 +50,16 @@ export function Compare(req) {
 }
 
 /**
+ * Config resolves the app's paths and environment for the help dialog.
+ * @returns {$CancellablePromise<$models.AppConfig>}
+ */
+export function Config() {
+    return $Call.ByID(2989893290).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType11($result);
+    }));
+}
+
+/**
  * Footprint measures the cache directories and the Go runtime's memory.
  * @returns {$CancellablePromise<$models.Footprint>}
  */
@@ -191,3 +201,4 @@ const $$createType7 = $models.UpdateInfo.createFrom;
 const $$createType8 = trivy$0.ImportReport.createFrom;
 const $$createType9 = trivy$0.VEXEntry.createFrom;
 const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = $models.AppConfig.createFrom;

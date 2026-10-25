@@ -7,6 +7,192 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * AppConfig is the resolved configuration for the help dialog: the paths and environment as this
+ * process sees them, so nothing shown there is a guess.
+ */
+export class AppConfig {
+    /**
+     * Creates a new AppConfig instance.
+     * @param {Partial<AppConfig>} [$$source = {}] - The source object to create the AppConfig.
+     */
+    constructor($$source = {}) {
+        if (!("version" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["version"] = "";
+        }
+        if (!("platform" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["platform"] = "";
+        }
+        if (!("headless" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["headless"] = false;
+        }
+        if (!("podman" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["podman"] = "";
+        }
+        if (!("remote" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["remote"] = false;
+        }
+        if (!("paths" in $$source)) {
+            /**
+             * @member
+             * @type {ConfigPath[]}
+             */
+            this["paths"] = [];
+        }
+        if (!("env" in $$source)) {
+            /**
+             * @member
+             * @type {ConfigEnv[]}
+             */
+            this["env"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AppConfig instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {AppConfig}
+     */
+    static createFrom($$source = {}) {
+        const $$createField5_0 = $$createType1;
+        const $$createField6_0 = $$createType3;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("paths" in $$parsedSource) {
+            $$parsedSource["paths"] = $$createField5_0($$parsedSource["paths"]);
+        }
+        if ("env" in $$parsedSource) {
+            $$parsedSource["env"] = $$createField6_0($$parsedSource["env"]);
+        }
+        return new AppConfig(/** @type {Partial<AppConfig>} */($$parsedSource));
+    }
+}
+
+/**
+ * ConfigEnv is one environment variable the app honours, with its value in this process.
+ */
+export class ConfigEnv {
+    /**
+     * Creates a new ConfigEnv instance.
+     * @param {Partial<ConfigEnv>} [$$source = {}] - The source object to create the ConfigEnv.
+     */
+    constructor($$source = {}) {
+        if (!("name" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["name"] = "";
+        }
+        if (!("value" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["value"] = "";
+        }
+        if (!("set" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["set"] = false;
+        }
+        if (!("desc" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["desc"] = "";
+        }
+        if (!("default" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["default"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ConfigEnv instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {ConfigEnv}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ConfigEnv(/** @type {Partial<ConfigEnv>} */($$parsedSource));
+    }
+}
+
+/**
+ * ConfigPath is one resolved location the app reads or writes.
+ */
+export class ConfigPath {
+    /**
+     * Creates a new ConfigPath instance.
+     * @param {Partial<ConfigPath>} [$$source = {}] - The source object to create the ConfigPath.
+     */
+    constructor($$source = {}) {
+        if (!("label" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["label"] = "";
+        }
+        if (!("value" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["value"] = "";
+        }
+        if (!("note" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["note"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ConfigPath instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {ConfigPath}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ConfigPath(/** @type {Partial<ConfigPath>} */($$parsedSource));
+    }
+}
+
+/**
  * Footprint is what the app keeps on disk and in memory, for the footer note.
  */
 export class Footprint {
@@ -187,3 +373,9 @@ export class UpdateInfo {
         return new UpdateInfo(/** @type {Partial<UpdateInfo>} */($$parsedSource));
     }
 }
+
+// Private type creation functions
+const $$createType0 = ConfigPath.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = ConfigEnv.createFrom;
+const $$createType3 = $Create.Array($$createType2);
