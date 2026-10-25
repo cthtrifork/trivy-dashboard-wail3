@@ -1,8 +1,6 @@
 package trivy
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,18 +11,15 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/openvex/go-vex/pkg/vex"
 )
 
-// VEX statuses and justifications as defined by OpenVEX v0.2.0.
+// VEX statuses and justifications as defined by OpenVEX, taken from the
+// go-vex library that vexctl is built on.
 var (
-	VEXStatuses       = []string{"affected", "not_affected", "fixed", "under_investigation"}
-	VEXJustifications = []string{
-		"component_not_present",
-		"vulnerable_code_not_present",
-		"vulnerable_code_not_in_execute_path",
-		"vulnerable_code_cannot_be_controlled_by_adversary",
-		"inline_mitigations_already_exist",
-	}
+	VEXStatuses       = vex.Statuses()
+	VEXJustifications = vex.Justifications()
 )
 
 // VEXEntry is a user's assessment of one finding.
@@ -94,17 +89,26 @@ func (e *VEXEntry) Validate() error {
 			return errors.New("expiry must be a date like 2026-12-31")
 		}
 	}
-	switch e.Status {
-	case "not_affected":
-		if e.Justification == "" && strings.TrimSpace(e.Impact) == "" {
-			return errors.New("not_affected needs a justification or an impact statement")
-		}
-	case "affected":
-		if strings.TrimSpace(e.Action) == "" {
-			return errors.New("affected needs an action statement (what should be done about it)")
-		}
+	st := e.statement()
+	return st.Validate()
+}
+
+// statement maps the entry to an OpenVEX statement, carrying only the fields
+// its status allows (the entry may hold a stale impact or action from an
+// earlier status).
+func (e VEXEntry) statement() vex.Statement {
+	st := vex.Statement{
+		Vulnerability: vex.Vulnerability{Name: vex.VulnerabilityID(e.Vulnerability)},
+		Status:        vex.Status(e.Status),
 	}
-	return nil
+	switch st.Status {
+	case vex.StatusNotAffected:
+		st.Justification = vex.Justification(e.Justification)
+		st.ImpactStatement = strings.TrimSpace(e.Impact)
+	case vex.StatusAffected:
+		st.ActionStatement = strings.TrimSpace(e.Action)
+	}
+	return st
 }
 
 func contains(list []string, s string) bool {
@@ -220,7 +224,8 @@ func ProductPURL(image string, repoDigests []string) string {
 	return p + "?" + q.Encode()
 }
 
-// ExportOpenVEX renders entries as an OpenVEX v0.2.0 document.
+// ExportOpenVEX renders entries as an OpenVEX document using go-vex, which
+// stamps the current spec version and derives the canonical document id.
 func ExportOpenVEX(entries []VEXEntry, product, author, role string) ([]byte, error) {
 	if len(entries) == 0 {
 		return nil, errors.New("no VEX assessments to export")
@@ -228,11 +233,13 @@ func ExportOpenVEX(entries []VEXEntry, product, author, role string) ([]byte, er
 	if strings.TrimSpace(author) == "" {
 		return nil, errors.New("author is required in an OpenVEX document")
 	}
-	type obj = map[string]any
 	sorted := append([]VEXEntry(nil), entries...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Key < sorted[j].Key })
 
-	stmts := []obj{}
+	doc := vex.New()
+	doc.Author = author
+	doc.AuthorRole = strings.TrimSpace(role)
+	doc.Tooling = "Trivy Scanner (Wails)"
 	for _, e := range sorted {
 		if err := e.Validate(); err != nil {
 			return nil, fmt.Errorf("%s: %w", e.Vulnerability, err)
@@ -241,38 +248,20 @@ func ExportOpenVEX(entries []VEXEntry, product, author, role string) ([]byte, er
 		if sub == "" {
 			sub = "pkg:generic/" + url.PathEscape(e.Package) + "@" + url.PathEscape(e.Version)
 		}
-		st := obj{
-			"vulnerability": obj{"name": e.Vulnerability},
-			"products":      []obj{{"@id": product, "subcomponents": []obj{{"@id": sub}}}},
-			"status":        e.Status,
-			"timestamp":     e.Updated,
+		st := e.statement()
+		if ts, err := time.Parse(time.RFC3339, e.Updated); err == nil {
+			st.Timestamp = &ts
 		}
-		if e.Justification != "" {
-			st["justification"] = e.Justification
-		}
-		if strings.TrimSpace(e.Impact) != "" {
-			st["impact_statement"] = e.Impact
-		}
-		if strings.TrimSpace(e.Action) != "" {
-			st["action_statement"] = e.Action
-		}
-		stmts = append(stmts, st)
+		st.Products = []vex.Product{{
+			Component:     vex.Component{ID: product},
+			Subcomponents: []vex.Subcomponent{{Component: vex.Component{ID: sub}}},
+		}}
+		doc.Statements = append(doc.Statements, st)
 	}
-	body, _ := json.Marshal(stmts)
-	sum := sha256.Sum256(body)
-	doc := obj{
-		"@context":   "https://openvex.dev/ns/v0.2.0",
-		"@id":        "https://openvex.dev/docs/public/vex-" + hex.EncodeToString(sum[:]),
-		"author":     author,
-		"timestamp":  time.Now().UTC().Format(time.RFC3339),
-		"version":    1,
-		"tooling":    "Trivy Scanner (Wails)",
-		"statements": stmts,
+	if _, err := doc.GenerateCanonicalID(); err != nil {
+		return nil, err
 	}
-	if strings.TrimSpace(role) != "" {
-		doc["role"] = role
-	}
-	return json.MarshalIndent(doc, "", "  ")
+	return json.MarshalIndent(&doc, "", "  ")
 }
 
 // ImportReport summarises what ImportOpenVEX did with a pasted document.
@@ -283,35 +272,15 @@ type ImportReport struct {
 	Warnings []string `json:"warnings"`
 }
 
-// ParseOpenVEX turns an OpenVEX document (v0.2.0, and older string-valued
-// vulnerabilities) into assessments for the given findings. A statement with
+// ParseOpenVEX turns an OpenVEX document (v0.2.0, as read by go-vex) into assessments for the given findings. A statement with
 // subcomponents applies to findings whose PURL (or name@version) matches one;
 // a statement without applies to every finding with that vulnerability id.
 // When several statements hit one finding the newest timestamp wins.
 func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportReport, error) {
-	var doc struct {
-		Context    string `json:"@context"`
-		Statements []struct {
-			Vulnerability json.RawMessage `json:"vulnerability"`
-			Timestamp     string          `json:"timestamp"`
-			Products      []struct {
-				ID            string `json:"@id"`
-				Subcomponents []struct {
-					ID string `json:"@id"`
-				} `json:"subcomponents"`
-			} `json:"products"`
-			Status          string `json:"status"`
-			Justification   string `json:"justification"`
-			ImpactStatement string `json:"impact_statement"`
-			ActionStatement string `json:"action_statement"`
-		} `json:"statements"`
-	}
 	rep := ImportReport{Warnings: []string{}}
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return nil, rep, fmt.Errorf("not valid JSON: %w", err)
-	}
-	if !strings.Contains(doc.Context, "openvex") {
-		return nil, rep, errors.New("not an OpenVEX document (missing openvex @context)")
+	doc, err := openVEXDoc(data)
+	if err != nil {
+		return nil, rep, err
 	}
 	if len(doc.Statements) == 0 {
 		return nil, rep, errors.New("document has no statements")
@@ -319,21 +288,22 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 
 	byKey := map[string]VEXEntry{}
 	for i, st := range doc.Statements {
-		var id string
-		var obj struct {
-			Name    string   `json:"name"`
-			Aliases []string `json:"aliases"`
+		ids := []string{string(st.Vulnerability.Name)}
+		for _, a := range st.Vulnerability.Aliases {
+			ids = append(ids, string(a))
 		}
-		if json.Unmarshal(st.Vulnerability, &id) != nil {
-			_ = json.Unmarshal(st.Vulnerability, &obj)
-			id = obj.Name
-		}
-		ids := append([]string{id}, obj.Aliases...)
 		var subs []string
 		for _, p := range st.Products {
 			for _, sc := range p.Subcomponents {
 				subs = append(subs, sc.ID)
 			}
+		}
+		stamp := time.Now().UTC()
+		switch {
+		case st.Timestamp != nil:
+			stamp = st.Timestamp.UTC()
+		case doc.Timestamp != nil:
+			stamp = doc.Timestamp.UTC()
 		}
 		matched := false
 		for _, v := range findings {
@@ -345,8 +315,9 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 			}
 			e := VEXEntry{
 				Vulnerability: v.ID, Package: v.Package, Version: v.Installed, PURL: v.PURL,
-				Status: st.Status, Justification: st.Justification, Impact: st.ImpactStatement, Action: st.ActionStatement,
-				Updated: st.Timestamp,
+				Status: string(st.Status), Justification: string(st.Justification),
+				Impact: st.ImpactStatement, Action: st.ActionStatement,
+				Updated: stamp.Format(time.RFC3339),
 			}
 			if err := e.Validate(); err != nil {
 				rep.Warnings = append(rep.Warnings, fmt.Sprintf("statement %d (%s): %v", i+1, v.ID, err))
@@ -354,9 +325,6 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 				break
 			}
 			e.Key = v.Key
-			if e.Updated == "" {
-				e.Updated = time.Now().UTC().Format(time.RFC3339)
-			}
 			if old, ok := byKey[e.Key]; !ok || e.Updated >= old.Updated {
 				byKey[e.Key] = e
 			}
@@ -364,7 +332,7 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 		}
 		if !matched {
 			rep.Skipped++
-			rep.Warnings = append(rep.Warnings, fmt.Sprintf("statement %d (%s): no matching finding in this scan", i+1, id))
+			rep.Warnings = append(rep.Warnings, fmt.Sprintf("statement %d (%s): no matching finding in this scan", i+1, ids[0]))
 		}
 	}
 	out := make([]VEXEntry, 0, len(byKey))
@@ -374,6 +342,18 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
 	rep.Imported = len(out)
 	return out, rep, nil
+}
+
+// openVEXDoc decodes an OpenVEX v0.2.0 document with go-vex.
+func openVEXDoc(data []byte) (*vex.VEX, error) {
+	doc, err := vex.Parse(data)
+	if err != nil {
+		return nil, fmt.Errorf("not valid JSON: %w", err)
+	}
+	if !strings.Contains(doc.Context, "openvex") {
+		return nil, errors.New("not an OpenVEX document (missing openvex @context)")
+	}
+	return doc, nil
 }
 
 func containsFold(list []string, s string) bool {

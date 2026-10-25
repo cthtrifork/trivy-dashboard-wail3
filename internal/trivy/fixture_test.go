@@ -341,3 +341,27 @@ func TestMarkUnassessedAndMerge(t *testing.T) {
 		t.Errorf("marked %d after import, want %d", n, len(keys)-len(entries))
 	}
 }
+
+// Our own export must read back through the importer.
+func TestOpenVEXRoundTrip(t *testing.T) {
+	res, err := fixtureScanner().Scan(context.Background(), ScanRequest{Image: "docker.io/library/traefik:3.7.13"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := res.Vulnerabilities[0]
+	st := &VEXStore{Path: filepath.Join(t.TempDir(), "vex.json")}
+	img := "docker.io/library/traefik:3.7.13"
+	if _, err := st.Set(img, VEXEntry{Vulnerability: v.ID, Package: v.Package, Version: v.Installed, PURL: v.PURL, Status: "affected", Action: "upgrade"}); err != nil {
+		t.Fatal(err)
+	}
+	entries, _ := st.List(img)
+	raw, err := ExportOpenVEX(entries, ProductPURL(img, nil), "Jane", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	back, rep, err := ParseOpenVEX(raw, res.Vulnerabilities)
+	if err != nil || len(back) == 0 || back[0].Status != "affected" || back[0].Action != "upgrade" {
+		t.Fatalf("round trip: %+v %+v %v", back, rep, err)
+	}
+
+}
