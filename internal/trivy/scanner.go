@@ -1,6 +1,7 @@
 package trivy
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	cdx "github.com/CycloneDX/cyclonedx-go"
+	"github.com/distribution/reference"
 )
 
 // ScanRequest is what the UI sends to start a scan.
@@ -190,14 +194,15 @@ func NormalizeImage(ref string) string {
 	return ref
 }
 
-// validImage normalises ref and rejects values that could be read as flags.
+// validImage normalises ref and rejects anything that is not a container image
+// reference (which also rules out values that could be read as flags).
 func validImage(ref string) (string, error) {
 	image := NormalizeImage(ref)
 	if image == "" {
 		return "", errors.New("image reference is empty")
 	}
-	if strings.HasPrefix(image, "-") || strings.ContainsAny(image, " \t\r\n") {
-		return "", errors.New("invalid image reference")
+	if _, err := reference.ParseAnyReference(image); err != nil {
+		return "", fmt.Errorf("invalid image reference: %w", err)
 	}
 	return image, nil
 }
@@ -447,52 +452,42 @@ func categoryOf(typ, purl string) string {
 }
 
 func parseSBOM(data []byte, res *ScanResult) error {
-	var bom struct {
-		Metadata struct {
-			Component struct {
-				BOMRef string `json:"bom-ref"`
-			}
-		}
-		Components []struct {
-			BOMRef     string `json:"bom-ref"`
-			Type       string
-			Group      string
-			Properties []struct{ Name, Value string }
-			Name       string
-			Version    string
-			PURL       string `json:"purl"`
-			Licenses   []struct {
-				License    *struct{ ID, Name string }
-				Expression string
-			}
-		}
-		Dependencies []struct {
-			Ref       string
-			DependsOn []string
-		}
-	}
-	if err := json.Unmarshal(data, &bom); err != nil {
+	var bom cdx.BOM
+	if err := cdx.NewBOMDecoder(bytes.NewReader(data), cdx.BOMFileFormatJSON).Decode(&bom); err != nil {
 		return err
+	}
+	var components []cdx.Component
+	if bom.Components != nil {
+		components = *bom.Components
 	}
 	res.Components = []Component{}
 	res.ComponentTypes = map[string]int{}
 	res.DepNodes = map[string]*DepNode{}
 	apps := map[string]string{}
 	osFamily, osVersion := "", ""
-	for i, c := range bom.Components {
-		for _, p := range c.Properties {
+	for i, c := range components {
+		var props []cdx.Property
+		if c.Properties != nil {
+			props = *c.Properties
+		}
+		typ := string(c.Type)
+		for _, p := range props {
 			if p.Name != "aquasecurity:trivy:Type" {
 				continue
 			}
-			switch c.Type {
+			switch typ {
 			case "application":
 				apps[c.Name] = p.Value
 			case "operating-system":
 				osFamily, osVersion = p.Value, c.Version
 			}
 		}
-		comp := Component{Name: c.Name, Version: c.Version, Type: c.Type, PURL: c.PURL, Group: c.Group, Licenses: []string{}}
-		for _, l := range c.Licenses {
+		comp := Component{Name: c.Name, Version: c.Version, Type: typ, PURL: c.PackageURL, Group: c.Group, Licenses: []string{}}
+		var licenses cdx.Licenses
+		if c.Licenses != nil {
+			licenses = *c.Licenses
+		}
+		for _, l := range licenses {
 			switch {
 			case l.License != nil && l.License.ID != "":
 				comp.Licenses = append(comp.Licenses, l.License.ID)
@@ -502,7 +497,7 @@ func parseSBOM(data []byte, res *ScanResult) error {
 				comp.Licenses = append(comp.Licenses, l.Expression)
 			}
 		}
-		res.ComponentTypes[c.Type]++
+		res.ComponentTypes[typ]++
 		res.Components = append(res.Components, comp)
 
 		ref := c.BOMRef
@@ -514,17 +509,28 @@ func parseSBOM(data []byte, res *ScanResult) error {
 			name = c.Group + "/" + name
 		}
 		res.DepNodes[ref] = &DepNode{
-			Ref: ref, Name: name, Version: c.Version, Type: c.Type, PURL: c.PURL,
-			Category: categoryOf(c.Type, c.PURL),
+			Ref: ref, Name: name, Version: c.Version, Type: typ, PURL: c.PackageURL,
+			Category: categoryOf(typ, c.PackageURL),
 			Children: []string{}, Parents: []string{}, Own: []int{},
 			OwnCounts: map[string]int{}, TotalCounts: map[string]int{},
 		}
 	}
 	sort.SliceStable(res.Components, func(i, j int) bool { return res.Components[i].Name < res.Components[j].Name })
 	res.Summary = summarize(res, apps, osFamily, osVersion)
-	buildDepGraph(res, bom.Metadata.Component.BOMRef, func(yield func(string, []string)) {
-		for _, d := range bom.Dependencies {
-			yield(d.Ref, d.DependsOn)
+	rootRef := ""
+	if bom.Metadata != nil && bom.Metadata.Component != nil {
+		rootRef = bom.Metadata.Component.BOMRef
+	}
+	buildDepGraph(res, rootRef, func(yield func(string, []string)) {
+		if bom.Dependencies == nil {
+			return
+		}
+		for _, d := range *bom.Dependencies {
+			var on []string
+			if d.Dependencies != nil {
+				on = *d.Dependencies
+			}
+			yield(d.Ref, on)
 		}
 	})
 	return nil

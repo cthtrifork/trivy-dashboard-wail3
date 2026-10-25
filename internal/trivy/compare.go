@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
-	"unicode"
+
+	"github.com/distribution/reference"
 )
 
 // CompareRequest asks for two tags (or digests) of one image to be compared.
@@ -106,13 +106,14 @@ func tagRef(repo, tag string) (string, error) {
 	if repo == "" || tag == "" {
 		return "", errors.New("image repository and both tags are required")
 	}
-	if strings.ContainsAny(tag, " \t\r\n/") || strings.HasPrefix(tag, "-") {
-		return "", fmt.Errorf("invalid tag %q", tag)
-	}
+	ref := repo + ":" + tag
 	if strings.HasPrefix(tag, "sha256:") {
-		return repo + "@" + tag, nil
+		ref = repo + "@" + tag
 	}
-	return repo + ":" + tag, nil
+	if _, err := reference.ParseNormalizedNamed(ref); err != nil {
+		return "", fmt.Errorf("invalid tag %q: %w", tag, err)
+	}
+	return ref, nil
 }
 
 // ListTags returns the tags the engine can offer for repo, newest first.
@@ -133,7 +134,7 @@ func (s *Scanner) ListTags(ctx context.Context, repo string) ([]string, error) {
 			tags = append(tags, t)
 		}
 	}
-	sort.Slice(tags, func(i, j int) bool { return compareVersions(tags[i], tags[j]) > 0 })
+	sort.Slice(tags, func(i, j int) bool { return compareVersions("", tags[i], tags[j]) > 0 })
 	return tags, nil
 }
 
@@ -143,19 +144,19 @@ func (s *Scanner) ListTags(ctx context.Context, repo string) ([]string, error) {
 // registry.fedoraproject.org and registry.access.redhat.com, so "nginx" would list
 // tags from the wrong registry. Trivy resolves bare names to Docker Hub itself.
 func qualifyRepo(repo string) string {
-	first, _, hasPath := strings.Cut(repo, "/")
-	switch {
-	case !hasPath:
-		return "docker.io/library/" + repo
-	case strings.ContainsAny(first, ".:") || first == "localhost":
-		return repo // already names a registry (host, host:port or localhost)
+	named, err := reference.ParseNormalizedNamed(repo)
+	if err != nil {
+		return repo
 	}
-	return "docker.io/" + repo
+	return named.Name()
 }
 
 // pkgKey identifies a package independent of its version.
 func pkgKey(purl, name string) string {
 	if purl != "" {
+		if n, _ := splitPURL(purl); n != "" {
+			return n
+		}
 		p, _, _ := strings.Cut(purl, "@")
 		return p
 	}
@@ -271,7 +272,7 @@ func Diff(a, b *ScanResult) *CompareResult {
 			res.Packages = append(res.Packages, pkgChange("removed", p, nil))
 		case p.version != q.version:
 			ch := "upgraded"
-			if compareVersions(q.version, p.version) < 0 {
+			if compareVersions(p.comp.PURL, q.version, p.version) < 0 {
 				ch = "downgraded"
 			}
 			res.Packages = append(res.Packages, pkgChange(ch, p, q))
@@ -342,43 +343,4 @@ func verdict(r *CompareResult) string {
 		out += fmt.Sprintf(" ⚠ %d more known-exploited (KEV) finding(s).", r.B.KEV-r.A.KEV)
 	}
 	return out
-}
-
-// compareVersions orders version-ish strings token by token, numerically
-// where both tokens are numbers. It is a heuristic, not a distro-exact sort.
-func compareVersions(a, b string) int {
-	ta, tb := tokens(a), tokens(b)
-	for i := 0; i < len(ta) && i < len(tb); i++ {
-		na, ea := strconv.Atoi(ta[i])
-		nb, eb := strconv.Atoi(tb[i])
-		switch {
-		case ea == nil && eb == nil:
-			if na != nb {
-				return cmpInt(na, nb)
-			}
-		case ea == nil: // numbers sort above words (1.0 > 1.0-rc1)
-			return 1
-		case eb == nil:
-			return -1
-		default:
-			if c := strings.Compare(ta[i], tb[i]); c != 0 {
-				return c
-			}
-		}
-	}
-	return cmpInt(len(ta), len(tb))
-}
-
-func cmpInt(a, b int) int {
-	switch {
-	case a < b:
-		return -1
-	case a > b:
-		return 1
-	}
-	return 0
-}
-
-func tokens(s string) []string {
-	return strings.FieldsFunc(s, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
 }

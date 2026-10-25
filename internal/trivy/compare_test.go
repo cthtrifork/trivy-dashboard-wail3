@@ -111,7 +111,7 @@ func TestCompareVersions(t *testing.T) {
 		a, b string
 		want int
 	}{{"1.10", "1.9", 1}, {"3.0.9", "3.0.1", 1}, {"1.2", "1.2", 0}, {"1.2", "1.2.1", -1}, {"2.0", "latest", 1}, {"5.2.15-2", "5.2.9-1", 1}} {
-		if got := compareVersions(c.a, c.b); got != c.want {
+		if got := compareVersions("", c.a, c.b); got != c.want {
 			t.Errorf("%s vs %s = %d want %d", c.a, c.b, got, c.want)
 		}
 	}
@@ -154,7 +154,7 @@ esac
 			t.Errorf("expected error for %+v", bad)
 		}
 	}
-	if r, err := tagRef("a/b", "sha256:abc"); err != nil || r != "a/b@sha256:abc" {
+	if r, err := tagRef("a/b", "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"); err != nil || r != "a/b@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" {
 		t.Errorf("digest ref: %s %v", r, err)
 	}
 
@@ -205,5 +205,40 @@ func TestListTagsAsksForAnExplicitRegistry(t *testing.T) {
 	}
 	if rec.asked != "docker.io/library/traefik" { // tag stripped, registry made explicit
 		t.Errorf("engine was asked for %q", rec.asked)
+	}
+}
+
+func TestCompareVersionsByEcosystem(t *testing.T) {
+	for _, c := range []struct {
+		purl, a, b string
+		want       int
+	}{
+		{"pkg:deb/debian/openssl", "1:3.0.11-1~deb12u2", "3.0.11-1", 1}, // epoch wins
+		{"pkg:deb/debian/zlib", "1.2.13~rc1", "1.2.13", -1},             // tilde sorts first
+		{"pkg:rpm/fedora/zlib", "1.3-10.fc40", "1.3-9.fc40", 1},
+		{"pkg:apk/alpine/zlib", "1.3.1-r2", "1.3.1-r10", -1},
+		{"pkg:apk/alpine/zlib", "1.3.1_rc1-r0", "1.3.1-r0", -1},
+		{"pkg:golang/stdlib", "1.22.1", "1.22.10", -1},
+		{"", "latest", "stable", -1}, // neither parses: plain string order
+	} {
+		if got := compareVersions(c.purl, c.a, c.b); got != c.want {
+			t.Errorf("%s: %s vs %s = %d want %d", c.purl, c.a, c.b, got, c.want)
+		}
+	}
+}
+
+func TestInvalidImageRefs(t *testing.T) {
+	for _, bad := range []string{"", "--help", "a b", "nginx:", "a/b@sha256:x"} {
+		if _, err := validImage(bad); err == nil {
+			t.Errorf("validImage(%q) accepted", bad)
+		}
+	}
+	for _, ok := range []string{"nginx", "docker://ghcr.io/a/b:1", "localhost:5000/x:2"} {
+		if _, err := validImage(ok); err != nil {
+			t.Errorf("validImage(%q): %v", ok, err)
+		}
+	}
+	if _, err := tagRef("a/b", "bad/tag"); err == nil {
+		t.Error("tag with a slash accepted")
 	}
 }
