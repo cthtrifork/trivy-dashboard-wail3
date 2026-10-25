@@ -33,7 +33,7 @@ fmt: ## Format the Go code
 	gofmt -w .
 
 lint: ## golangci-lint plus the frontend's ESLint and Prettier check (as CI runs them)
-	golangci-lint run ./...
+	CGO_ENABLED=0 golangci-lint run --build-tags server ./...
 	cd frontend && npm run lint && npm run format:check
 
 vet: ## go vet, with and without the production tag

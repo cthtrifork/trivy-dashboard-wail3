@@ -82,7 +82,8 @@ jobs:
       - name: golangci-lint
         run: |
           (cd "$RUNNER_TEMP" && CGO_ENABLED=0 GOBIN="$RUNNER_TEMP/bin" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0)
-          "$RUNNER_TEMP/bin/golangci-lint" run ./...
+          # Headless: this job has no GTK, so lint the server-tag build (CGO off, like the headless build).
+          CGO_ENABLED=0 "$RUNNER_TEMP/bin/golangci-lint" run --build-tags server ./...
 
   vet:
     name: vet
