@@ -186,8 +186,8 @@ func TestVEX(t *testing.T) {
 	if p := ProductPURL("nginx:1.27", nil); p != "pkg:oci/nginx?repository_url=nginx&tag=1.27" {
 		t.Errorf("tag purl: %s", p)
 	}
-	if ImageRepo("docker://localhost:5000/a/b:1@sha256:x") != "localhost:5000/a/b" {
-		t.Errorf("repo: %s", ImageRepo("docker://localhost:5000/a/b:1@sha256:x"))
+	if ImageRepo("docker://localhost:5000/a/b:1@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") != "localhost:5000/a/b" {
+		t.Errorf("repo: %s", ImageRepo("docker://localhost:5000/a/b:1@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 	}
 }
 

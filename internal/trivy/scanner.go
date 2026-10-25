@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/distribution/reference"
 )
 
 // ScanRequest is what the UI sends to start a scan.
@@ -190,14 +192,15 @@ func NormalizeImage(ref string) string {
 	return ref
 }
 
-// validImage normalises ref and rejects values that could be read as flags.
+// validImage normalises ref and rejects anything that is not a container image
+// reference (which also rules out values that could be read as flags).
 func validImage(ref string) (string, error) {
 	image := NormalizeImage(ref)
 	if image == "" {
 		return "", errors.New("image reference is empty")
 	}
-	if strings.HasPrefix(image, "-") || strings.ContainsAny(image, " \t\r\n") {
-		return "", errors.New("invalid image reference")
+	if _, err := reference.ParseAnyReference(image); err != nil {
+		return "", fmt.Errorf("invalid image reference: %w", err)
 	}
 	return image, nil
 }

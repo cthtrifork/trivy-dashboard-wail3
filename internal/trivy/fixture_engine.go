@@ -71,7 +71,7 @@ func (f *FixtureEngine) index() (fixtureSet, error) {
 	for v := range set.vuln {
 		set.versions = append(set.versions, v)
 	}
-	sort.Slice(set.versions, func(i, j int) bool { return compareVersions(set.versions[i], set.versions[j]) > 0 })
+	sort.Slice(set.versions, func(i, j int) bool { return compareVersions("", set.versions[i], set.versions[j]) > 0 })
 	return set, nil
 }
 
@@ -164,9 +164,9 @@ func (s fixtureSet) sbomFor(version string) string {
 	for v := range s.sbom {
 		versions = append(versions, v)
 	}
-	sort.Slice(versions, func(i, j int) bool { return compareVersions(versions[i], versions[j]) > 0 })
+	sort.Slice(versions, func(i, j int) bool { return compareVersions("", versions[i], versions[j]) > 0 })
 	for _, v := range versions {
-		if compareVersions(v, version) <= 0 {
+		if compareVersions("", v, version) <= 0 {
 			return s.sbom[v]
 		}
 	}

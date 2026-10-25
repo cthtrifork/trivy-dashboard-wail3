@@ -12,7 +12,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/distribution/reference"
 	"github.com/openvex/go-vex/pkg/vex"
+	"github.com/package-url/packageurl-go"
 )
 
 // VEX statuses and justifications as defined by OpenVEX, taken from the
@@ -61,9 +63,12 @@ func VEXKey(id, purl, pkg, version string) string {
 // ImageRepo strips tag and digest so assessments carry over to new tags.
 func ImageRepo(ref string) string {
 	ref = NormalizeImage(ref)
-	ref, _, _ = strings.Cut(ref, "@")
-	if i := strings.LastIndex(ref, ":"); i > strings.LastIndex(ref, "/") {
-		ref = ref[:i]
+	named, err := reference.Parse(ref)
+	if err != nil {
+		return ref
+	}
+	if n, ok := named.(reference.Named); ok {
+		return n.Name()
 	}
 	return ref
 }
@@ -435,18 +440,13 @@ func anyPURLMatches(subs []string, v Vulnerability) bool {
 	return false
 }
 
-// splitPURL returns the unescaped "pkg:type/namespace/name" and the version.
+// splitPURL returns the canonical "pkg:type/namespace/name" and the version.
+// A string that is not a package URL is returned as it is, without a version.
 func splitPURL(p string) (name, version string) {
-	p, _, _ = strings.Cut(p, "#")
-	p, _, _ = strings.Cut(p, "?")
-	if i := strings.LastIndex(p, "@"); i > strings.LastIndex(p, "/") {
-		p, version = p[:i], p[i+1:]
+	u, err := packageurl.FromString(p)
+	if err != nil {
+		return p, ""
 	}
-	if u, err := url.PathUnescape(p); err == nil {
-		p = u
-	}
-	if u, err := url.PathUnescape(version); err == nil {
-		version = u
-	}
-	return p, version
+	base := packageurl.PackageURL{Type: u.Type, Namespace: u.Namespace, Name: u.Name}
+	return base.ToString(), u.Version
 }
