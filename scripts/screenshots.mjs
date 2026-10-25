@@ -48,22 +48,22 @@ expect((await text("#mode-banner")).includes("Demo mode"), "demo banner should b
 await page.click("#scan-btn");
 await page.waitForFunction(() => !document.querySelector("#scan-btn").disabled && document.querySelector("#vuln-count").textContent !== "0", null, { timeout: 30000 });
 expect((await text("#vuln-count")) === "29", "3.7.13 should have 29 findings, got " + (await text("#vuln-count")));
-const hideVexBoxes = () => page.evaluate(() => {
-  document.querySelectorAll("details.vexbox").forEach((d) => (d.open = false));
+const scrollTop = () => page.evaluate(() => {
   document.getElementById("prio-list").scrollTop = 0;
 });
 
 // ---- Priorities ----
-await hideVexBoxes();
+await scrollTop();
 await shot("01-priorities");
 
 const first = page.locator(".pcard").first();
-await first.locator("details.vexbox > summary").click();
-await first.locator(".vexform select").first().selectOption("not_affected");
-await first.locator(".vexform select").nth(1).selectOption("vulnerable_code_not_in_execute_path");
-await first.locator(".vexform textarea").first().fill("The vulnerable HTTP/2 path is not reachable: the entrypoint only serves HTTP/1.1.");
+await first.locator(".vexbtn").click();
+const drawer = page.locator("dialog.drawer");
+await drawer.locator('.seg label:has-text("Not affected")').click();
+await drawer.locator('.radio:has-text("never run")').click();
+await drawer.locator("#vex-impact").fill("The vulnerable HTTP/2 path is not reachable: the entrypoint only serves HTTP/1.1.");
 await shot("02-priorities-vex-editor");
-await first.locator('.vexform button:has-text("Save")').click();
+await drawer.locator('.drawer-actions button:has-text("Save")').click();
 await page.waitForTimeout(400);
 
 await page.click("#vex-export-btn");
@@ -84,7 +84,7 @@ await page.click("#vex-close");
 // ---- Vulnerabilities ----
 await tab("vulns");
 await shot("04-vulnerabilities");
-// Expand a finding that has no VEX assessment, so the editor stays collapsed.
+// Expand a finding that has no VEX assessment, so the trigger reads "Assess this finding".
 await page.click("#vuln-table tbody:not(.pad) tr.row >> nth=1");
 await shot("05-vulnerability-details");
 

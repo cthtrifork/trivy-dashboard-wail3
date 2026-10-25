@@ -26,6 +26,7 @@ import DepsPanel from "./components/DepsPanel.vue";
 import SbomPanel from "./components/SbomPanel.vue";
 import ComparePanel from "./components/ComparePanel.vue";
 import VexDialog from "./components/VexDialog.vue";
+import VexDrawer from "./components/VexDrawer.vue";
 import HelpDialog from "./components/HelpDialog.vue";
 
 const tab = ref("prio");
@@ -162,6 +163,7 @@ onMounted(init);
   </main>
 
   <VexDialog ref="vexDialog" />
+  <VexDrawer />
   <HelpDialog ref="helpDialog" />
   <div id="status" :class="[status.err ? 'err' : '', status.busy ? 'spin' : '']">{{ status.msg }}</div>
   <footer id="footprint" v-if="footprintNote" :title="footprint.cacheLocation">{{ footprintNote }}</footer>
