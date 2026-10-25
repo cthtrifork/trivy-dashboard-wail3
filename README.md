@@ -1,115 +1,45 @@
 # Trivy Scanner (Wails v3)
 
 Desktop app: enter a container image reference, and Trivy runs inside a local
-Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/image/Dockerfile`](internal/trivy/image/Dockerfile) and kept current by Dependabot; choose another version or image under **Options → Trivy version or image**). Results show in two panels:
+Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/image/Dockerfile`](internal/trivy/image/Dockerfile); choose another version or image under **Options → Trivy version or image**).
 
-- **Priorities** – the landing view: instead of 150 CVEs, a ranked shortlist (top 10 by default). Each finding gets a 0–100 score from a small explainable rule engine that combines
-  CISA **KEV** (documented exploitation), **EPSS** (predicted 30-day exploitation probability), CVSS severity, attack vector/complexity/privileges/user interaction, and fix availability.
-  Every card shows the points behind its rank and a plain-English attack-vector assessment. Tiers: Act now / Fix soon / Plan / Monitor (low-risk hidden by default).
-- **VEX editor** – **Assess this finding** opens a side drawer with the CVE (linked to its advisory), its title, a glanceable *What it means* (headline plus attack vector, privileges needed, impact and fix) and the components that carry it. There choose `affected`, `not_affected`, `fixed` or `under_investigation`, add a justification / impact / action statement (validated per the OpenVEX rules),
-  and use **Edit/Create VEX** to export OpenVEX (v0.2.0) or **import** an existing OpenVEX file by pasting it: its statements are matched to the scan's findings (versionless PURLs such as `pkg:apk/alpine/zlib` apply to every version) and applied as assessments. Assessments are stored in `<user config dir>/trivy-scanner/vex.json` per image repository, so they carry over to later scans and tags; resolved findings are hidden from the shortlist. To cover every CVE and then work the list down, tick **Mark all as under investigation** under the scan options, or use **Mark the N as under investigation** in *Edit/Create VEX*, which adds an `under_investigation` statement to each finding that has none and leaves existing ones alone; filter the findings by VEX status to see what is left. Importing a file replaces the stored assessment of every finding it matches and keeps the rest; tick *Mark findings the file does not cover as under investigation* to fill the gaps in the same step. When a CVE appears in several components, the drawer offers checkboxes to apply the same statement to the other components in one save. Each assessment can carry an author and a review-by date (kept locally, not part of the OpenVEX export); once the date has passed the finding is shown again, flagged `expired`. Findings hidden by VEX are listed in a collapsed **Suppressed by VEX** section under the shortlist, 25 CVEs per page, with a CVE that hits several components shown once and the components as children.
-- **Compare** – pick an image repository and two tags (*Load tags* asks the registry via `podman search --list-tags`; you can also type tags or `sha256:` digests). Both are scanned and diffed docker-scout style:
-  side-by-side severity counts with deltas, a verdict, vulnerabilities **added / removed / unchanged** with the reason (package upgraded, package removed/new, newly disclosed), and package **added / removed / upgraded / downgraded** with per-package vulnerability counts.
-- **Vulnerabilities** – severity cards (click to filter), search, sortable table, click a row for details.
-- **Dependencies** – an interactive force-directed **graph** of the SBOM dependency graph (canvas, no libraries): nodes are components (square = OS package, circle = library/app; fill = worst vulnerability in the package itself, ring = vulnerable only via a dependency; size = vulnerability count), arrows point from a package to what it depends on, laid out top-down from the image. Scroll to zoom, drag to pan or move nodes, double-click to fit. Defaults to vulnerable paths only; search, OS/Application filter, and *Focus* (selection ±1–3 hops) keep big images readable (max 400 nodes drawn). Click a node for its vulnerabilities and clickable *Depends on* / *Required by* lists.
-- **SBOM** – CycloneDX components (name, version, type, license, purl) with search and type filters.
+- **Priorities** – the landing view: a ranked shortlist instead of 150 CVEs. An explainable 0–100 score combines CISA **KEV**, **EPSS**, CVSS severity, attack vector and fix availability. Tiers: Act now / Fix soon / Plan / Monitor. Tuning: [`docs/scoring.md`](docs/scoring.md).
+- **VEX editor** – assess a finding as `affected`, `not_affected`, `fixed` or `under_investigation`, export or import OpenVEX (v0.2.0). Assessments are stored per image repository in `<user config dir>/trivy-scanner/vex.json`; resolved findings are hidden from the shortlist.
+- **Compare** – scan two tags or digests and diff them: severity deltas, vulnerabilities added / removed / unchanged, and package changes.
+- **Vulnerabilities** – severity cards, search, sortable table, details.
+- **Dependencies** – interactive graph of the SBOM dependency graph.
+- **SBOM** – CycloneDX components with search and type filters.
+
+Screenshots: [`docs/screenshots`](docs/screenshots).
 
 ## Requirements
-- Go 1.26+ (required by Wails v3 beta.34), [Wails v3 CLI](https://v3.wails.io) (`make wails3-install` installs the version pinned in `go.mod`)
-- Node 20.19+ or 22.12+ to build the Vue frontend (`frontend/`, Vite)
-- Linux: GTK4 + WebKitGTK 6 dev packages (see Wails docs); macOS/Windows: native webview
-- `podman` on PATH (override with `PODMAN=/path/to/podman`) for real scans; not needed in demo mode
+- Go 1.26+, [Wails v3 CLI](https://v3.wails.io) (`make wails3-install`)
+- Node 20.19+ or 22.12+ for the Vue frontend (`frontend/`)
+- Linux: GTK4 + WebKitGTK 6 dev packages; macOS/Windows: native webview
+- `podman` on PATH (override with `PODMAN=/path/to/podman`)
 
 ## Run
-    make frontend                             # once, and after UI changes: builds frontend/dist, which the binary embeds
-    make run                                  # or: wails3 dev. Real podman, real scans
-    make build                                # production build, always real podman
-    make test                                 # replays the recorded fixtures, no podman needed
+    make frontend    # builds frontend/dist, which the binary embeds
+    make run         # or: wails3 dev. Real podman, real scans
+    make build       # production build
+    make test        # replays recorded fixtures, no podman needed
+    make demo        # dev builds only: the app on recorded data
 
-Without GTK, use the dev container: `make dev` gives hot reload for Vue and Go, see [`docs/devcontainer.md`](docs/devcontainer.md).
+`make help` lists all tasks. Without GTK, use the dev container (`make dev`, [`docs/devcontainer.md`](docs/devcontainer.md)).
 
-Every normal run, `wails3 dev` included, uses the real podman. Nothing is faked unless you ask for it.
-Priority scoring is explainable and tunable (per-rule toggles, EPSS cutoff, fixed-only, tier thresholds, saved presets): [`docs/scoring.md`](docs/scoring.md).
+## Notes
+- The Trivy cache is a host directory (`~/.cache/trivy-scanner/trivy` on Linux); set `TRIVY_SCANNER_CACHE` to change it. The vulnerability DB is checked once per session and scans run with `--skip-db-update`. See [`docs/architecture.md`](docs/architecture.md#trivy-cache).
+- Private registries: pass credentials via *Options* (`TRIVY_USERNAME`/`TRIVY_PASSWORD`). Locally-built images not in a registry are not scanned.
+- EPSS and KEV feeds can be overridden with `TRIVY_SCANNER_EPSS_URL` / `TRIVY_SCANNER_KEV_URL`; the VEX store with `TRIVY_SCANNER_VEX_FILE`.
+- Release builds can self-update: [`docs/self-update.md`](docs/self-update.md).
 
-Quitting (closing the window) stops a running scan and removes its container, following Wails' lifecycle guide: [`docs/lifecycle.md`](docs/lifecycle.md).
+## More
+- Headless server over an SSH tunnel: [`docs/headless.md`](docs/headless.md)
+- Wails MCP server (development only): [`docs/mcp.md`](docs/mcp.md)
+- Window lifecycle: [`docs/lifecycle.md`](docs/lifecycle.md)
+- UI conventions: [`docs/ux-design-sheet.md`](docs/ux-design-sheet.md)
+- CI, screenshots and releases: [`docs/ci.md`](docs/ci.md), [`docs/releasing.md`](docs/releasing.md)
+- Recorded fixtures for tests and demo mode: [`internal/trivy/fixtures`](internal/trivy/fixtures/README.md)
+- Contributors and AI agents: [`AGENTS.md`](AGENTS.md)
 
-Running on a headless server that only has podman (no Go), reached from your browser over an SSH tunnel: [`docs/headless.md`](docs/headless.md).
-
-Let an LLM agent drive the running app through Wails' built-in MCP server (development only, never in releases): [`docs/mcp.md`](docs/mcp.md).
-
-Visual and interaction conventions (tokens, components, states) for anyone touching the UI: [`docs/ux-design-sheet.md`](docs/ux-design-sheet.md).
-
-`make help` lists common tasks (`make check`, `make test`, `make headless`, ...).
-
-Contributors and AI agents: start at [`AGENTS.md`](AGENTS.md) (rules, commands, architecture, current status).
-
-### Fake data (tests and screenshots only)
-Recorded Trivy output for two real Traefik releases lives in [`internal/trivy/fixtures`](internal/trivy/fixtures/README.md).
-The Go tests replay it directly. To run the app itself on it, set a flag, in any **development** build (one without `-tags production`):
-
-    make demo
-    TRIVY_SCANNER_FAKE_PODMAN=1 wails3 dev
-
-A yellow banner says demo mode is on, the inputs are prefilled (`traefik:3.7.13`, Compare `3.7.13` → `3.7.16`) and EPSS/KEV lookups are turned off so the output is offline and deterministic.
-Tags `3.7.13`, `3.7.16`, `3.7` and `latest` work; any other image gets an error listing what is recorded. Production builds do not contain the fixtures or any code that could replay them,
-so the flag is ignored there (with a logged warning), and CI and the release workflow fail if a production binary ever contains demo-mode code.
-
-### Screenshots
-`make screenshots` (it runs `scripts/screenshots.sh`) rebuilds the app in headless server mode, runs it with `TRIVY_SCANNER_FAKE_PODMAN=1` and a throwaway VEX store, drives the UI with Playwright and rewrites `docs/screenshots/`.
-It builds the Vue frontend too. It needs Go, Node 20.19+ (or 22.12+) and Playwright with Chromium (`npm install --no-save playwright && npx playwright install chromium`), and no GTK, podman or network.
-
-
-The **Screenshots** workflow (`.github/workflows/screenshots.yml`) renders them in CI: a pull request gets them embedded in an updatable PR comment (as run artifacts) and commits nothing; after merge, a bot PR from `main` updates `docs/screenshots`. Do not commit locally generated images in a feature PR. Details: [`docs/ci.md`](docs/ci.md#screenshots).
-The script also checks the data and that the dependency graph's layout stays finite, so a regression fails the run instead of producing a blank image.
-
-Notes: the Trivy cache (vulnerability DB) is a host directory (`~/.cache/trivy-scanner/trivy` on Linux) mounted at an explicit `--cache-dir`; with a remote podman it is the `trivy-cache` volume. Set `TRIVY_SCANNER_CACHE` to a volume name or an absolute directory to change it (see [`docs/architecture.md`](docs/architecture.md#trivy-cache)). Scans pass `--list-all-pkgs`, so reports list every installed package. The vulnerability DB is checked once per session (then hourly) and scans run with `--skip-db-update`, so repeat scans and comparisons start fast and keep working offline from the cache; `TRIVY_DB_REPOSITORY` / `TRIVY_JAVA_DB_REPOSITORY` select a mirror.
-Trivy pulls the
-target image itself from the registry; for private registries use *Options* to
-pass credentials (via `TRIVY_USERNAME`/`TRIVY_PASSWORD` env, not argv).
-Locally-built images that aren't in a registry are not scanned.
-
-## Exploitation data
-EPSS comes from `api.first.org`, KEV from CISA's JSON feed (cached on disk for 12h, stale cache used if offline). If a feed is unreachable the scan still works and the UI says which signal is missing.
-Override with `TRIVY_SCANNER_EPSS_URL` / `TRIVY_SCANNER_KEV_URL` (mirrors, air-gapped use) and `TRIVY_SCANNER_VEX_FILE` (VEX store location).
-
-## Updating
-Release builds can update themselves: **Options → Check for updates…** fetches the latest GitHub release, verifies the download against its `SHA256SUMS`, and offers **Download**, then swaps the binary on **Restart & apply**. Each step (check, download, restart) runs only when you click it, needs the install directory to be writable (use your package manager for packaged installs), and is disabled in development builds. Details, limits and the release-asset contract: [`docs/self-update.md`](docs/self-update.md).
-
-## CI and releases (GitHub Actions)
-- **CI** (`.github/workflows/ci.yml`) – every PR and push to `main`: gofmt, `go mod tidy -diff` / `verify`, `go vet`, `go test -race`, a production-tag build that links GTK4/WebKitGTK, and a JS syntax check.
-- **Security** (`security.yml`) – `govulncheck` and a Trivy filesystem scan when Go files or dependencies change, plus weekly (new advisories appear without code changes).
-- **Tag and release** (`tag-release.yml`) – the normal way to cut a release. **Actions → Tag and release → Run workflow**: give a new tag (`v1.4.0`, `v1.4.0-rc.1`) or choose `patch` / `minor` / `major` to bump the latest `vX.Y.Z` tag. It tags `main` and then runs `release.yml`. Details: [`docs/releasing.md`](docs/releasing.md).
-- **Release** (`release.yml`) – publishes a release for a tag. Run by *Tag and release*, or by pushing a semver tag yourself (`git tag v1.2.3 && git push origin v1.2.3`; `v1.2.3-rc.1` makes a pre-release). It re-runs vet/tests/govulncheck, builds a Linux amd64 binary, and publishes a GitHub release with the raw binary, a tarball, `SHA256SUMS`, generated notes and a build-provenance attestation (`gh attestation verify <tarball> --repo <owner>/<repo>`). Run it manually for a dry run that builds but does not publish.
-- Dependabot keeps Go modules and the SHA-pinned actions current.
-- The release layout doubles as the in-app updater's interface (raw binary + fixed-name `SHA256SUMS`): [`docs/self-update.md`](docs/self-update.md).
-- Which ideas came from Wails' cross-platform build guide and `wails-build-action`, and what was left out: [`docs/ci.md`](docs/ci.md).
-
-The release binary is built on Ubuntu 24.04 and links dynamically, so it needs GTK4 and WebKitGTK 6 (and a glibc at least as new as Ubuntu 24.04's) on the machine that runs it, plus `podman`.
-
-## Screenshots
-Generated by `scripts/screenshots.sh` from the recorded `traefik:3.7.13` / `3.7.16` scans (demo mode, hence the banner).
-
-### Priorities
-![Priorities](docs/screenshots/01-priorities.png)
-![VEX editor](docs/screenshots/02-priorities-vex-editor.png)
-![OpenVEX export](docs/screenshots/03-priorities-export-openvex.png)
-
-### Vulnerabilities
-![Vulnerabilities](docs/screenshots/04-vulnerabilities.png)
-![Vulnerability details](docs/screenshots/05-vulnerability-details.png)
-
-### Dependencies
-![Dependency graph](docs/screenshots/06-dependencies-graph.png)
-![Selected node](docs/screenshots/07-dependencies-node-selected.png)
-![Focus view](docs/screenshots/08-dependencies-focus.png)
-![All components](docs/screenshots/09-dependencies-all-components.png)
-
-### SBOM
-![SBOM](docs/screenshots/10-sbom.png)
-
-### Compare
-![Compare vulnerabilities](docs/screenshots/11-compare-vulnerabilities.png)
-![Compare packages](docs/screenshots/12-compare-packages.png)
-
-### Log
-![Log](docs/screenshots/13-log.png)
+The release binary is built on Ubuntu 24.04 and needs GTK4, WebKitGTK 6 and `podman` on the machine that runs it.
