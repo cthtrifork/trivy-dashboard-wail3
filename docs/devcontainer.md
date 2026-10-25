@@ -1,6 +1,6 @@
 # Dev container and hot reload
 
-A dev container with Go, Node, `air` (Go reloader), the `wails3` CLI and the podman client. It runs the app in **server mode** (the GUI needs GTK, which the container does not have) and you use it in a browser.
+A dev container with Go, Node, `air` (Go reloader), the `wails3` CLI and rootless podman. It runs the app in **server mode** (the GUI needs GTK, which the container does not have) and you use it in a browser.
 
 ## Start
 
@@ -22,15 +22,17 @@ The Go app proxies the page to Vite (`FRONTEND_DEVSERVER_URL`, dev builds only),
 
 ## Real scans or demo data
 
-Scans run in podman containers through an API socket. Without one, `make dev` prints a notice and uses the recorded demo data (`TRIVY_SCANNER_FAKE_PODMAN=1`, never in production builds).
+The container runs rootless **podman inside itself**, and the app starts Trivy with it, like a local `go run .`. That is why `devcontainer.json` sets `"privileged": true`, and why podman's storage is a named volume (`trivy-scanner-podman-storage`): rebuilding the dev container keeps the pulled Trivy image. Trivy's DB cache is in `~/.cache/trivy-scanner` inside the container.
 
-For real scans on a Linux host with rootless podman:
+Check it with `podman run --rm docker.io/library/alpine echo ok`. If podman cannot run here, `make dev` says so and uses the recorded demo data (`TRIVY_SCANNER_FAKE_PODMAN=1`, never in production builds).
+
+Alternative on a Linux host with rootless podman: reuse the host's podman and image cache instead.
 
 ```sh
 systemctl --user enable --now podman.socket          # on the host
 ```
 
-then uncomment `mounts` and `runArgs` in `.devcontainer/devcontainer.json` and rebuild the container. `CONTAINER_HOST` already points at `/run/podman/podman.sock`. On macOS/Windows or in Codespaces there is no such socket; use demo mode.
+then in `devcontainer.json` add the mount `source=${localEnv:XDG_RUNTIME_DIR}/podman/podman.sock,target=/run/podman/podman.sock,type=bind`, set `CONTAINER_HOST=unix:///run/podman/podman.sock` in `containerEnv`, and install `podman-remote` in place of `podman`. You can then drop `privileged`.
 
 ## Checks
 
@@ -41,3 +43,4 @@ then uncomment `mounts` and `runArgs` in `.devcontainer/devcontainer.json` and r
 - *"unable to connect to frontend server"*: Vite is not up; run `make dev` rather than starting `air` by hand.
 - *Port in use*: `WAILS_SERVER_PORT=9090 make dev`.
 - Going through a forwarded URL other than `localhost` (Codespaces web URL) can trip Wails' loopback `Host` check; use the editor's local port forward instead.
+- *Podman storage errors* (overlay on an unsupported filesystem, common on Docker Desktop): `printf '[storage]\ndriver = "vfs"\n' > ~/.config/containers/storage.conf` (slower, always works), then `podman system reset`.

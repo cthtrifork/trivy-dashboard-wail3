@@ -3,7 +3,7 @@
 #
 # Vite serves the Vue app with HMR; the Go app runs in server mode (no GTK) behind it and is
 # rebuilt and restarted by air on every .go change. Open http://localhost:$WAILS_SERVER_PORT.
-# Without a podman socket it falls back to the recorded demo data (dev builds only).
+# Scans use podman (nested in the dev container); if it is unusable it falls back to the recorded demo data (dev builds only).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -15,9 +15,9 @@ export PATH="$PATH:$(go env GOPATH)/bin"
 
 command -v air >/dev/null || { echo "air not found: go install github.com/air-verse/air@v1.61.7" >&2; exit 1; }
 
-sock="${CONTAINER_HOST:-}"; sock="${sock#unix://}"
-if [ -z "${TRIVY_SCANNER_FAKE_PODMAN:-}" ] && [ ! -S "${sock:-/nonexistent}" ]; then
-  echo "dev: no podman socket (CONTAINER_HOST=${CONTAINER_HOST:-unset}); using demo data. See docs/devcontainer.md." >&2
+# Real scans need a working podman (local, or CONTAINER_HOST pointing at a socket).
+if [ -z "${TRIVY_SCANNER_FAKE_PODMAN:-}" ] && ! podman info >/dev/null 2>&1; then
+  echo "dev: podman is not usable here; using demo data. See docs/devcontainer.md." >&2
   export TRIVY_SCANNER_FAKE_PODMAN=1
 fi
 
