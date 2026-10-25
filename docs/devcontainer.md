@@ -1,12 +1,16 @@
 # Dev container and hot reload
 
-A dev container with Go, Node, `air` (Go reloader), the `wails3` CLI and rootless podman. It runs the app in **server mode** (the GUI needs GTK, which the container does not have) and you use it in a browser.
+A dev container with Go and Node (both baked into the `Dockerfile`, copied from the official `golang` and `node` images, no dev container features), `air` (Go reloader), the `wails3` CLI and rootless podman. It runs the app in **server mode** (the GUI needs GTK, which the container does not have) and you use it in a browser.
 
 ## Start
 
 1. Install Docker or Podman plus an editor that speaks dev containers (VS Code *Dev Containers*, GitHub Codespaces, or `devcontainer up`).
 2. Open the repo and choose **Reopen in Container**. The first start runs `.devcontainer/post-create.sh` (`npm ci`, `go mod download`, installs `air` and `wails3`).
 3. In the container terminal: `make dev`, then open <http://localhost:8080> (port 8080 is forwarded).
+
+## File ownership
+
+The container user is `vscode` with `updateRemoteUserUID` on, so on Linux it takes your host uid and your clone stays writable (`node_modules`, `tmp/`, Go caches, podman storage all belong to you). `post-create.sh` also marks the workspace as a git `safe.directory` for setups where the owner still differs, and `.gitattributes` keeps `*.sh` on LF so a Windows clone still runs.
 
 ## What reloads
 
