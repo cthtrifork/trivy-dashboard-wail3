@@ -1,8 +1,8 @@
 # Dev environment for Trivy Scanner: Go, Node and a full rootless podman, so scans run inside
 # the container (podman-in-podman/docker, see docs/devcontainer.md). No GTK: the app runs in
 # server mode in the browser.
-FROM docker.io/library/golang:1.26-trixie AS go
-FROM docker.io/library/node:22-trixie-slim AS node
+FROM mirror.gcr.io/library/golang:1.26-trixie AS go
+FROM mirror.gcr.io/library/node:22-trixie-slim AS node
 
 FROM mcr.microsoft.com/devcontainers/base:trixie
 
@@ -19,6 +19,11 @@ RUN apt-get update \
  && echo "vscode:100000:65536" > /etc/subgid \
  && mkdir -p /home/vscode/go /home/vscode/.local/share/containers \
  && chown -R vscode:vscode /home/vscode/go /home/vscode/.local
+
+# Pull Docker Hub images (the Trivy scanner image) through Google's mirror first, which has no
+# anonymous rate limit; podman falls back to docker.io itself.
+RUN printf '[[registry]]\nprefix = "docker.io"\nlocation = "docker.io"\n\n[[registry.mirror]]\nlocation = "mirror.gcr.io"\n' \
+    > /etc/containers/registries.conf.d/10-mirror-gcr.conf
 
 ENV GOPATH=/home/vscode/go \
     PATH=/usr/local/go/bin:/home/vscode/go/bin:${PATH}

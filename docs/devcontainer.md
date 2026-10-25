@@ -1,6 +1,6 @@
 # Dev container and hot reload
 
-A dev container with Go and Node (both baked into the `Dockerfile`, copied from the official `golang` and `node` images, no dev container features), `air` (Go reloader), the `wails3` CLI and rootless podman. It runs the app in **server mode** (the GUI needs GTK, which the container does not have) and you use it in a browser.
+A dev container with Go and Node (both baked into the `Dockerfile`, copied from the official `golang` and `node` images, pulled from `mirror.gcr.io`, no dev container features), `air` (Go reloader), the `wails3` CLI and rootless podman. It runs the app in **server mode** (the GUI needs GTK, which the container does not have) and you use it in a browser.
 
 ## Start
 
@@ -15,6 +15,10 @@ The container installs the Go, ESLint, Prettier, MDX and Vue extensions. The Go 
 Frontend checks, from `frontend/`: `npm run lint` (ESLint, the `essential` Vue rules: real errors only), `npm run format:check` and `npm run format` (Prettier; config in `.prettierrc.json`, generated `bindings/` and `dist/` are ignored). The existing frontend code predates Prettier, so `format:check` reports most files and the first save of each reformats it; run `npm run format` once in its own commit when you want that churn out of the way.
 
 `.editorconfig` sets UTF-8, LF, a final newline, tabs for Go and the Makefile and two spaces elsewhere. `.gitattributes` normalises text to LF and marks `frontend/bindings` and the lockfile as generated.
+
+## Image mirror
+
+The `Dockerfile` pulls its base images from `mirror.gcr.io`, and nested podman is configured (`/etc/containers/registries.conf.d/10-mirror-gcr.conf`) to try `mirror.gcr.io` before `docker.io`, so the Trivy image does not hit Docker Hub's anonymous rate limit. If the mirror lacks an image or tag, podman falls back to Docker Hub. Remove that file inside the container to bypass the mirror.
 
 ## File ownership
 
