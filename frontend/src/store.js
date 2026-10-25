@@ -152,6 +152,7 @@ Events.On("scan:log", (ev) => {
 // Options shared by Scan and Compare.
 export const opts = reactive({
   ignoreUnfixed: false,
+  markUnderInvestigation: false,
   username: "",
   password: "",
   // The Trivy version is a preference, not a secret: remember it between runs.
@@ -197,6 +198,7 @@ export async function runScan() {
       password: opts.password,
       ignoreUnfixed: opts.ignoreUnfixed,
       trivyImage: opts.trivyImage.trim(),
+      markUnderInvestigation: opts.markUnderInvestigation,
     });
     if (!cmpForm.repo) cmpForm.repo = r.image.replace(/@.*$/, "").replace(/:[^/:]*$/, "");
     result.value = r;

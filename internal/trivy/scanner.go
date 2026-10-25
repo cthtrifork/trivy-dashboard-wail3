@@ -19,6 +19,9 @@ type ScanRequest struct {
 	IgnoreUnfixed bool   `json:"ignoreUnfixed"`
 	// TrivyImage selects the Trivy image or version to scan with. Empty means the default.
 	TrivyImage string `json:"trivyImage"`
+	// MarkUnderInvestigation records an under_investigation VEX assessment for every
+	// finding that has none after the scan (handled by the service, which owns the store).
+	MarkUnderInvestigation bool `json:"markUnderInvestigation"`
 }
 
 // Vulnerability is one finding, flattened from trivy's JSON report.

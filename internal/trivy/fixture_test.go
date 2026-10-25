@@ -260,3 +260,84 @@ func TestFixtureSBOMSummary(t *testing.T) {
 		t.Errorf("summary = %+v, want text %q", res.Summary, want)
 	}
 }
+
+// The VEX workflows: add statements one by one, cover every finding as
+// under_investigation, and merge an import where the import wins.
+func TestMarkUnassessedAndMerge(t *testing.T) {
+	res, err := fixtureScanner().Scan(context.Background(), ScanRequest{Image: "docker.io/library/traefik:3.7.13"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const img = "docker.io/library/traefik:3.7.13"
+	keys := map[string]bool{}
+	for _, v := range res.Vulnerabilities {
+		keys[v.Key] = true
+	}
+	st := &VEXStore{Path: filepath.Join(t.TempDir(), "vex.json")}
+
+	// One hand-written statement, then cover the rest.
+	first := res.Vulnerabilities[0]
+	if _, err := st.Set(img, VEXEntry{Vulnerability: first.ID, Package: first.Package, Version: first.Installed, PURL: first.PURL, Status: "fixed"}); err != nil {
+		t.Fatal(err)
+	}
+	n, err := st.MarkUnassessed(img, res.Vulnerabilities, "Jane")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != len(keys)-1 {
+		t.Fatalf("marked %d, want %d", n, len(keys)-1)
+	}
+	got, _ := st.List(img)
+	if len(got) != len(keys) {
+		t.Fatalf("stored %d, want %d", len(got), len(keys))
+	}
+	for _, e := range got {
+		if e.Key == first.Key && e.Status != "fixed" {
+			t.Errorf("existing assessment was overwritten: %+v", e)
+		}
+		if e.Key != first.Key && (e.Status != "under_investigation" || e.Author != "Jane") {
+			t.Errorf("bad placeholder %+v", e)
+		}
+	}
+	if n, _ := st.MarkUnassessed(img, res.Vulnerabilities, ""); n != 0 {
+		t.Errorf("second run marked %d, want 0", n)
+	}
+
+	// An import replaces matching statements, whatever their state, and keeps the rest.
+	doc, err := os.ReadFile("testdata/traefik-vex.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries, _, err := ParseOpenVEX(doc, res.Vulnerabilities)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetMany(img, entries); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = st.List(img)
+	if len(got) != len(keys) {
+		t.Fatalf("import changed the entry count to %d", len(got))
+	}
+	imported := map[string]bool{}
+	for _, e := range entries {
+		imported[e.Key] = true
+	}
+	for _, e := range got {
+		if imported[e.Key] && e.Status != "not_affected" {
+			t.Errorf("import did not override %+v", e)
+		}
+		if !imported[e.Key] && e.Key != first.Key && e.Status != "under_investigation" {
+			t.Errorf("import touched an unrelated entry %+v", e)
+		}
+	}
+
+	// Import into an empty store, then fill the gaps.
+	st2 := &VEXStore{Path: filepath.Join(t.TempDir(), "vex.json")}
+	if err := st2.SetMany(img, entries); err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := st2.MarkUnassessed(img, res.Vulnerabilities, ""); n != len(keys)-len(entries) {
+		t.Errorf("marked %d after import, want %d", n, len(keys)-len(entries))
+	}
+}

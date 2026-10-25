@@ -209,6 +209,11 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 		s.found[trivy.ImageRepo(res.Image)] = res.Vulnerabilities
 		s.latest = res.Vulnerabilities
 		s.mu.Unlock()
+		if req.MarkUnderInvestigation {
+			if _, merr := s.vex.MarkUnassessed(res.Image, res.Vulnerabilities, ""); merr != nil {
+				return res, errors.New("scan finished, but marking findings under investigation failed: " + merr.Error())
+			}
+		}
 	}
 	return res, err
 }
@@ -256,8 +261,11 @@ func (s *ScanService) VEXExport(image, author, role string) (string, error) {
 }
 
 // VEXImport applies a pasted OpenVEX document to the findings of the latest
-// scan of the image and saves the matching assessments.
-func (s *ScanService) VEXImport(image, doc string) (trivy.ImportReport, error) {
+// scan of the image and saves the matching assessments. A statement replaces
+// the stored assessment of the finding it matches; other stored assessments are
+// kept. With markRest, findings still without an assessment afterwards are
+// marked under_investigation.
+func (s *ScanService) VEXImport(image, doc string, markRest bool) (trivy.ImportReport, error) {
 	s.mu.Lock()
 	findings := s.found[trivy.ImageRepo(image)]
 	s.mu.Unlock()
@@ -271,7 +279,25 @@ func (s *ScanService) VEXImport(image, doc string) (trivy.ImportReport, error) {
 	if len(entries) == 0 {
 		return rep, errors.New("no statement in the document matched a finding of this scan")
 	}
-	return rep, s.vex.SetMany(image, entries)
+	if err := s.vex.SetMany(image, entries); err != nil {
+		return rep, err
+	}
+	if markRest {
+		rep.Marked, err = s.vex.MarkUnassessed(image, findings, "")
+	}
+	return rep, err
+}
+
+// VEXMarkUnassessed marks every finding of the latest scan that has no
+// assessment as under_investigation and returns how many it marked.
+func (s *ScanService) VEXMarkUnassessed(image, author string) (int, error) {
+	s.mu.Lock()
+	findings := s.found[trivy.ImageRepo(image)]
+	s.mu.Unlock()
+	if len(findings) == 0 {
+		return 0, errors.New("scan the image first")
+	}
+	return s.vex.MarkUnassessed(image, findings, author)
 }
 
 // VEXSave exports the document through a native save dialog. It returns the

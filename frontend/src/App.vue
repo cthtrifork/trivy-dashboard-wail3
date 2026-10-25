@@ -97,6 +97,9 @@ onMounted(init);
         <summary>Options</summary>
         <div class="opts-body">
           <label><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed" /> Ignore unfixed</label>
+          <label title="Record an under investigation VEX statement for every finding that has none"
+            ><input type="checkbox" id="mark-uninvestigated" v-model="opts.markUnderInvestigation" /> Mark all as under investigation</label
+          >
           <input id="username" v-model="opts.username" placeholder="Registry username" autocomplete="off" />
           <input id="password" v-model="opts.password" type="password" placeholder="Registry password / token" autocomplete="off" />
           <input

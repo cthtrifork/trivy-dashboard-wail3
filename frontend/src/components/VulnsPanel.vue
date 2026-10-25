@@ -8,7 +8,7 @@ import Chip from "./Chip.vue";
 import SummaryCard from "./SummaryCard.vue";
 import VexBox from "./VexBox.vue";
 
-const state = reactive({ filter: "", sort: "priority", dir: 1, hidden: new Set() });
+const state = reactive({ filter: "", vex: "", sort: "priority", dir: 1, hidden: new Set() });
 const expanded = reactive(new Set());
 const COLUMNS = [
   ["priority", "Priority"],
@@ -27,8 +27,12 @@ const toggle = (sev) => (state.hidden.has(sev) ? state.hidden.delete(sev) : stat
 const all = computed(() => vulns.value);
 const rows = computed(() => {
   const q = state.filter.toLowerCase();
+  const vexOk = (v) => {
+    const s = vex.value.get(v.key)?.status;
+    return !state.vex || (state.vex === "none" ? !s : s === state.vex);
+  };
   const kept = all.value.filter(
-    (v) => !state.hidden.has(v.severity) && (!q || [v.id, v.package, v.title, v.installed, v.fixed].join(" ").toLowerCase().includes(q)),
+    (v) => !state.hidden.has(v.severity) && vexOk(v) && (!q || [v.id, v.package, v.title, v.installed, v.fixed].join(" ").toLowerCase().includes(q)),
   );
   const signalRank = (v) => (v.kev ? 2 : 0) + (vex.value.has(v.key) ? 1 : 0);
   return sortRows(kept, state, (v, k) =>
@@ -65,6 +69,14 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
   </div>
   <div class="toolbar">
     <input id="vuln-filter" v-model="state.filter" placeholder="Filter by CVE, package, title…" autocomplete="off" />
+    <select id="vuln-vex" v-model="state.vex" aria-label="Filter by VEX status">
+      <option value="">Any VEX status</option>
+      <option value="none">No statement</option>
+      <option value="under_investigation">Under investigation</option>
+      <option value="affected">Affected</option>
+      <option value="not_affected">Not affected</option>
+      <option value="fixed">Fixed</option>
+    </select>
     <span id="vuln-shown">{{ rows.length }} shown</span>
   </div>
   <div class="table-wrap" ref="scroller">

@@ -164,13 +164,17 @@ export function VEXExport(image, author, role) {
 
 /**
  * VEXImport applies a pasted OpenVEX document to the findings of the latest
- * scan of the image and saves the matching assessments.
+ * scan of the image and saves the matching assessments. A statement replaces
+ * the stored assessment of the finding it matches; other stored assessments are
+ * kept. With markRest, findings still without an assessment afterwards are
+ * marked under_investigation.
  * @param {string} image
  * @param {string} doc
+ * @param {boolean} markRest
  * @returns {$CancellablePromise<trivy$0.ImportReport>}
  */
-export function VEXImport(image, doc) {
-    return $Call.ByID(494835202, image, doc).then(/** @type {($result: any) => any} */(($result) => {
+export function VEXImport(image, doc, markRest) {
+    return $Call.ByID(494835202, image, doc, markRest).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType13($result);
     }));
 }
@@ -184,6 +188,17 @@ export function VEXList(image) {
     return $Call.ByID(4047392387, image).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType15($result);
     }));
+}
+
+/**
+ * VEXMarkUnassessed marks every finding of the latest scan that has no
+ * assessment as under_investigation and returns how many it marked.
+ * @param {string} image
+ * @param {string} author
+ * @returns {$CancellablePromise<number>}
+ */
+export function VEXMarkUnassessed(image, author) {
+    return $Call.ByID(2169371234, image, author);
 }
 
 /**

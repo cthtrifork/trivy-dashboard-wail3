@@ -114,6 +114,15 @@ export class CompareRequest {
              */
             this["trivyImage"] = "";
         }
+        if (!("markUnderInvestigation" in $$source)) {
+            /**
+             * MarkUnderInvestigation records an under_investigation VEX assessment for every
+             * finding that has none after the scan (handled by the service, which owns the store).
+             * @member
+             * @type {boolean}
+             */
+            this["markUnderInvestigation"] = false;
+        }
 
         Object.assign(this, $$source);
     }
@@ -587,6 +596,14 @@ export class ImportReport {
              * @type {number}
              */
             this["skipped"] = 0;
+        }
+        if (!("marked" in $$source)) {
+            /**
+             * findings left without a statement that were marked under_investigation
+             * @member
+             * @type {number}
+             */
+            this["marked"] = 0;
         }
         if (!("warnings" in $$source)) {
             /**
