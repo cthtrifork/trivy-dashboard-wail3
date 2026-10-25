@@ -3,6 +3,7 @@ package trivy
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -11,6 +12,8 @@ type Reason struct {
 	Signal string `json:"signal"` // KEV, EPSS, Severity, Vector, Fix, Status, Context
 	Text   string `json:"text"`
 	Points int    `json:"points"`
+	// Rule is the exact rule that fired, with the thresholds in force, e.g. "EPSS ≥ 10% → +22".
+	Rule string `json:"rule"`
 }
 
 // Priority tiers, most urgent first.
@@ -53,6 +56,7 @@ func ParseVector(raw string) CVSSVector {
 
 // ruleCtx is everything the rules may look at.
 type ruleCtx struct {
+	r   Rules
 	v   *Vulnerability
 	vec CVSSVector
 	// text is the lowercase title + description for keyword rules.
@@ -67,75 +71,102 @@ type rule struct {
 
 var rules = []rule{
 	{"kev", func(c *ruleCtx) *Reason {
-		if !c.v.KEV {
+		if !c.r.KEVEnabled || !c.v.KEV {
 			return nil
 		}
-		pts, txt := 50, "Listed in CISA's Known Exploited Vulnerabilities catalog: exploitation in the wild is documented"
+		pts, txt := PointsKEV, "Listed in CISA's Known Exploited Vulnerabilities catalog: exploitation in the wild is documented"
+		rule := fmt.Sprintf("listed in KEV → +%d", PointsKEV)
 		if c.v.KEVRansomware {
-			pts += 10
+			pts += PointsKEVRansomware
 			txt += ", including use in ransomware campaigns"
+			rule += fmt.Sprintf(", used in ransomware → +%d", PointsKEVRansomware)
 		}
-		return &Reason{"KEV", txt, pts}
+		return &Reason{"KEV", txt, pts, rule}
 	}},
 	{"epss", func(c *ruleCtx) *Reason {
-		if !c.v.HasEPSS {
+		if !c.r.EPSSEnabled || !c.v.HasEPSS {
 			return nil
 		}
 		pct := c.v.EPSS * 100
 		txt := fmt.Sprintf("EPSS predicts a %.1f%% chance of exploitation in the next 30 days (more likely than %.1f%% of all CVEs)", pct, c.v.EPSSPercentile*100)
 		switch {
-		case c.v.EPSS >= 0.5:
-			return &Reason{"EPSS", txt, 35}
-		case c.v.EPSS >= 0.1:
-			return &Reason{"EPSS", txt, 22}
-		case c.v.EPSS >= 0.01:
-			return &Reason{"EPSS", txt, 10}
+		case c.v.EPSS >= c.r.EPSSVeryHigh:
+			return &Reason{"EPSS", txt, PointsEPSSVeryHigh, fmt.Sprintf("EPSS ≥ %s → +%d", pctText(c.r.EPSSVeryHigh), PointsEPSSVeryHigh)}
+		case c.v.EPSS >= c.r.EPSSHigh:
+			return &Reason{"EPSS", txt, PointsEPSSHigh, fmt.Sprintf("EPSS ≥ %s → +%d", pctText(c.r.EPSSHigh), PointsEPSSHigh)}
+		case c.v.EPSS >= c.r.EPSSCutoff:
+			return &Reason{"EPSS", txt, PointsEPSSLow, fmt.Sprintf("EPSS ≥ %s → +%d", pctText(c.r.EPSSCutoff), PointsEPSSLow)}
 		}
-		return &Reason{"EPSS", txt + ": unlikely to be exploited", 0}
+		return &Reason{"EPSS", txt + ": unlikely to be exploited", 0, fmt.Sprintf("EPSS < %s → +0", pctText(c.r.EPSSCutoff))}
 	}},
 	{"severity", func(c *ruleCtx) *Reason {
+		if !c.r.SeverityEnabled {
+			return nil
+		}
 		pts := map[string]int{"CRITICAL": 20, "HIGH": 14, "MEDIUM": 8, "LOW": 3, "UNKNOWN": 5}[c.v.Severity]
 		txt := fmt.Sprintf("%s severity", strings.ToLower(c.v.Severity))
 		if c.v.Score > 0 {
 			txt += fmt.Sprintf(" (CVSS %.1f)", c.v.Score)
 		}
-		return &Reason{"Severity", txt + ": how bad it is if exploited", pts}
+		return &Reason{"Severity", txt + ": how bad it is if exploited", pts, fmt.Sprintf("severity %s → +%d", c.v.Severity, pts)}
 	}},
 	{"vector", func(c *ruleCtx) *Reason {
+		if !c.r.VectorEnabled {
+			return nil
+		}
 		av := c.vec.M["AV"]
 		if av == "" {
 			return nil
 		}
 		pts := 0
+		var parts []string
+		add := func(label string, n int) {
+			pts += n
+			parts = append(parts, fmt.Sprintf("%s %+d", label, n))
+		}
 		switch av {
 		case "N":
-			pts += 10
+			add("AV:N", 10)
 		case "A":
-			pts += 4
+			add("AV:A", 4)
 		case "P":
-			pts -= 2
+			add("AV:P", -2)
 		}
 		if c.vec.M["AC"] == "L" {
-			pts += 3
+			add("AC:L", 3)
 		}
-		if pr := c.vec.M["PR"]; pr == "N" || c.vec.M["Au"] == "N" {
-			pts += 5
+		if c.vec.M["PR"] == "N" {
+			add("PR:N", 5)
+		} else if c.vec.M["Au"] == "N" {
+			add("Au:N", 5)
 		}
 		if c.vec.M["UI"] == "N" {
-			pts += 4
+			add("UI:N", 4)
 		}
-		return &Reason{"Vector", "attack vector makes exploitation " + ease(pts), pts}
+		rule := fmt.Sprintf("CVSS vector → %+d", pts)
+		if len(parts) > 0 {
+			rule += " (" + strings.Join(parts, ", ") + ")"
+		}
+		return &Reason{"Vector", "attack vector makes exploitation " + ease(pts), pts, rule}
 	}},
 	{"fix", func(c *ruleCtx) *Reason {
+		if !c.r.FixEnabled {
+			return nil
+		}
 		switch {
 		case c.v.Fixed != "":
-			return &Reason{"Fix", "a fixed version exists (" + c.v.Fixed + "): remediation is an upgrade away", 5}
+			return &Reason{"Fix", "a fixed version exists (" + c.v.Fixed + "): remediation is an upgrade away", 5, "fix available → +5"}
 		case strings.Contains(strings.ToLower(c.v.Status), "end_of_life"), strings.Contains(strings.ToLower(c.v.Status), "will_not_fix"):
-			return &Reason{"Fix", "the vendor will not fix this: plan mitigation or replacement", -5}
+			return &Reason{"Fix", "the vendor will not fix this: plan mitigation or replacement", -5, "vendor will not fix → -5"}
 		default:
-			return &Reason{"Fix", "no fix is available yet: mitigate or accept the risk", -3}
+			return &Reason{"Fix", "no fix is available yet: mitigate or accept the risk", -3, "no fix available → -3"}
 		}
 	}},
+}
+
+// pctText formats a probability as a short percentage: 0.01 → "1%", 0.125 → "12.5%".
+func pctText(p float64) string {
+	return strconv.FormatFloat(p*100, 'f', -1, 64) + "%"
 }
 
 func ease(pts int) string {
@@ -150,32 +181,52 @@ func ease(pts int) string {
 	return "difficult"
 }
 
-// Assess fills in the vector, priority score, tier, reasons and the
-// human-readable attack assessment of v from its current signals.
-func Assess(v *Vulnerability) {
-	c := &ruleCtx{v: v, vec: ParseVector(v.Vector), text: strings.ToLower(v.Title + " " + v.Description)}
+// Assess scores v with the default (balanced) rules; see AssessWith.
+func Assess(v *Vulnerability) { AssessWith(v, DefaultRules()) }
+
+// AssessWith fills in the vector, priority score, tier, reasons and the
+// human-readable attack assessment of v from its current signals, under rules r.
+func AssessWith(v *Vulnerability, r Rules) {
+	c := &ruleCtx{r: r.Normalize(), v: v, vec: ParseVector(v.Vector), text: strings.ToLower(v.Title + " " + v.Description)}
+	applyRules(c)
+	v.Attack = describeAttack(c)
+}
+
+// applyRules sets everything about v that depends on the rules: reasons, score, tier and the
+// sentence saying which threshold decided the tier.
+func applyRules(c *ruleCtx) {
+	v, r := c.v, c.r
 	v.Reasons = nil
 	score := 0
-	for _, r := range rules {
-		if re := r.apply(c); re != nil {
+	for _, ru := range rules {
+		if re := ru.apply(c); re != nil {
 			v.Reasons = append(v.Reasons, *re)
 			score += re.Points
 		}
 	}
 	v.Priority = min(max(score, 0), 100)
-	switch {
-	case v.KEV || v.Priority >= 70:
-		v.Tier = TierNow
-	case v.Priority >= 45 || (v.HasEPSS && v.EPSS >= 0.5):
-		v.Tier = TierSoon
-	case v.Priority >= 25:
-		v.Tier = TierPlan
-	default:
-		v.Tier = TierMonitor
-	}
 	// Highest-impact reasons first so the UI can show the top few.
 	sort.SliceStable(v.Reasons, func(i, j int) bool { return abs(v.Reasons[i].Points) > abs(v.Reasons[j].Points) })
-	v.Attack = describeAttack(c)
+
+	epssTop := r.EPSSEnabled && v.HasEPSS && v.EPSS >= r.EPSSVeryHigh
+	switch {
+	case r.FixedOnly && v.Fixed == "":
+		v.Priority, v.Tier = 0, TierMonitor
+		v.TierWhy = "Monitor: the fixed-only rule drops findings without a fix"
+		v.Reasons = append([]Reason{{"Fix", "no fix is available and the fixed-only rule is on: the score is set to 0", 0, "fixed-only → score 0"}}, v.Reasons...)
+	case r.KEVEnabled && r.KEVForceNow && v.KEV:
+		v.Tier, v.TierWhy = TierNow, "Act now: listed in KEV and the KEV rule forces Act now"
+	case v.Priority >= r.TierNow:
+		v.Tier, v.TierWhy = TierNow, fmt.Sprintf("Act now: score %d ≥ %d", v.Priority, r.TierNow)
+	case v.Priority >= r.TierSoon:
+		v.Tier, v.TierWhy = TierSoon, fmt.Sprintf("Fix soon: score %d ≥ %d", v.Priority, r.TierSoon)
+	case epssTop:
+		v.Tier, v.TierWhy = TierSoon, fmt.Sprintf("Fix soon: EPSS %s ≥ %s", pctText(v.EPSS), pctText(r.EPSSVeryHigh))
+	case v.Priority >= r.TierPlan:
+		v.Tier, v.TierWhy = TierPlan, fmt.Sprintf("Plan: score %d ≥ %d", v.Priority, r.TierPlan)
+	default:
+		v.Tier, v.TierWhy = TierMonitor, fmt.Sprintf("Monitor: score %d < %d", v.Priority, r.TierPlan)
+	}
 }
 
 func abs(n int) int {

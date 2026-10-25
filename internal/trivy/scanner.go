@@ -48,6 +48,7 @@ type Vulnerability struct {
 	KEVAction      string   `json:"kevAction"`
 	Priority       int      `json:"priority"`
 	Tier           string   `json:"tier"`
+	TierWhy        string   `json:"tierWhy"` // the threshold or rule that decided the tier
 	Reasons        []Reason `json:"reasons"`
 	Attack         string   `json:"attack"`
 	Key            string   `json:"key"` // VEX key
@@ -380,22 +381,23 @@ func parseVulns(data []byte, res *ScanResult) error {
 
 // sortVulns orders by priority, then severity and CVSS.
 func sortVulns(v []Vulnerability) {
-	sort.SliceStable(v, func(i, j int) bool {
-		a, b := v[i], v[j]
-		if a.Priority != b.Priority {
-			return a.Priority > b.Priority
-		}
-		if a.KEV != b.KEV {
-			return a.KEV
-		}
-		if a.EPSS != b.EPSS { // scores are capped at 100, so break ties by exploitation odds
-			return a.EPSS > b.EPSS
-		}
-		if severityRank[a.Severity] != severityRank[b.Severity] {
-			return severityRank[a.Severity] < severityRank[b.Severity]
-		}
-		return a.Score > b.Score
-	})
+	sort.SliceStable(v, func(i, j int) bool { return ranksBefore(&v[i], &v[j]) })
+}
+
+func ranksBefore(a, b *Vulnerability) bool {
+	if a.Priority != b.Priority {
+		return a.Priority > b.Priority
+	}
+	if a.KEV != b.KEV {
+		return a.KEV
+	}
+	if a.EPSS != b.EPSS { // scores are capped at 100, so break ties by exploitation odds
+		return a.EPSS > b.EPSS
+	}
+	if severityRank[a.Severity] != severityRank[b.Severity] {
+		return severityRank[a.Severity] < severityRank[b.Severity]
+	}
+	return a.Score > b.Score
 }
 
 // pickVector prefers NVD's CVSS v3 vector, then any v3, then v2.

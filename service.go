@@ -32,6 +32,7 @@ type ScanService struct {
 	mu      sync.Mutex
 	product map[string]string                // image repo -> product purl from the latest scan
 	found   map[string][]trivy.Vulnerability // image repo -> findings from the latest scan, for VEX import
+	latest  []trivy.Vulnerability            // findings of the most recent scan, in the order the UI holds them, for Rescore
 }
 
 // Mode tells the UI whether scans are real. Fixtures is true in development
@@ -202,9 +203,22 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 		s.mu.Lock()
 		s.product[trivy.ImageRepo(res.Image)] = res.ProductPURL
 		s.found[trivy.ImageRepo(res.Image)] = res.Vulnerabilities
+		s.latest = res.Vulnerabilities
 		s.mu.Unlock()
 	}
 	return res, err
+}
+
+// RulePresets returns the built-in scoring presets.
+func (s *ScanService) RulePresets() []trivy.Preset { return trivy.Presets() }
+
+// Rescore re-ranks the findings of the latest scan under the given rules, best first. Each
+// entry's Index points into the scan result's vulnerabilities. It returns nothing before a scan.
+func (s *ScanService) Rescore(rules trivy.Rules) []trivy.Rescored {
+	s.mu.Lock()
+	vulns := s.latest
+	s.mu.Unlock()
+	return trivy.Rescore(vulns, rules)
 }
 
 // Cancel aborts the running scan.

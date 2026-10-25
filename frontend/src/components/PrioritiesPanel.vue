@@ -1,9 +1,10 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
-import { result, vex } from "../store.js";
+import { result, vulns, vex } from "../store.js";
 import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import SummaryCard from "./SummaryCard.vue";
+import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
 import SuppressedRow from "./SuppressedRow.vue";
 import { useVirtualList } from "../lib/virtual.js";
@@ -14,7 +15,7 @@ const TIERS = Object.keys(TIER_COLOR);
 const AV = { N: "Network", A: "Adjacent", L: "Local", P: "Physical" };
 
 const isResolved = (v) => suppresses(vex.value.get(v.key));
-const all = computed(() => result.value?.vulnerabilities ?? []);
+const all = computed(() => vulns.value);
 const hidden = computed(() => all.value.filter((v) => prio.hideResolved && isResolved(v)));
 const open = computed(() => all.value.filter((v) => !(prio.hideResolved && isResolved(v)) && (!prio.fixableOnly || v.fixed)));
 // The suppressed list is not virtualised, so it is paged to keep the DOM small.
@@ -68,6 +69,7 @@ defineExpose({ count: computed(() => pool.value.length) });
   <div id="prio-summary">
     <SummaryCard v-for="t in TIERS" :key="t" :count="tierCount[t]" :label="t" :color="`var(${TIER_COLOR[t]})`" />
   </div>
+  <RulesEditor />
   <div class="toolbar">
     <label class="chk">Show
       <select id="prio-top" v-model.number="prio.top">
@@ -91,7 +93,7 @@ defineExpose({ count: computed(() => pool.value.length) });
         <div class="pbody">
           <div class="phead">
             <span class="id">{{ v.id }}</span>
-            <span class="sev tier" :style="tierStyle(v.tier)">{{ v.tier }}</span>
+            <span class="sev tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }}</span>
             <span class="mono">{{ v.package }} {{ v.installed }}</span>
           </div>
           <div class="chips">
@@ -107,8 +109,9 @@ defineExpose({ count: computed(() => pool.value.length) });
           <ul class="why">
             <li v-for="(r, j) in v.reasons" :key="j">
               <span :class="['pts', { pos: r.points > 0 }]">{{ r.points > 0 ? "+" : "" }}{{ r.points }}</span>
-              <span>{{ r.text }}</span>
+              <span>{{ r.text }} <code class="rule" title="The rule that fired, with the current thresholds">{{ r.rule }}</code></span>
             </li>
+            <li class="tierwhy"><span class="pts">tier</span><span>{{ v.tierWhy }}</span></li>
           </ul>
           <VexBox :v="v" />
         </div>
