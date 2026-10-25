@@ -37,17 +37,6 @@ type AppConfig struct {
 	Env      []ConfigEnv  `json:"env"`
 }
 
-// envDocs lists the documented variables, read from the desc and def tags on settings.
-func envDocs() []ConfigEnv {
-	var docs []ConfigEnv
-	for _, f := range reflect.VisibleFields(reflect.TypeFor[settings]()) {
-		if desc := f.Tag.Get("desc"); desc != "" {
-			docs = append(docs, ConfigEnv{Name: f.Tag.Get("env"), Desc: desc, Default: f.Tag.Get("def")})
-		}
-	}
-	return docs
-}
-
 // Config resolves the app's paths and environment for the help dialog.
 func (s *ScanService) Config() AppConfig {
 	c := AppConfig{
@@ -57,33 +46,40 @@ func (s *ScanService) Config() AppConfig {
 		Podman:   trivy.PodmanBin(),
 		Remote:   trivy.Remote(),
 	}
-	add := func(label, value, note string) {
-		if value != "" {
-			c.Paths = append(c.Paths, ConfigPath{label, value, note})
-		}
-	}
 	exe, _ := os.Executable()
 	home, _ := os.UserHomeDir()
 	cache, _ := os.UserCacheDir()
 	cfg, _ := os.UserConfigDir()
 	wd, _ := os.Getwd()
-	add("Executable", exe, "")
-	add("Working directory", wd, "")
-	add("Home", home, "")
-	add("User cache dir", cache, "")
-	add("User config dir", cfg, "")
+	trivyCache, trivyNote := "", "Vulnerability DB, mounted at /root/.cache/trivy in the scanner"
 	if src, err := trivy.CacheSource(); err != nil {
-		add("Trivy cache", err.Error(), "invalid TRIVY_SCANNER_CACHE")
+		trivyCache, trivyNote = err.Error(), "invalid TRIVY_SCANNER_CACHE"
 	} else if filepath.IsAbs(src) {
-		add("Trivy cache", src, "Vulnerability DB on the podman host, mounted at /root/.cache/trivy in the scanner")
+		trivyCache, trivyNote = src, "Vulnerability DB on the podman host, mounted at /root/.cache/trivy in the scanner"
 	} else {
-		add("Trivy cache", "podman volume "+src, "Vulnerability DB, mounted at /root/.cache/trivy in the scanner")
+		trivyCache = "podman volume " + src
 	}
-	add("EPSS / KEV cache", enrichCacheDir(), "Downloaded EPSS data and kev.json, reused between scans")
-	add("VEX assessments", vexFile(), "Saved per image repository")
-	for _, e := range envDocs() {
-		e.Value, e.Set = os.LookupEnv(e.Name)
-		c.Env = append(c.Env, e)
+	for _, p := range []ConfigPath{
+		{"Executable", exe, ""},
+		{"Working directory", wd, ""},
+		{"Home", home, ""},
+		{"User cache dir", cache, ""},
+		{"User config dir", cfg, ""},
+		{"Trivy cache", trivyCache, trivyNote},
+		{"EPSS / KEV cache", enrichCacheDir(), "Downloaded EPSS data and kev.json, reused between scans"},
+		{"VEX assessments", vexFile(), "Saved per image repository"},
+	} {
+		if p.Value != "" {
+			c.Paths = append(c.Paths, p)
+		}
+	}
+	// The desc and def tags on settings document each variable.
+	for _, f := range reflect.VisibleFields(reflect.TypeFor[settings]()) {
+		if desc := f.Tag.Get("desc"); desc != "" {
+			e := ConfigEnv{Name: f.Tag.Get("env"), Desc: desc, Default: f.Tag.Get("def")}
+			e.Value, e.Set = os.LookupEnv(e.Name)
+			c.Env = append(c.Env, e)
+		}
 	}
 	return c
 }

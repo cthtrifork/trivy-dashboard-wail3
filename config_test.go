@@ -13,7 +13,7 @@ func TestEnvDocsDefaults(t *testing.T) {
 		"TRIVY_SCANNER_KEV_URL":  trivy.DefaultKEVURL,
 	}
 	seen := 0
-	for _, e := range envDocs() {
+	for _, e := range (&ScanService{}).Config().Env {
 		if d, ok := want[e.Name]; ok {
 			seen++
 			if e.Default != d {
