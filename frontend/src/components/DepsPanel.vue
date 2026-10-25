@@ -8,6 +8,14 @@ const IMAGE_NODE = "__image__";
 const MAX_NODES = 400;
 
 const dep = reactive({ filter: "", cat: "all", vulnOnly: true, focus: 0, selected: null, labels: false });
+// The search box redraws the graph, so wait for a pause in typing before applying it.
+const typed = ref("");
+let typing = 0;
+watch(typed, (v) => {
+  clearTimeout(typing);
+  typing = setTimeout(() => (dep.filter = v), 150);
+});
+watch(() => dep.filter, (v) => { if (v !== typed.value) typed.value = v; }); // reset by select()
 const canvas = ref(null);
 const shown = ref("");
 const hover = ref("");
@@ -28,6 +36,16 @@ const worst = (counts) => SEVERITIES.find((s) => counts[s]);
 const cssVar = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const sevWeight = (n) => SEVERITIES.reduce((t, s, i) => t + (n.totalCounts[s] || 0) * [10000, 1000, 100, 10, 5][i], 0);
 const query = () => dep.filter.trim().toLowerCase();
+
+// Per scan, once: each component's search text and severity weight. Typing and the top-N cut
+// then do not rebuild strings or re-sum counts for every component on every keystroke.
+const index = computed(() => {
+  const all = nodes.value;
+  return Object.keys(all).map((ref) => {
+    const n = all[ref];
+    return { ref, text: (n.name + " " + n.version).toLowerCase(), weight: sevWeight(n), vulnerable: total(n) > 0, category: n.category };
+  });
+});
 
 function computeDepths() {
   depth = new Map();
@@ -56,20 +74,18 @@ function visibleRefs() {
     }
     refs = [...seen.keys()];
   } else if (q) {
-    const hits = Object.keys(all).filter((r) => (all[r].name + " " + all[r].version).toLowerCase().includes(q));
+    const hits = index.value.filter((e) => e.text.includes(q)).map((e) => e.ref);
     const set = new Set(hits);
     for (const r of hits) { all[r].children.forEach((c) => set.add(c)); all[r].parents.forEach((p) => set.add(p)); }
     refs = [...set];
   } else {
-    refs = Object.keys(all).filter((r) => {
-      const n = all[r];
-      return (dep.cat === "all" || n.category === dep.cat) && (!dep.vulnOnly || total(n) > 0);
-    });
+    refs = index.value.filter((e) => (dep.cat === "all" || e.category === dep.cat) && (!dep.vulnOnly || e.vulnerable)).map((e) => e.ref);
   }
   let truncated = 0;
   if (refs.length > MAX_NODES) {
     truncated = refs.length - MAX_NODES;
-    refs.sort((a, b) => sevWeight(all[b]) - sevWeight(all[a]));
+    const weight = new Map(index.value.map((e) => [e.ref, e.weight]));
+    refs.sort((a, b) => weight.get(b) - weight.get(a));
     refs = refs.slice(0, MAX_NODES);
     if (dep.selected && !refs.includes(dep.selected) && all[dep.selected]) refs.push(dep.selected);
   }
@@ -151,7 +167,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
 
 <template>
   <div class="toolbar wrap">
-    <input id="dep-filter" v-model="dep.filter" placeholder="Find a package…" autocomplete="off">
+    <input id="dep-filter" v-model="typed" placeholder="Find a package…" autocomplete="off">
     <div class="seg" id="dep-cat">
       <button v-for="[cat, label] in [['all', 'All'], ['OS', 'OS'], ['Application', 'Application']]" :key="cat" :class="{ on: dep.cat === cat }" @click="dep.cat = cat">{{ label }}</button>
     </div>
