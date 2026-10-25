@@ -26,8 +26,33 @@ The workflow then:
 2. works out the tag (`scripts/next-version.sh`) and stops if a **release** for it already exists;
 3. creates an annotated tag on the head of `main` and pushes it, unless the tag already exists (see *Retrying*);
 4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck`, builds the binary, and publishes the
-   release with its assets (binary, tarball, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
+   release with its assets (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
    have the names they do.
+
+## One-time setup: the package signing key
+
+The `.deb` and `.rpm` are signed with a PGP key kept in two repository secrets (Settings → Secrets and variables →
+Actions). A release **fails without the key**; a dry run on a branch builds unsigned packages.
+
+```sh
+gpg --quick-gen-key 'Trivy Scanner releases <you@example.com>' rsa4096 sign 2y
+gpg --armor --export-secret-keys <fingerprint>        # -> secret RELEASE_GPG_PRIVATE_KEY
+# the key's passphrase                                 # -> secret RELEASE_GPG_PASSPHRASE (omit for no passphrase)
+```
+
+Use a key made only for this. The workflow exports the matching public key as `trivy-scanner-release-key.asc` on every
+release and prints its fingerprint in the log, so publish the fingerprint somewhere users can cross-check it (the README
+is a good place). Rotating the key means updating the secrets; users import the new public key.
+
+## Packages
+
+`scripts/package-linux.sh` runs `wails3 tool package` (nfpm) with `build/linux/nfpm/nfpm.yaml`. They install the
+binary to `/usr/bin/trivy-scanner`, the launcher `build/linux/trivy-scanner.desktop` (category Security, startup
+notification, `StartupWMClass=trivy-scanner`, matching `ProgramName` in `main.go`) and the icon in hicolor (256px PNG
+and scalable SVG). Dependencies are `libgtk-4-1` and `libwebkitgtk-6.0-4` (`gtk4`, `webkitgtk6.0` for the rpm), and
+podman is recommended. The packages are built from the Ubuntu 24.04 binary, so the Fedora package needs a Fedora with
+WebKitGTK 6 and a glibc that new. Try it locally with a built binary: `make wails3-install` then
+`scripts/package-linux.sh <binary> v1.2.3 dist` (set `PKG_SIGNING_KEY_FILE` and `NFPM_PASSPHRASE` to sign).
 
 ## Retrying
 
@@ -62,6 +87,21 @@ the binary, then verifies them itself before creating the release. To check a do
 gh attestation verify trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboard-wail3
 gh attestation verify trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboard-wail3 \
   --predicate-type https://cyclonedx.org/bom
+```
+
+The packages are also signed with the release PGP key. Import `trivy-scanner-release-key.asc` from the release, check
+its fingerprint, then:
+
+```sh
+# rpm: rpmkeys --import checks the signature from now on, even with plain rpm/dnf
+sudo rpmkeys --import trivy-scanner-release-key.asc
+rpm --checksig trivy-scanner_<version>_x86_64.rpm
+
+# deb: the signature is an origin signature inside the .deb (_gpgorigin), checked with debsig-verify
+# or by hand; apt itself does not check it for a file installed with `apt install ./x.deb`.
+ar p trivy-scanner_<version>_amd64.deb debian-binary control.tar.gz data.tar.gz > payload
+ar p trivy-scanner_<version>_amd64.deb _gpgorigin > payload.sig
+gpg --import trivy-scanner-release-key.asc && gpg --verify payload.sig payload
 ```
 
 The SBOM (`trivy-scanner_<version>.sbom.cdx.json`) lists the Go modules and npm packages the binary is built from (from `go.mod` and `frontend/package-lock.json`), generated with Trivy (`format: cyclonedx`).

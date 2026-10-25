@@ -40,15 +40,21 @@ var releaseVersion = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0
 // release.
 func Enabled(version string) bool { return releaseVersion.MatchString(version) }
 
-// isArchive reports whether an asset name is an archive format.
+// isArchive reports whether an asset name is an archive or a Linux package (.deb, .rpm), none of
+// which the updater can install in place.
 func isArchive(name string) bool {
 	n := strings.ToLower(name)
-	return strings.HasSuffix(n, ".tar.gz") || strings.HasSuffix(n, ".tgz") || strings.HasSuffix(n, ".zip")
+	for _, ext := range []string{".tar.gz", ".tgz", ".zip", ".deb", ".rpm"} {
+		if strings.HasSuffix(n, ext) {
+			return true
+		}
+	}
+	return false
 }
 
-// MatchAsset picks the raw binary for the running platform. Archives are skipped
-// on purpose: the release also ships a tarball (binary + README + LICENSE) for
-// people, but the updater can only install a single file or an archive with
+// MatchAsset picks the raw binary for the running platform. Archives and packages are
+// skipped on purpose: the release also ships a tarball (binary + README + LICENSE) and
+// .deb/.rpm packages for people, but the updater can only install a single file or an archive with
 // exactly one top-level entry, and the default matcher would take whichever
 // matching asset GitHub lists first.
 func MatchAsset(req updater.CheckRequest, assets []github.ReleaseAsset) int {

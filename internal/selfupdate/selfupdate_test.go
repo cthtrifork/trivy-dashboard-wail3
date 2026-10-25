@@ -44,11 +44,13 @@ func TestMatchAsset(t *testing.T) {
 	// GitHub lists assets in upload order; the tarball can come first.
 	assets := []github.ReleaseAsset{
 		{Name: "trivy-scanner_v0.2.0_linux_amd64.tar.gz"},
+		{Name: "trivy-scanner_v0.2.0_amd64.deb"},
+		{Name: "trivy-scanner_v0.2.0_x86_64.rpm"},
 		{Name: "SHA256SUMS"},
 		{Name: "trivy-scanner_linux_amd64"},
 	}
-	if got := MatchAsset(linux, assets); got != 2 {
-		t.Errorf("picked index %d (%s), want the raw binary at 2", got, assets[max(got, 0)].Name)
+	if got := MatchAsset(linux, assets); got != 4 {
+		t.Errorf("picked index %d (%s), want the raw binary at 4", got, assets[max(got, 0)].Name)
 	}
 	if got := MatchAsset(updater.CheckRequest{Platform: "linux", Arch: "arm64"}, assets); got != -1 {
 		t.Errorf("arm64 matched %d, but none is published", got)
@@ -56,8 +58,8 @@ func TestMatchAsset(t *testing.T) {
 	if got := MatchAsset(updater.CheckRequest{Platform: "windows", Arch: "amd64"}, assets); got != -1 {
 		t.Errorf("windows matched %d", got)
 	}
-	// With only the multi-file tarball the update must fail with "no asset", not install it.
-	if got := MatchAsset(linux, assets[:2]); got != -1 {
+	// With only the multi-file tarball and the packages the update must fail with "no asset", not install it.
+	if got := MatchAsset(linux, assets[:4]); got != -1 {
 		t.Errorf("a tarball-only release matched %d", got)
 	}
 }

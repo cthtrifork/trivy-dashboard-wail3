@@ -73,6 +73,9 @@ EPSS comes from `api.first.org`, KEV from CISA's JSON feed (cached on disk for 1
 Override with `TRIVY_SCANNER_EPSS_URL` / `TRIVY_SCANNER_KEV_URL` (mirrors, air-gapped use) and `TRIVY_SCANNER_VEX_FILE` (VEX store location).
 
 ## Updating
+Each release also has a signed `.deb` (Debian/Ubuntu) and `.rpm` (Fedora/RHEL), which install the app with its launcher entry and icon: `sudo apt install ./trivy-scanner_<version>_amd64.deb` or `sudo dnf install ./trivy-scanner_<version>_x86_64.rpm`. Install, verify and uninstall steps for every distribution: [`docs/install.md`](docs/install.md).
+
+Release builds can update themselves: **Options → Check for updates…** fetches the latest GitHub release, verifies the download against its `SHA256SUMS`, and swaps the binary on **Restart & Apply**. It only runs when you click, needs the install directory to be writable (use your package manager for packaged installs), and is disabled in development builds. Details, limits and the release-asset contract: [`docs/self-update.md`](docs/self-update.md).
 Release builds can update themselves: **Options → Check for updates…** fetches the latest GitHub release, verifies the download against its `SHA256SUMS`, and offers **Download**, then swaps the binary on **Restart & apply**. Each step (check, download, restart) runs only when you click it, needs the install directory to be writable (use your package manager for packaged installs), and is disabled in development builds. Details, limits and the release-asset contract: [`docs/self-update.md`](docs/self-update.md).
 
 ## CI and releases (GitHub Actions)
