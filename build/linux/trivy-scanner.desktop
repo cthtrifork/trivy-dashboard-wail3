@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Trivy Scanner
+GenericName=Container Image Scanner
+Comment=Scan container images with Trivy running in Podman
+Exec=/usr/bin/trivy-scanner
+Icon=trivy-scanner
+Terminal=false
+Categories=Security;System;Utility;
+Keywords=trivy;vulnerability;cve;container;podman;sbom;security;
+StartupNotify=true
+# Matches the program name the app sets (main.go), so the window groups under this launcher.
+StartupWMClass=trivy-scanner
