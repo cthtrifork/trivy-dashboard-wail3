@@ -41,7 +41,7 @@ Build with `CGO_ENABLED=0` for server mode to avoid GTK.
 
 ## Trivy cache
 
-The footer shows a small footprint note (`ScanService.Footprint`): the size of the Trivy cache and the Go runtime's memory. The KEV catalog is a few hundred KB, too small to be worth a figure. A podman volume cannot be measured by the app, so it is named instead.
+The footer shows a small footprint note (`ScanService.Footprint`): the size of the Trivy cache and the Go runtime's memory. The KEV catalog is a few hundred KB, too small to be worth a figure. A podman volume cannot be measured by the app, so it is named instead. Demo mode reports zero for both so the screenshots stay identical between PRs.
 
 The scanner always gets an explicit `--cache-dir /root/.cache/trivy`, backed by a mount whose source is `TRIVY_SCANNER_CACHE`:
 

@@ -142,9 +142,12 @@ export class Graph {
     const steps = this.nodes.length > 250 ? 1 : 2;
     for (let i = 0; i < steps; i++) this.step();
     this.alpha *= 0.985;
-    if (this.autoFit && this.alpha > 0.1) this.fit(false);
+    // Fit once more when the layout comes to rest, so the final view depends on the final
+    // positions only and not on which mid-simulation frame a resize last refit at.
+    const resting = this.alpha <= 0.015 && !this.drag;
+    if (this.autoFit && (this.alpha > 0.1 || resting)) this.fit(false);
     this.draw();
-    if (this.alpha > 0.015 || this.drag) this.kick();
+    if (!resting) this.kick();
   }
 
   step() {

@@ -1,17 +1,36 @@
 name: Screenshots
 
-# When a pull request changes the UI (frontend/**), regenerate docs/screenshots from the recorded
-# fixtures and push the result to the PR branch, so the screenshots in the README never go stale.
-# Same-repository PRs only (a fork's token is read-only). The workflow ignores pushes made by
-# github-actions[bot], which is what stops its own commit from triggering another run.
+# docs/screenshots is rendered here, never committed from a feature branch: every PR that rewrote
+# the PNGs conflicted with every other one, because git cannot merge binary files.
+#
+#   pull_request  Render the screenshots from the recorded fixtures, upload each image as its own
+#                 unzipped artifact (`archive: false`) and embed them in one sticky PR comment
+#                 that is updated on every push. Nothing is pushed anywhere. Fork PRs (read-only
+#                 token) get the artifacts on the run page but no comment.
+#   push to main  Render again and, if any image differs from docs/screenshots, open or update one
+#                 PR (branch bot/update-screenshots) with the new images.
+#
+# The bot PR only touches docs/screenshots, which is not in `paths`, so merging it does not
+# trigger another run.
 on:
   pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - frontend/**
       - scripts/screenshots.*
+      - internal/trivy/fixtures/**
+      - .github/workflows/screenshots.yml
+  push:
+    branches: [main]
+    paths:
+      - frontend/**
+      - scripts/screenshots.*
+      - internal/trivy/fixtures/**
+      - .github/workflows/screenshots.yml
+  workflow_dispatch:
 
 permissions:
-  contents: write # push the screenshot commit to the PR branch
+  contents: read
 
 concurrency:
   group: screenshots-${{ github.event.pull_request.number || github.ref }}
@@ -25,16 +44,16 @@ env:
 jobs:
   screenshots:
     name: screenshots
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.actor != 'dependabot[bot]' && github.actor != 'github-actions[bot]'
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    permissions:
+      contents: write # push bot/update-screenshots (main only)
+      pull-requests: write # the sticky comment (PRs) and the update PR (main)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.head_ref }}
-          persist-credentials: true # needed to push the screenshot commit
+          persist-credentials: ${{ github.event_name != 'pull_request' }} # only the main run pushes
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -51,9 +70,190 @@ jobs:
       - name: Generate screenshots
         run: make screenshots
 
-      - name: Commit and push
+      - name: Upload 01-priorities
+        id: shot-01-priorities
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/01-priorities.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 02-priorities-vex-editor
+        id: shot-02-priorities-vex-editor
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/02-priorities-vex-editor.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 03-priorities-export-openvex
+        id: shot-03-priorities-export-openvex
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/03-priorities-export-openvex.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 04-vulnerabilities
+        id: shot-04-vulnerabilities
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/04-vulnerabilities.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 05-vulnerability-details
+        id: shot-05-vulnerability-details
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/05-vulnerability-details.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 06-dependencies-graph
+        id: shot-06-dependencies-graph
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/06-dependencies-graph.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 07-dependencies-node-selected
+        id: shot-07-dependencies-node-selected
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/07-dependencies-node-selected.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 08-dependencies-focus
+        id: shot-08-dependencies-focus
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/08-dependencies-focus.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 09-dependencies-all-components
+        id: shot-09-dependencies-all-components
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/09-dependencies-all-components.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 10-sbom
+        id: shot-10-sbom
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/10-sbom.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 11-compare-vulnerabilities
+        id: shot-11-compare-vulnerabilities
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/11-compare-vulnerabilities.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 12-compare-packages
+        id: shot-12-compare-packages
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/12-compare-packages.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 13-log
+        id: shot-13-log
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/13-log.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Show screenshots in a PR comment
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
-          HEAD_REF: ${{ github.head_ref }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          STEPS: ${{ toJSON(steps) }}
+        run: |
+          # Every PNG needs an `Upload` step above; fail loudly when a screenshot was added.
+          want="$(ls docs/screenshots/*.png | wc -l)"
+          have="$(jq '[to_entries[] | select(.key | startswith("shot-"))] | length' <<<"$STEPS")"
+          if [ "$want" != "$have" ]; then
+            echo "::error::docs/screenshots has $want images but screenshots.yml uploads $have: add or remove an 'Upload <name>' step."
+            exit 1
+          fi
+
+          body="$(mktemp)"
+          {
+            echo "<!-- screenshots-preview -->"
+            echo "### Screenshots"
+            echo
+            echo "Rendered from the recorded fixtures at ${HEAD_SHA::7}. Not committed to this branch; after merge a bot PR from \`main\` updates \`docs/screenshots\`. Images are run artifacts: you must be logged in to see them, and they expire after 14 days."
+            echo
+            jq -r 'to_entries[] | select(.key | startswith("shot-")) | "\(.key[5:])\t\(.value.outputs["artifact-url"])"' <<<"$STEPS" |
+              while IFS=$'\t' read -r name url; do
+                # As in homeserver-bootc's screenshot action: a heading, then the bare artifact URL as
+                # its own paragraph, with no HTML wrapper, which GitHub renders inline.
+                echo "#### ${name}"
+                echo
+                echo "${url}"
+                echo
+              done
+          } > "$body"
+
+          id="$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
+            --jq '.[] | select(.body | contains("<!-- screenshots-preview -->")) | .id' | sed -n '1p')"
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/${REPO}/issues/comments/${id}" -F body=@"$body" >/dev/null
+          else
+            gh pr comment "$PR" --body-file "$body"
+          fi
+          echo "Screenshots are in the PR comment and in the run's artifacts." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summarise (fork pull request)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "Rendered \`docs/screenshots\`. This is a fork PR (read-only token), so there is no PR comment: the images are in this run's artifacts." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update the screenshots PR
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: bot/update-screenshots
         run: |
           if [ -z "$(git status --porcelain -- docs/screenshots)" ]; then
             echo "Screenshots are up to date." | tee -a "$GITHUB_STEP_SUMMARY"
@@ -61,7 +261,14 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
           git add docs/screenshots
           git commit -m "Update screenshots"
-          git push origin "HEAD:refs/heads/${HEAD_REF}"
-          echo "Pushed updated screenshots to \`${HEAD_REF}\`." | tee -a "$GITHUB_STEP_SUMMARY"
+          # Always rebuilt from the current main, so the branch cannot conflict with it.
+          git push --force origin "$BRANCH"
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr create --base main --head "$BRANCH" \
+              --title "Update screenshots" \
+              --body "Regenerated by the Screenshots workflow from the recorded fixtures on \`main\` (${GITHUB_SHA::7}). Only \`docs/screenshots\` changes."
+          fi
+          echo "Screenshots PR for \`${BRANCH}\` is up to date." | tee -a "$GITHUB_STEP_SUMMARY"

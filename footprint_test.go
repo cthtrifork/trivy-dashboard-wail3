@@ -21,6 +21,13 @@ func TestFootprintMeasuresTheTrivyCache(t *testing.T) {
 	}
 }
 
+func TestFootprintIsZeroInDemoMode(t *testing.T) {
+	f := (&ScanService{scanner: &trivy.Scanner{}, mode: Mode{Fixtures: true}}).Footprint()
+	if f.CacheBytes != 0 || f.MemoryBytes != 0 || f.WebviewBytes != -1 {
+		t.Errorf("demo footprint = %+v, want zero cache and memory, no webview", f)
+	}
+}
+
 func TestFootprintCannotMeasureAPodmanVolume(t *testing.T) {
 	t.Setenv(trivy.CacheEnv, "trivy-cache")
 	if got := (&ScanService{scanner: &trivy.Scanner{}}).Footprint().CacheBytes; got != -1 {

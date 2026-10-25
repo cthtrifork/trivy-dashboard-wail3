@@ -163,6 +163,10 @@ type Footprint struct {
 
 // Footprint measures the cache directories and the Go runtime's memory.
 func (s *ScanService) Footprint() Footprint {
+	// Demo mode reports zero so the screenshots do not change with the machine or the run.
+	if s.mode.Fixtures {
+		return Footprint{CacheLocation: "demo", WebviewBytes: -1}
+	}
 	f := Footprint{CacheBytes: -1, WebviewBytes: -1}
 	if src, err := trivy.CacheSource(); err == nil {
 		f.CacheLocation = src

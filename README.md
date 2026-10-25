@@ -55,7 +55,7 @@ so the flag is ignored there (with a logged warning), and CI and the release wor
 It builds the Vue frontend too. It needs Go, Node 20.19+ (or 22.12+) and Playwright with Chromium (`npm install --no-save playwright && npx playwright install chromium`), and no GTK, podman or network.
 
 
-The **Screenshots** workflow (`.github/workflows/screenshots.yml`) does this for you: when a same-repository pull request changes `frontend/`, it regenerates the images and pushes an `Update screenshots` commit to the PR branch if any image changed. Details: [`docs/ci.md`](docs/ci.md#screenshots).
+The **Screenshots** workflow (`.github/workflows/screenshots.yml`) renders them in CI: a pull request gets them embedded in an updatable PR comment (as run artifacts) and commits nothing; after merge, a bot PR from `main` updates `docs/screenshots`. Do not commit locally generated images in a feature PR. Details: [`docs/ci.md`](docs/ci.md#screenshots).
 The script also checks the data and that the dependency graph's layout stays finite, so a regression fails the run instead of producing a blank image.
 
 Notes: the Trivy cache (vulnerability DB) is a host directory (`~/.cache/trivy-scanner/trivy` on Linux) mounted at an explicit `--cache-dir`; with a remote podman it is the `trivy-cache` volume. Set `TRIVY_SCANNER_CACHE` to a volume name or an absolute directory to change it (see [`docs/architecture.md`](docs/architecture.md#trivy-cache)). Scans pass `--list-all-pkgs`, so reports list every installed package. The vulnerability DB is checked once per session (then hourly) and scans run with `--skip-db-update`, so repeat scans and comparisons start fast and keep working offline from the cache; `TRIVY_DB_REPOSITORY` / `TRIVY_JAVA_DB_REPOSITORY` select a mirror.
