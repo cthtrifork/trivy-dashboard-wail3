@@ -92,17 +92,17 @@ defineExpose({ count: computed(() => pool.value.length) });
       <div class="kv">{{ signals }}</div>
       <div v-if="before > 0" class="pad" :style="{ height: before - GAP + 'px' }"></div>
       <div v-for="{ item: v, index } in visible" :key="cardKey(v)" v-measure="cardKey(v)" class="pcard" :style="tierStyle(v.tier)">
-        <div class="rank">{{ index + 1 }}</div>
-        <div class="pbody">
-          <div class="phead">
-            <a v-if="detailUrl(v)" class="id" :href="detailUrl(v)" title="Open CVE details" @click.prevent="openUrl(detailUrl(v))">{{
-              v.id
-            }}</a>
-            <span v-else class="id">{{ v.id }}</span>
-            <span class="sev tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }}</span>
-            <span class="mono">{{ v.package }} {{ v.installed }}</span>
-          </div>
+        <div class="ptop">
+          <span class="rank">#{{ index + 1 }}</span>
+          <a v-if="detailUrl(v)" class="id" :href="detailUrl(v)" title="Open CVE details" @click.prevent="openUrl(detailUrl(v))">{{
+            v.id
+          }}</a>
+          <span v-else class="id">{{ v.id }}</span>
+          <span class="sev tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }}</span>
+        </div>
+        <div class="pmain">
           <div v-if="v.title" class="ptitle">{{ v.title }}</div>
+          <div class="mono">{{ v.package }} {{ v.installed }}</div>
           <div class="chips">
             <Chip title="CVSS severity">{{ v.severity }}{{ v.score ? ` ${v.score.toFixed(1)}` : "" }}</Chip>
             <Chip v-if="v.kev" kind="hot" :title="`Added to CISA KEV on ${v.kevAdded}; due ${v.kevDue}. ${v.kevAction}`"
@@ -123,23 +123,27 @@ defineExpose({ count: computed(() => pool.value.length) });
               >VEX: {{ STATUS_LABEL[vex.get(v.key).status] }}{{ isExpired(vex.get(v.key)) ? " · expired" : "" }}</Chip
             >
           </div>
-          <p class="attack">{{ v.attack }}</p>
-          <ul class="why">
-            <li v-for="(r, j) in v.reasons" :key="j">
-              <span :class="['pts', { pos: r.points > 0 }]">{{ r.points > 0 ? "+" : "" }}{{ r.points }}</span>
-              <span
-                >{{ r.text }} <code class="rule" title="The rule that fired, with the current thresholds">{{ r.rule }}</code></span
-              >
-            </li>
-            <li class="tierwhy">
-              <span class="pts">tier</span><span>{{ v.tierWhy }}</span>
-            </li>
-          </ul>
-          <VexBox :v="v" />
         </div>
-        <div class="score">
-          <b>{{ v.priority }}</b
-          >score
+        <div class="pmeans">
+          <small>What it means</small>
+          <p class="attack">{{ v.attack }}</p>
+        </div>
+        <div class="pfoot">
+          <details class="scorebox">
+            <summary>Score {{ v.priority }} · why</summary>
+            <ul class="why">
+              <li v-for="(r, j) in v.reasons" :key="j">
+                <span :class="['pts', { pos: r.points > 0 }]">{{ r.points > 0 ? "+" : "" }}{{ r.points }}</span>
+                <span
+                  >{{ r.text }} <code class="rule" title="The rule that fired, with the current thresholds">{{ r.rule }}</code></span
+                >
+              </li>
+              <li class="tierwhy">
+                <span class="pts">tier</span><span>{{ v.tierWhy }}</span>
+              </li>
+            </ul>
+          </details>
+          <VexBox :v="v" />
         </div>
       </div>
       <div v-if="after > 0" class="pad" :style="{ height: after - GAP + 'px' }"></div>

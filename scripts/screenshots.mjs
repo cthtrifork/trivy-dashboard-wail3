@@ -58,7 +58,7 @@ await hideVexBoxes();
 await shot("01-priorities");
 
 const first = page.locator(".pcard").first();
-await first.locator("summary").click();
+await first.locator("details.vexbox > summary").click();
 await first.locator(".vexform select").first().selectOption("not_affected");
 await first.locator(".vexform select").nth(1).selectOption("vulnerable_code_not_in_execute_path");
 await first.locator(".vexform textarea").first().fill("The vulnerable HTTP/2 path is not reachable: the entrypoint only serves HTTP/1.1.");
