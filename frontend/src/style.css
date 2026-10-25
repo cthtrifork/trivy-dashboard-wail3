@@ -3,6 +3,7 @@
 @media(prefers-color-scheme:light){:root{--bg:#f6f7f9;--panel:#fff;--line:#dde1e8;--text:#1c2330;--mute:#5e6878}}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
+#app{flex:1;min-height:0;display:flex;flex-direction:column}
 body{display:flex;flex-direction:column;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,sans-serif}
 header{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
 #scan-form{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
@@ -117,7 +118,7 @@ dialog::backdrop{background:#0009}
 .verdict{flex:none;padding:10px 14px;border-radius:8px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,var(--accent))}
 .chg{display:inline-block;min-width:22px;text-align:center;font-weight:700;border-radius:4px;padding:0 6px;color:#fff;background:var(--c)}
 .cmp-controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;flex:none}
-.cmp-table{flex:none;overflow:visible}
+.cmp-table{flex:1;min-height:240px}
 
 .graph-wrap{position:relative;min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 #dep-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
@@ -132,3 +133,11 @@ dialog::backdrop{background:#0009}
 .opts-update{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
 .opts-update button:disabled{cursor:not-allowed}
 .opts-update button,.opts-update .kv{white-space:nowrap}
+
+/* Windowed tables (lib/virtual.js): fixed column widths so scrolling never reflows the columns,
+   and spacer rows that stand in for the rows that are not rendered. */
+.vt{table-layout:fixed}
+.vt td{overflow-wrap:anywhere}
+.vt tbody.pad td{padding:0;border:0}
+.vt tbody.pad tr{pointer-events:none}
+.scroll>.pad{flex:none}

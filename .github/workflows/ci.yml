@@ -48,6 +48,28 @@ jobs:
           go version
           pkg-config --modversion gtk4 webkitgtk-6.0 libsoup-3.0
 
+      # The Go binary embeds frontend/dist, so the Vue app is built first. The runner's Node
+      # satisfies Vite's engines range (see frontend/package.json).
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          node --version
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+
+      # frontend/bindings is generated from the Go services and committed. Regenerate it with the
+      # CLI version that matches go.mod and fail if the committed copy differs (run `make bindings`).
+      - name: Check Wails bindings are up to date
+        run: |
+          version="$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)"
+          (cd "$RUNNER_TEMP" && CGO_ENABLED=0 GOBIN="$RUNNER_TEMP/bin" go install -tags server "github.com/wailsapp/wails/v3/cmd/wails3@${version}")
+          CGO_ENABLED=0 "$RUNNER_TEMP/bin/wails3" generate bindings -silent
+          if [ -n "$(git status --porcelain -- frontend/bindings)" ]; then
+            git status --short -- frontend/bindings
+            git diff -- frontend/bindings | head -80
+            echo "::error::frontend/bindings is stale: run 'make bindings' and commit the result"; exit 1
+          fi
+
       - name: Check formatting
         run: |
           unformatted="$(gofmt -l .)"
@@ -94,9 +116,3 @@ jobs:
           path: dist/trivy-scanner
           if-no-files-found: error
           retention-days: 7
-
-      - name: Check frontend JavaScript parses
-        run: |
-          for f in frontend/*.js; do
-            node --input-type=module --check < "$f" || { echo "syntax error in $f"; exit 1; }
-          done

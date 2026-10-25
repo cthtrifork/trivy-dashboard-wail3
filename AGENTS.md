@@ -15,6 +15,7 @@ Read in this order, stopping when you have enough:
 `make help` lists shortcuts (`make check` runs the GTK-free CI checks; `make headless*` manages the podman deployment). Underlying commands:
 
 ```sh
+(cd frontend && npm ci && npm run build)           # Vue app -> frontend/dist; required before any `go build`/`go run`, not before vet/test
 go test -race -count=1 ./...                       # what CI runs; replays recorded fixtures, no podman needed
 go vet ./... && go vet -tags production ./...
 gofmt -l .                                         # must print nothing
@@ -37,6 +38,8 @@ The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. U
 - The Trivy scanner container is named `trivy-scanner-<random>` so cancel can `podman rm --force --ignore --time 0` it by name before signalling the client.
 - Pin GitHub Actions by commit SHA with a version comment, as the existing workflows do.
 
+- **Frontend is Vue 3 + Vite** (decision 14). After changing an exported `ScanService` method or a type it exchanges, run `make bindings` (needs the `wails3` CLI) and commit `frontend/bindings`. `frontend/dist` is untracked build output except `.gitkeep`.
+
 ## Layout
 
 | Path | What |
@@ -47,7 +50,7 @@ The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. U
 | `headless_*.go` | `headless` const (true with `-tags server`) |
 | `internal/trivy` | Engine, scanner, EPSS/KEV enrichment, priority rules, compare, VEX/OpenVEX |
 | `internal/trivy/fixtures` | Recorded Trivy output used by tests and screenshots |
-| `frontend/` | Plain JS/HTML/CSS, no build step, embedded with `go:embed` |
+| `frontend/` | Vue 3 + Vite app (`src/`), generated Wails bindings (`bindings/`, committed); `dist/` is build output embedded with `go:embed` |
 | `Containerfile` | Podman-only server deployment, see `docs/headless.md` |
 | `.github/workflows` | `ci`, `security`, `release`, `tag-release` |
 | `scripts/` | release/version helpers and the screenshot driver |

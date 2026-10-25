@@ -11,11 +11,11 @@ import (
 // version is stamped at release time: -ldflags "-X main.version=v1.2.3".
 var version = "dev"
 
-//go:embed all:frontend
+//go:embed all:frontend/dist
 var assets embed.FS
 
 func main() {
-	frontend, err := fs.Sub(assets, "frontend")
+	frontend, err := fs.Sub(assets, "frontend/dist")
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -16,10 +16,12 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
 
 ## Requirements
 - Go 1.26+ (required by Wails v3 beta.34), [Wails v3 CLI](https://v3.wails.io) (`go install github.com/wailsapp/wails/v3/cmd/wails3@latest`)
+- Node 20.19+ or 22.12+ to build the Vue frontend (`frontend/`, Vite)
 - Linux: GTK4 + WebKitGTK 6 dev packages (see Wails docs); macOS/Windows: native webview
 - `podman` on PATH (override with `PODMAN=/path/to/podman`) for real scans; not needed in demo mode
 
 ## Run
+    make frontend                             # once, and after UI changes: builds frontend/dist, which the binary embeds
     go run .                                  # or: wails3 dev. Real podman, real scans
     go build -tags production -trimpath .     # production build, always real podman
     go test ./internal/...                    # replays the recorded fixtures, no podman needed
@@ -46,7 +48,8 @@ so the flag is ignored there (with a logged warning), and CI and the release wor
 
 ### Screenshots
 `scripts/screenshots.sh` rebuilds the app in headless server mode, runs it with `TRIVY_SCANNER_FAKE_PODMAN=1` and a throwaway VEX store, drives the UI with Playwright and rewrites `docs/screenshots/`.
-It needs Go, Node 20+ and Playwright with Chromium (`npm install --no-save playwright && npx playwright install chromium`), and no GTK, podman or network.
+It builds the Vue frontend too. It needs Go, Node 20.19+ (or 22.12+) and Playwright with Chromium (`npm install --no-save playwright && npx playwright install chromium`), and no GTK, podman or network.
+
 
 The **Screenshots** workflow (`.github/workflows/screenshots.yml`) does this for you: when a same-repository pull request changes `frontend/`, it regenerates the images and pushes an `Update screenshots` commit to the PR branch if any image changed. Details: [`docs/ci.md`](docs/ci.md#screenshots).
 The script also checks the data and that the dependency graph's layout stays finite, so a regression fails the run instead of producing a blank image.

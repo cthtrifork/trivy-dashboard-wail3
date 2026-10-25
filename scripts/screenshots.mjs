@@ -85,7 +85,7 @@ await page.click("#vex-close");
 await tab("vulns");
 await shot("04-vulnerabilities");
 // Expand a finding that has no VEX assessment, so the editor stays collapsed.
-await page.click("#vuln-table tbody tr:nth-child(2)");
+await page.click("#vuln-table tbody:not(.pad) tr.row >> nth=1");
 await shot("05-vulnerability-details");
 
 // ---- Dependencies ----

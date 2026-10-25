@@ -34,6 +34,8 @@ curl -s -o /dev/null -w '%{http_code}\n' localhost:18080/                      #
 curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: evil.example' localhost:18080/   # 403
 ```
 
+Build the frontend before the headless build above (`cd frontend && npm ci && npm run build`); the server embeds `frontend/dist`. For hot reload run `make dev-frontend` and start the app with `FRONTEND_DEVSERVER_URL=http://127.0.0.1:9245`.
+
 For UI work, `scripts/screenshots.sh` drives the real frontend with Playwright (Chromium is preinstalled; do not reinstall Playwright).
 
 ## Gotchas from earlier sessions

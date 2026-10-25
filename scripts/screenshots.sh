@@ -21,6 +21,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+echo "building the frontend…"
+(cd frontend && npm ci --no-audit --no-fund && npm run build)
+
 echo "building (server mode, dev tags)…"
 CGO_ENABLED=0 go build -tags server -o "$tmp/app" .
 

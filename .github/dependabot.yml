@@ -1,5 +1,5 @@
 # Keeps Go modules (including the pre-1.0 Wails v3 beta), the SHA-pinned
-# actions in .github/workflows and the default Trivy image version up to date.
+# actions in .github/workflows, the frontend npm packages and the default Trivy image version up to date.
 version: 2
 updates:
   - package-ecosystem: gomod
@@ -16,6 +16,16 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+  # The Vue + Vite frontend; the wails runtime package is kept in step with the Go module by hand.
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      frontend-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "@wailsio/runtime"
   # internal/trivy/image/Dockerfile holds the Trivy version scans run with (embedded in the binary).
   - package-ecosystem: docker
     directory: /internal/trivy/image

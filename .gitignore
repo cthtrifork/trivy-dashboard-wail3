@@ -48,10 +48,12 @@ go.work.sum
 *.exe
 *.syso
 
-# Frontend tooling (the UI is plain JS today; these appear if a bundler is added)
+# Frontend (Vue + Vite). dist/ is build output embedded by main.go; only the placeholder is
+# tracked so `go vet` and `go test` work before the frontend has been built.
 node_modules/
 frontend/node_modules/
-frontend/dist/
+frontend/dist/*
+!frontend/dist/.gitkeep
 .vite/
 *.tsbuildinfo
 npm-debug.log*

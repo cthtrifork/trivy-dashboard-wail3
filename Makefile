@@ -13,7 +13,7 @@ CACHE     ?= /tmp/trivy
 SOCKET    ?= $(RUNTIME)/podman/podman.sock
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt vet build build-server run demo screenshots \
+.PHONY: help test check fmt vet frontend bindings dev-frontend build build-server run demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -37,16 +37,25 @@ check: ## Everything CI checks that runs without GTK: gofmt, tidy, vet, tests, h
 	go mod tidy -diff
 	$(MAKE) vet test build-server
 
-build: ## Desktop release build (needs GTK4 + WebKitGTK 6)
+frontend: ## Build the Vue app into frontend/dist (embedded by the Go binary)
+	cd frontend && npm ci --ignore-scripts --no-audit --no-fund && npm run build
+
+bindings: ## Regenerate frontend/bindings from the Go services (needs the wails3 CLI)
+	CGO_ENABLED=0 wails3 generate bindings -silent
+
+dev-frontend: ## Vite dev server with hot reload; then run: FRONTEND_DEVSERVER_URL=http://127.0.0.1:9245 go run .
+	cd frontend && npm run dev
+
+build: frontend ## Desktop release build (needs GTK4 + WebKitGTK 6)
 	go build -tags production -trimpath -ldflags "-w -s -X main.version=$(VERSION)" -o trivy-scanner .
 
-build-server: ## Headless server build, no GTK needed
+build-server: frontend ## Headless server build, no GTK needed
 	CGO_ENABLED=0 go build -tags server,production -trimpath -ldflags "-w -s -X main.version=$(VERSION)" -o trivy-scanner .
 
-run: ## Run the desktop app with real podman
+run: frontend ## Run the desktop app with real podman
 	go run .
 
-demo: ## Run the desktop app on recorded data (dev build only)
+demo: frontend ## Run the desktop app on recorded data (dev build only)
 	TRIVY_SCANNER_FAKE_PODMAN=1 go run .
 
 screenshots: ## Regenerate docs/screenshots (needs Node and Playwright)

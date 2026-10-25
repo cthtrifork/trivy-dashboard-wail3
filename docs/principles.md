@@ -27,7 +27,7 @@ Standing rules for this repository. They come from the maintainer's instructions
 
 13. **Match the surrounding code**: naming, comment density, idiom. Comments explain *why*.
 14. **Tests replay fixtures**; they must not need podman, network or a display. Prefer testing `internal/trivy` behaviour over UI plumbing.
-15. **Keep the frontend dependency-free** (plain JS, canvas graph, no bundler) unless a decision record says otherwise.
+15. **Keep the frontend small.** Vue 3 + Vite with `@wailsio/runtime` and nothing else at runtime; the dependency graph stays a hand-written canvas. Add an npm dependency only with a decision record (see decision 14).
 16. **Small files of docs next to the feature** (`docs/<feature>.md`), linked from the README.
 
 ## Verification checklist before opening a PR

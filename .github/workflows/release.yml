@@ -107,6 +107,15 @@ jobs:
           go version
           pkg-config --modversion gtk4 webkitgtk-6.0 libsoup-3.0
 
+      # The Go binary embeds frontend/dist, so the Vue app is built first. The runner's Node
+      # satisfies Vite's engines range (see frontend/package.json).
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          node --version
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+
       # Never ship something CI would have rejected.
       - name: Vet and test
         run: |
