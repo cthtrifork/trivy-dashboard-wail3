@@ -1,7 +1,7 @@
 name: Release
 
-# Publishes a GitHub release with a Linux amd64 binary, a tarball, SHA256SUMS and a build-provenance
-# attestation. The in-app updater installs the raw binary and verifies it against SHA256SUMS, so those
+# Publishes a GitHub release with a Linux amd64 binary, a tarball, SHA256SUMS, a CycloneDX SBOM and
+# signed attestations (build provenance for the binary, tarball and SBOM; the SBOM bound to the binary). The in-app updater installs the raw binary and verifies it against SHA256SUMS, so those
 # names are an interface. Three ways to run it:
 #   - the "Tag and release" workflow creates a tag and calls this one (workflow_call). This is the
 #     normal route. It has to call rather than rely on the tag push below, because a tag pushed with
@@ -148,6 +148,19 @@ jobs:
           # The layout matters: see scripts/package-release.sh and internal/selfupdate.
           scripts/package-release.sh "$built" "${VERSION}" dist
 
+      # SBOM of the Go modules compiled into the binary. Named without os/arch so the in-app updater's
+      # asset matcher cannot mistake it for the binary.
+      - name: Generate SBOM
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.12.0
+          cyclonedx-gomod app -json -licenses=false -main . -tags production \
+            -output "dist/${APP}_${VERSION}.sbom.cdx.json"
+          # SHA256SUMS lists every asset, so regenerate it with the SBOM included.
+          (cd dist && sha256sum "${APP}_linux_amd64" "${APP}_${VERSION}_linux_amd64.tar.gz" \
+            "${APP}_${VERSION}.sbom.cdx.json" > SHA256SUMS)
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-files
@@ -177,6 +190,26 @@ jobs:
           subject-path: |
             dist/*.tar.gz
             dist/*_linux_amd64
+            dist/*.sbom.cdx.json
+
+      - name: Attest SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-path: dist/*_linux_amd64
+          sbom-path: dist/*.sbom.cdx.json
+
+      # Fail the release if what was just signed does not verify against this workflow.
+      - name: Verify attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          for f in dist/*_linux_amd64 dist/*.tar.gz dist/*.sbom.cdx.json; do
+            gh attestation verify "$f" --repo "$REPO" \
+              --signer-workflow "$REPO/.github/workflows/release.yml"
+          done
+          gh attestation verify dist/*_linux_amd64 --repo "$REPO" \
+            --predicate-type https://cyclonedx.org/bom
 
       - name: Create GitHub release
         env:

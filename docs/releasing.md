@@ -26,7 +26,7 @@ The workflow then:
 2. works out the tag (`scripts/next-version.sh`) and stops if a **release** for it already exists;
 3. creates an annotated tag on the head of `main` and pushes it, unless the tag already exists (see *Retrying*);
 4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck`, builds the binary, and publishes the
-   release with its assets and a build-provenance attestation. See [self-update](self-update.md) for why those assets
+   release with its assets (binary, tarball, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
    have the names they do.
 
 ## Retrying
@@ -52,3 +52,17 @@ access token or a GitHub App, which would work but adds a long-lived secret.
   publishes, which is another way to retry.
 - **Not run on GitHub yet.** The scripts and the workflow steps' shell are tested here (see `internal/release`), and
   `actionlint` validates the reusable-workflow wiring, but the first real run is the first end-to-end.
+
+## Verifying a release
+
+The release job signs a SLSA build-provenance attestation for the binary, tarball and SBOM, and an SBOM attestation for
+the binary, then verifies them itself before creating the release. To check a download by hand:
+
+```sh
+gh attestation verify trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboard-wail3
+gh attestation verify trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboard-wail3 \
+  --predicate-type https://cyclonedx.org/bom
+```
+
+The SBOM (`trivy-scanner_<version>.sbom.cdx.json`) lists the Go modules compiled into the binary, generated with
+`cyclonedx-gomod`. It has no os/arch in its name so the in-app updater never considers it as the binary.
