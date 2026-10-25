@@ -9,6 +9,7 @@ export {
     Component,
     DepNode,
     EnrichInfo,
+    ImportReport,
     PkgChange,
     Reason,
     ScanRequest,

@@ -7,7 +7,7 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
   CISA **KEV** (documented exploitation), **EPSS** (predicted 30-day exploitation probability), CVSS severity, attack vector/complexity/privileges/user interaction, and fix availability.
   Every card shows the points behind its rank and a plain-English attack-vector assessment. Tiers: Act now / Fix soon / Plan / Monitor (low-risk hidden by default).
 - **VEX editor** – on any finding choose `affected`, `not_affected`, `fixed` or `under_investigation`, add a justification / impact / action statement (validated per the OpenVEX rules),
-  and **Export OpenVEX** (v0.2.0). Assessments are stored in `<user config dir>/trivy-scanner/vex.json` per image repository, so they carry over to later scans and tags; resolved findings are hidden from the shortlist.
+  and use **Edit/Create VEX** to export OpenVEX (v0.2.0) or **import** an existing OpenVEX file by pasting it: its statements are matched to the scan's findings (versionless PURLs such as `pkg:apk/alpine/zlib` apply to every version) and applied as assessments. Assessments are stored in `<user config dir>/trivy-scanner/vex.json` per image repository, so they carry over to later scans and tags; resolved findings are hidden from the shortlist.
 - **Compare** – pick an image repository and two tags (*Load tags* asks the registry via `podman search --list-tags`; you can also type tags or `sha256:` digests). Both are scanned and diffed docker-scout style:
   side-by-side severity counts with deltas, a verdict, vulnerabilities **added / removed / unchanged** with the reason (package upgraded, package removed/new, newly disclosed), and package **added / removed / upgraded / downgraded** with per-package vulnerability counts.
 - **Vulnerabilities** – severity cards (click to filter), search, sortable table, click a row for details.
@@ -49,6 +49,9 @@ so the flag is ignored there (with a logged warning), and CI and the release wor
 ### Screenshots
 `scripts/screenshots.sh` rebuilds the app in headless server mode, runs it with `TRIVY_SCANNER_FAKE_PODMAN=1` and a throwaway VEX store, drives the UI with Playwright and rewrites `docs/screenshots/`.
 It builds the Vue frontend too. It needs Go, Node 20.19+ (or 22.12+) and Playwright with Chromium (`npm install --no-save playwright && npx playwright install chromium`), and no GTK, podman or network.
+
+
+The **Screenshots** workflow (`.github/workflows/screenshots.yml`) does this for you: when a same-repository pull request changes `frontend/`, it regenerates the images and pushes an `Update screenshots` commit to the PR branch if any image changed. Details: [`docs/ci.md`](docs/ci.md#screenshots).
 The script also checks the data and that the dependency graph's layout stays finite, so a regression fails the run instead of producing a blank image.
 
 Notes: the Trivy cache (vulnerability DB) is a host directory (`~/.cache/trivy-scanner/trivy` on Linux) mounted at an explicit `--cache-dir`; with a remote podman it is the `trivy-cache` volume. Set `TRIVY_SCANNER_CACHE` to a volume name or an absolute directory to change it (see [`docs/architecture.md`](docs/architecture.md#trivy-cache)). Scans pass `--list-all-pkgs`, so reports list every installed package. The vulnerability DB is checked once per session (then hourly) and scans run with `--skip-db-update`, so repeat scans and comparisons start fast and keep working offline from the cache; `TRIVY_DB_REPOSITORY` / `TRIVY_JAVA_DB_REPOSITORY` select a mirror.

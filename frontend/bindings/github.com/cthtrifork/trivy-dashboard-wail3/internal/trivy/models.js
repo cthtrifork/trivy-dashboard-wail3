@@ -517,6 +517,57 @@ export class EnrichInfo {
 }
 
 /**
+ * ImportReport summarises what ImportOpenVEX did with a pasted document.
+ */
+export class ImportReport {
+    /**
+     * Creates a new ImportReport instance.
+     * @param {Partial<ImportReport>} [$$source = {}] - The source object to create the ImportReport.
+     */
+    constructor($$source = {}) {
+        if (!("imported" in $$source)) {
+            /**
+             * findings that received an assessment
+             * @member
+             * @type {number}
+             */
+            this["imported"] = 0;
+        }
+        if (!("skipped" in $$source)) {
+            /**
+             * statements that matched nothing or were invalid
+             * @member
+             * @type {number}
+             */
+            this["skipped"] = 0;
+        }
+        if (!("warnings" in $$source)) {
+            /**
+             * @member
+             * @type {string[]}
+             */
+            this["warnings"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImportReport instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {ImportReport}
+     */
+    static createFrom($$source = {}) {
+        const $$createField2_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("warnings" in $$parsedSource) {
+            $$parsedSource["warnings"] = $$createField2_0($$parsedSource["warnings"]);
+        }
+        return new ImportReport(/** @type {Partial<ImportReport>} */($$parsedSource));
+    }
+}
+
+/**
  * PkgChange is one package's fate between A and B.
  */
 export class PkgChange {

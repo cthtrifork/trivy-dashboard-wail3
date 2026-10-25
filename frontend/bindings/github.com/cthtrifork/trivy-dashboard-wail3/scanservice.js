@@ -121,13 +121,26 @@ export function VEXExport(image, author, role) {
 }
 
 /**
+ * VEXImport applies a pasted OpenVEX document to the findings of the latest
+ * scan of the image and saves the matching assessments.
+ * @param {string} image
+ * @param {string} doc
+ * @returns {$CancellablePromise<trivy$0.ImportReport>}
+ */
+export function VEXImport(image, doc) {
+    return $Call.ByID(494835202, image, doc).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType7($result);
+    }));
+}
+
+/**
  * VEXList returns the saved assessments for an image repository.
  * @param {string} image
  * @returns {$CancellablePromise<trivy$0.VEXEntry[]>}
  */
 export function VEXList(image) {
     return $Call.ByID(4047392387, image).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType8($result);
+        return $$createType9($result);
     }));
 }
 
@@ -152,7 +165,7 @@ export function VEXSave(image, author, role) {
  */
 export function VEXSet(image, e) {
     return $Call.ByID(847093897, image, e).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType7($result);
+        return $$createType8($result);
     }));
 }
 
@@ -164,5 +177,6 @@ const $$createType3 = $models.Mode.createFrom;
 const $$createType4 = trivy$0.ScanResult.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
 const $$createType6 = $models.UpdateInfo.createFrom;
-const $$createType7 = trivy$0.VEXEntry.createFrom;
-const $$createType8 = $Create.Array($$createType7);
+const $$createType7 = trivy$0.ImportReport.createFrom;
+const $$createType8 = trivy$0.VEXEntry.createFrom;
+const $$createType9 = $Create.Array($$createType8);

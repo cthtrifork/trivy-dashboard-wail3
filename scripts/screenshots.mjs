@@ -29,8 +29,11 @@ const problems = [];
 page.on("pageerror", (e) => problems.push("page error: " + e.message));
 
 const shot = async (name) => {
-  await page.waitForTimeout(250);
-  await page.screenshot({ path: path.join(outDir, name + ".png") });
+  await page.waitForTimeout(700); // transitions (dialog open, tab switch) must be finished: pixels are committed
+  await page.evaluate(() => Promise.all(document.getAnimations()
+    .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime))
+    .map((a) => a.finished.catch(() => {}))));
+  await page.screenshot({ path: path.join(outDir, name + ".png"), animations: "disabled", caret: "hide" });
   console.log("  " + name + ".png");
 };
 const tab = (name) => page.click(`[data-tab=${name}]`);
@@ -67,6 +70,14 @@ await page.click("#vex-export-btn");
 await page.fill("#vex-author", "Security Team");
 await page.fill("#vex-role", "Platform Security");
 await page.waitForFunction(() => document.querySelector("#vex-preview").value.includes("@context"));
+// The document and its statements are stamped with the current time, and the document id is a hash
+// over them; pin all of it so reruns produce identical pixels.
+await page.evaluate(() => {
+  const ta = document.querySelector("#vex-preview");
+  ta.value = ta.value
+    .replace(/("timestamp":\s*")[^"]+"/g, '$1' + '2026-01-01T00:00:00Z"')
+    .replace(/(openvex\.dev\/docs\/public\/vex-)[0-9a-f]+/g, "$1" + "0".repeat(64));
+});
 await shot("03-priorities-export-openvex");
 await page.click("#vex-close");
 
@@ -90,8 +101,24 @@ const graphSane = async (what) => {
   expect(g.w < 8000 && g.h < 8000, `${what}: layout exploded (${Math.round(g.w)}x${Math.round(g.h)}px)`);
   console.log(`    ${what}: ${g.count} nodes, ${Math.round(g.w)}x${Math.round(g.h)}px, zoom ${g.k.toFixed(2)}`);
 };
+// Screenshots are committed, so they must be reproducible: wait for the force layout to come to
+// rest (not a fixed time, which captures a different frame on a slower machine), and park the
+// mouse so no hover tooltip is drawn.
+const settled = async () => {
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(300); // let a just-triggered rebuild start before asking whether it is done
+  // At rest on three polls in a row, so one quiet moment between a rebuild and its first frame
+  // is not mistaken for the end of the layout.
+  let calm = 0;
+  for (let i = 0; i < 600 && calm < 3; i++) {
+    const rest = await page.evaluate(() => window.__depGraph.alpha <= 0.015 && !window.__depGraph.raf);
+    calm = rest ? calm + 1 : 0;
+    await page.waitForTimeout(200);
+  }
+  expect(calm >= 3, "dependency graph layout did not settle");
+};
 await tab("deps");
-await page.waitForTimeout(6000); // let the force layout settle
+await settled();
 await graphSane("overview");
 await shot("06-dependencies-graph");
 
@@ -103,17 +130,18 @@ const pick = async (label) => {
   }, label);
   expect(!!pos, "graph node " + label + " should exist");
   if (pos) await page.mouse.click(pos.x, pos.y);
-  await page.waitForTimeout(400);
+  await settled();
 };
 await pick("golang.org/x/net");
 await shot("07-dependencies-node-selected");
 await page.selectOption("#dep-focus", "2");
-await page.waitForTimeout(3000);
+await settled();
 await graphSane("focus ±2");
 await shot("08-dependencies-focus");
 await page.selectOption("#dep-focus", "0");
+await settled(); // each change rebuilds from the previous layout, so let every step finish
 await page.uncheck("#dep-vuln-only");
-await page.waitForTimeout(9000);
+await settled();
 await graphSane("all components");
 await shot("09-dependencies-all-components");
 
