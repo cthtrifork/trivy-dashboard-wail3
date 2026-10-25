@@ -46,6 +46,13 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           npm run build
 
+      # ESLint (errors only, see frontend/eslint.config.js) and Prettier. Run `npm run format` to fix.
+      - name: Lint and check formatting (frontend)
+        working-directory: frontend
+        run: |
+          npm run lint
+          npm run format:check
+
       # frontend/bindings is generated from the Go services and committed. Regenerate it with the
       # CLI version that matches go.mod and fail if the committed copy differs (run `make bindings`).
       - name: Check Wails bindings are up to date
@@ -70,6 +77,13 @@ jobs:
         run: |
           go mod tidy -diff
           go mod verify
+
+      # Config in .golangci.yml. Installed like the wails3 CLI above: pinned, built with the job's Go.
+      - name: golangci-lint
+        run: |
+          (cd "$RUNNER_TEMP" && CGO_ENABLED=0 GOBIN="$RUNNER_TEMP/bin" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0)
+          # Headless: this job has no GTK, so lint the server-tag build (CGO off, like the headless build).
+          CGO_ENABLED=0 "$RUNNER_TEMP/bin/golangci-lint" run --build-tags server ./...
 
   vet:
     name: vet

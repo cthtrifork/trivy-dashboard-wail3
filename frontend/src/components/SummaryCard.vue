@@ -5,6 +5,7 @@ defineProps({ count: [Number, String], label: String, color: { type: String, def
 
 <template>
   <div class="card" :class="{ off }" :style="{ '--c': color, cursor: clickable ? 'pointer' : 'default' }">
-    <b>{{ count }}</b><span>{{ label }}</span>
+    <b>{{ count }}</b
+    ><span>{{ label }}</span>
   </div>
 </template>

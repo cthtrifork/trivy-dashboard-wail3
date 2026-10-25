@@ -43,7 +43,7 @@ const note = computed(
     `${all.value.length} findings → ${tierCount.value["Act now"] + tierCount.value["Fix soon"]} worth acting on` +
     (kevN.value ? `, ${kevN.value} known exploited` : "") +
     (hidden.value.length ? ` · ${hidden.value.length} hidden by VEX` : "") +
-    (!prio.includeLow && lowN.value ? ` · ${lowN.value} low-risk not shown` : "")
+    (!prio.includeLow && lowN.value ? ` · ${lowN.value} low-risk not shown` : ""),
 );
 const signals = computed(() => {
   const en = result.value?.enrichment || {};
@@ -71,14 +71,17 @@ defineExpose({ count: computed(() => pool.value.length) });
   </div>
   <RulesEditor />
   <div class="toolbar">
-    <label class="chk">Show
+    <label class="chk"
+      >Show
       <select id="prio-top" v-model.number="prio.top">
-        <option :value="10">top 10</option><option :value="25">top 25</option><option :value="0">all</option>
+        <option :value="10">top 10</option>
+        <option :value="25">top 25</option>
+        <option :value="0">all</option>
       </select>
     </label>
-    <label class="chk"><input type="checkbox" id="prio-hide" v-model="prio.hideResolved"> Hide resolved by VEX</label>
-    <label class="chk"><input type="checkbox" id="prio-low" v-model="prio.includeLow"> Include low-risk (Monitor)</label>
-    <label class="chk"><input type="checkbox" id="prio-fixable" v-model="prio.fixableOnly"> Only with a fix</label>
+    <label class="chk"><input type="checkbox" id="prio-hide" v-model="prio.hideResolved" /> Hide resolved by VEX</label>
+    <label class="chk"><input type="checkbox" id="prio-low" v-model="prio.includeLow" /> Include low-risk (Monitor)</label>
+    <label class="chk"><input type="checkbox" id="prio-fixable" v-model="prio.fixableOnly" /> Only with a fix</label>
     <button class="ghost" id="vex-export-btn" @click="emit('export')">Edit/Create VEX ({{ vex.size }})</button>
     <span id="prio-note">{{ note }}</span>
   </div>
@@ -98,24 +101,43 @@ defineExpose({ count: computed(() => pool.value.length) });
           </div>
           <div class="chips">
             <Chip title="CVSS severity">{{ v.severity }}{{ v.score ? ` ${v.score.toFixed(1)}` : "" }}</Chip>
-            <Chip v-if="v.kev" kind="hot" :title="`Added to CISA KEV on ${v.kevAdded}; due ${v.kevDue}. ${v.kevAction}`">KEV{{ v.kevRansomware ? " · ransomware" : "" }}</Chip>
-            <Chip v-if="v.hasEpss" :kind="v.epss >= 0.1 ? 'warm' : ''" :title="`Exploitation probability in the next 30 days; percentile ${(v.epssPercentile * 100).toFixed(1)}`">EPSS {{ pct(v.epss) }}</Chip>
+            <Chip v-if="v.kev" kind="hot" :title="`Added to CISA KEV on ${v.kevAdded}; due ${v.kevDue}. ${v.kevAction}`"
+              >KEV{{ v.kevRansomware ? " · ransomware" : "" }}</Chip
+            >
+            <Chip
+              v-if="v.hasEpss"
+              :kind="v.epss >= 0.1 ? 'warm' : ''"
+              :title="`Exploitation probability in the next 30 days; percentile ${(v.epssPercentile * 100).toFixed(1)}`"
+              >EPSS {{ pct(v.epss) }}</Chip
+            >
             <Chip v-if="attackVector(v)" :kind="attackVector(v) === 'N' ? 'warm' : ''" :title="v.vector">{{ AV[attackVector(v)] }}</Chip>
             <Chip>{{ v.fixed ? "Fix: " + v.fixed : "No fix yet" }}</Chip>
-            <Chip v-if="vex.get(v.key)" :kind="isExpired(vex.get(v.key)) ? 'warm' : 'vex'" :title="isExpired(vex.get(v.key)) ? `Expired ${vex.get(v.key).expires}: shown again until reassessed` : ''">VEX: {{ STATUS_LABEL[vex.get(v.key).status] }}{{ isExpired(vex.get(v.key)) ? " · expired" : "" }}</Chip>
+            <Chip
+              v-if="vex.get(v.key)"
+              :kind="isExpired(vex.get(v.key)) ? 'warm' : 'vex'"
+              :title="isExpired(vex.get(v.key)) ? `Expired ${vex.get(v.key).expires}: shown again until reassessed` : ''"
+              >VEX: {{ STATUS_LABEL[vex.get(v.key).status] }}{{ isExpired(vex.get(v.key)) ? " · expired" : "" }}</Chip
+            >
           </div>
           <p class="attack">{{ v.attack }}</p>
           <div v-if="v.title" class="kv">{{ v.title }}</div>
           <ul class="why">
             <li v-for="(r, j) in v.reasons" :key="j">
               <span :class="['pts', { pos: r.points > 0 }]">{{ r.points > 0 ? "+" : "" }}{{ r.points }}</span>
-              <span>{{ r.text }} <code class="rule" title="The rule that fired, with the current thresholds">{{ r.rule }}</code></span>
+              <span
+                >{{ r.text }} <code class="rule" title="The rule that fired, with the current thresholds">{{ r.rule }}</code></span
+              >
             </li>
-            <li class="tierwhy"><span class="pts">tier</span><span>{{ v.tierWhy }}</span></li>
+            <li class="tierwhy">
+              <span class="pts">tier</span><span>{{ v.tierWhy }}</span>
+            </li>
           </ul>
           <VexBox :v="v" />
         </div>
-        <div class="score"><b>{{ v.priority }}</b>score</div>
+        <div class="score">
+          <b>{{ v.priority }}</b
+          >score
+        </div>
       </div>
       <div v-if="after > 0" class="pad" :style="{ height: after - GAP + 'px' }"></div>
       <div v-if="!list.length" class="empty">Nothing left to show with these filters.</div>

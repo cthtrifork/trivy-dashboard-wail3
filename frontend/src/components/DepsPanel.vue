@@ -15,7 +15,12 @@ watch(typed, (v) => {
   clearTimeout(typing);
   typing = setTimeout(() => (dep.filter = v), 150);
 });
-watch(() => dep.filter, (v) => { if (v !== typed.value) typed.value = v; }); // reset by select()
+watch(
+  () => dep.filter,
+  (v) => {
+    if (v !== typed.value) typed.value = v;
+  },
+); // reset by select()
 const canvas = ref(null);
 const shown = ref("");
 const hover = ref("");
@@ -50,10 +55,16 @@ const index = computed(() => {
 function computeDepths() {
   depth = new Map();
   const queue = [];
-  for (const r of result.value.depRoots) { depth.set(r, 1); queue.push(r); }
+  for (const r of result.value.depRoots) {
+    depth.set(r, 1);
+    queue.push(r);
+  }
   for (let i = 0; i < queue.length; i++) {
     for (const c of nodes.value[queue[i]].children) {
-      if (!depth.has(c)) { depth.set(c, depth.get(queue[i]) + 1); queue.push(c); }
+      if (!depth.has(c)) {
+        depth.set(c, depth.get(queue[i]) + 1);
+        queue.push(c);
+      }
     }
   }
 }
@@ -70,13 +81,20 @@ function visibleRefs() {
       const d = seen.get(queue[i]);
       if (d >= dep.focus) continue;
       const n = all[queue[i]];
-      for (const x of [...n.children, ...n.parents]) if (!seen.has(x)) { seen.set(x, d + 1); queue.push(x); }
+      for (const x of [...n.children, ...n.parents])
+        if (!seen.has(x)) {
+          seen.set(x, d + 1);
+          queue.push(x);
+        }
     }
     refs = [...seen.keys()];
   } else if (q) {
     const hits = index.value.filter((e) => e.text.includes(q)).map((e) => e.ref);
     const set = new Set(hits);
-    for (const r of hits) { all[r].children.forEach((c) => set.add(c)); all[r].parents.forEach((p) => set.add(p)); }
+    for (const r of hits) {
+      all[r].children.forEach((c) => set.add(c));
+      all[r].parents.forEach((p) => set.add(p));
+    }
     refs = [...set];
   } else {
     refs = index.value.filter((e) => (dep.cat === "all" || e.category === dep.cat) && (!dep.vulnOnly || e.vulnerable)).map((e) => e.ref);
@@ -96,7 +114,10 @@ function renderGraph() {
   const all = nodes.value;
   if (!result.value || !count.value) return;
   if (!graph) {
-    graph = new Graph(canvas.value, { onSelect: (id) => select(id === IMAGE_NODE ? null : id), onHover: (id) => (hover.value = describe(id)) });
+    graph = new Graph(canvas.value, {
+      onSelect: (id) => select(id === IMAGE_NODE ? null : id),
+      onHover: (id) => (hover.value = describe(id)),
+    });
     graph.showLabels = dep.labels ? "all" : "auto";
     window.__depGraph = graph; // handy for debugging in devtools, and used by scripts/screenshots.mjs
   }
@@ -108,9 +129,13 @@ function renderGraph() {
   const labelled = new Set([...refs].sort((x, y) => sevWeight(all[y]) - sevWeight(all[x])).slice(0, 12));
   const gnodes = refs.map((r) => {
     const n = all[r];
-    const own = worst(n.ownCounts), tot = worst(n.totalCounts);
+    const own = worst(n.ownCounts),
+      tot = worst(n.totalCounts);
     return {
-      id: r, label: n.name, sub: n.version, depth: depth.get(r) ?? 1,
+      id: r,
+      label: n.name,
+      sub: n.version,
+      depth: depth.get(r) ?? 1,
       r: 5 + Math.min(11, Math.sqrt(total(n)) * 1.6),
       fill: own ? colors[own] : n.category === "OS" ? "#6b7a99" : "#4a8f7a",
       ring: tot && !own ? colors[tot] : own ? colors[own] : null,
@@ -121,12 +146,22 @@ function renderGraph() {
   });
   const edges = [];
   for (const r of refs) for (const c of all[r].children) if (keep.has(c)) edges.push([r, c]);
-  gnodes.push({ id: IMAGE_NODE, label: result.value.image, depth: 0, r: 10, fill: cssVar("--accent"), ring: null, shape: "square", always: true });
+  gnodes.push({
+    id: IMAGE_NODE,
+    label: result.value.image,
+    depth: 0,
+    r: 10,
+    fill: cssVar("--accent"),
+    ring: null,
+    shape: "square",
+    always: true,
+  });
   for (const r of result.value.depRoots) if (keep.has(r)) edges.push([IMAGE_NODE, r]);
 
   graph.setData(gnodes, edges);
   graph.select(dep.selected && keep.has(dep.selected) ? dep.selected : null);
-  shown.value = `${refs.length} of ${count.value} components` +
+  shown.value =
+    `${refs.length} of ${count.value} components` +
     (truncated ? ` · ${truncated} lower-risk hidden: search, filter or focus a node to see them` : "");
 }
 
@@ -154,7 +189,15 @@ async function select(ref, center = false) {
 
 // Anything that changes which components are drawn; the selection only matters while focusing on it.
 watch(() => [dep.filter, dep.cat, dep.vulnOnly, dep.focus, dep.focus > 0 ? dep.selected : null], renderGraph);
-watch(() => dep.labels, (on) => { if (graph) { graph.showLabels = on ? "all" : "auto"; graph.draw(); } });
+watch(
+  () => dep.labels,
+  (on) => {
+    if (graph) {
+      graph.showLabels = on ? "all" : "auto";
+      graph.draw();
+    }
+  },
+);
 watch(result, () => {
   dep.selected = null;
   depth = null;
@@ -167,18 +210,32 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
 
 <template>
   <div class="toolbar wrap">
-    <input id="dep-filter" v-model="typed" placeholder="Find a package…" autocomplete="off">
+    <input id="dep-filter" v-model="typed" placeholder="Find a package…" autocomplete="off" />
     <div class="seg" id="dep-cat">
-      <button v-for="[cat, label] in [['all', 'All'], ['OS', 'OS'], ['Application', 'Application']]" :key="cat" :class="{ on: dep.cat === cat }" @click="dep.cat = cat">{{ label }}</button>
+      <button
+        v-for="[cat, label] in [
+          ['all', 'All'],
+          ['OS', 'OS'],
+          ['Application', 'Application'],
+        ]"
+        :key="cat"
+        :class="{ on: dep.cat === cat }"
+        @click="dep.cat = cat"
+      >
+        {{ label }}
+      </button>
     </div>
-    <label class="chk"><input type="checkbox" id="dep-vuln-only" v-model="dep.vulnOnly"> Vulnerable paths only</label>
-    <label class="chk">Focus
+    <label class="chk"><input type="checkbox" id="dep-vuln-only" v-model="dep.vulnOnly" /> Vulnerable paths only</label>
+    <label class="chk"
+      >Focus
       <select id="dep-focus" v-model.number="dep.focus">
-        <option :value="0">whole graph</option><option :value="1">selection ±1 hop</option>
-        <option :value="2">selection ±2 hops</option><option :value="3">selection ±3 hops</option>
+        <option :value="0">whole graph</option>
+        <option :value="1">selection ±1 hop</option>
+        <option :value="2">selection ±2 hops</option>
+        <option :value="3">selection ±3 hops</option>
       </select>
     </label>
-    <label class="chk"><input type="checkbox" id="dep-labels" v-model="dep.labels"> All labels</label>
+    <label class="chk"><input type="checkbox" id="dep-labels" v-model="dep.labels" /> All labels</label>
     <button class="ghost" id="dep-fit" @click="graph?.fit()">Fit</button>
     <span id="dep-shown">{{ shown }}</span>
   </div>
@@ -199,7 +256,10 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
         <h3>{{ selectedNode.name }} {{ selectedNode.version }}</h3>
         <div class="kv">{{ selectedNode.category }} · {{ selectedNode.type }}</div>
         <div class="kv mono">{{ selectedNode.purl }}</div>
-        <h4>Vulnerabilities ({{ selectedVulns.length }}{{ total(selectedNode) > selectedVulns.length ? `, ${total(selectedNode)} incl. dependencies` : "" }})</h4>
+        <h4>
+          Vulnerabilities ({{ selectedVulns.length
+          }}{{ total(selectedNode) > selectedVulns.length ? `, ${total(selectedNode)} incl. dependencies` : "" }})
+        </h4>
         <div v-for="v in shownVulns" :key="v.key + '|' + v.target" class="vrow">
           <span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span>
           <span class="mono">{{ v.id }}</span>
@@ -207,7 +267,13 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
         </div>
         <div v-if="more(selectedVulns.length)" class="kv">…and {{ more(selectedVulns.length) }} more</div>
         <div v-if="!selectedVulns.length" class="kv">none in this package</div>
-        <template v-for="[title, refs] in [['Depends on', selectedNode.children], ['Required by', selectedNode.parents]]" :key="title">
+        <template
+          v-for="[title, refs] in [
+            ['Depends on', selectedNode.children],
+            ['Required by', selectedNode.parents],
+          ]"
+          :key="title"
+        >
           <h4>{{ title }} ({{ refs.length }})</h4>
           <div v-for="[r, x] in links(refs)" :key="r" class="link" @click="select(r, true)">
             <span>{{ x.name }} {{ x.version }}</span>

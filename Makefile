@@ -10,10 +10,14 @@ VERSION   ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo de
 RUNTIME   := $(or $(XDG_RUNTIME_DIR),/run/user/$(shell id -u))
 # CACHE: directory on the server (the podman host) that holds Trivy's cache; overridable.
 CACHE     ?= /tmp/trivy
+# Build tags for the production vet; the dev container (no GTK) sets this to server,production.
+VET_TAGS  ?= production
+# -race needs cgo, which pulls in GTK; the dev container sets RACE to empty.
+RACE      ?= -race
 SOCKET    ?= $(RUNTIME)/podman/podman.sock
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt vet frontend bindings dev-frontend build build-server run demo screenshots \
+.PHONY: help test check fmt lint vet frontend bindings dev dev-frontend build build-server run demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -23,14 +27,18 @@ help: ## List the targets
 ## Development -------------------------------------------------------------
 
 test: ## Run the tests as CI does (fixtures, no podman needed)
-	go test -race -count=1 ./...
+	go test $(RACE) -count=1 ./...
 
 fmt: ## Format the Go code
 	gofmt -w .
 
+lint: ## golangci-lint plus the frontend's ESLint and Prettier check (as CI runs them)
+	CGO_ENABLED=0 golangci-lint run --build-tags server ./...
+	cd frontend && npm run lint && npm run format:check
+
 vet: ## go vet, with and without the production tag
 	go vet ./...
-	go vet -tags production ./...
+	go vet -tags $(VET_TAGS) ./...
 
 check: ## Everything CI checks that runs without GTK: gofmt, tidy, vet, tests, headless build
 	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "needs gofmt:"; echo "$$unformatted"; exit 1; fi
@@ -42,6 +50,9 @@ frontend: ## Build the Vue app into frontend/dist (embedded by the Go binary)
 
 bindings: ## Regenerate frontend/bindings from the Go services (needs the wails3 CLI)
 	CGO_ENABLED=0 wails3 generate bindings -silent
+
+dev: ## Hot reload: Vite HMR + rebuild-on-save Go server (http://localhost:8080)
+	scripts/dev.sh
 
 dev-frontend: ## Vite dev server with hot reload; then run: FRONTEND_DEVSERVER_URL=http://127.0.0.1:9245 go run .
 	cd frontend && npm run dev

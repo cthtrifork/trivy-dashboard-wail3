@@ -11,8 +11,20 @@ export const SEV_COLOR = { CRITICAL: "--CRITICAL", HIGH: "--HIGH", MEDIUM: "--ME
 export const sevStyle = (sev) => ({ "--c": `var(${SEV_COLOR[sev]})` });
 export const errText = (e) => String(e?.message || e);
 
-export const lsGet = (k) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } };
-export const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* ignore */ } };
+export const lsGet = (k) => {
+  try {
+    return localStorage.getItem(k) || "";
+  } catch {
+    return "";
+  }
+};
+export const lsSet = (k, v) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch {
+    /* ignore */
+  }
+};
 
 // The latest scan. Shallow: the dependency graph holds thousands of read-only objects.
 export const result = shallowRef(null);
@@ -42,9 +54,21 @@ export const openVex = new Set();
 export const rules = reactive({});
 export const builtinPresets = ref([]);
 export const userPresets = ref([]);
-const RULES_KEY = "score-rules", PRESETS_KEY = "score-presets";
-const lsJSON = (k, fallback) => { try { return JSON.parse(lsGet(k)) ?? fallback; } catch { return fallback; } };
-const rulesJSON = (r) => JSON.stringify(Object.keys(r).sort().map((k) => [k, r[k]]));
+const RULES_KEY = "score-rules",
+  PRESETS_KEY = "score-presets";
+const lsJSON = (k, fallback) => {
+  try {
+    return JSON.parse(lsGet(k)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+const rulesJSON = (r) =>
+  JSON.stringify(
+    Object.keys(r)
+      .sort()
+      .map((k) => [k, r[k]]),
+  );
 export const allPresets = () => [...builtinPresets.value, ...userPresets.value];
 // The preset the live rules equal exactly, or null once the user has changed anything.
 export const activePreset = () => allPresets().find((p) => rulesJSON(p.rules) === rulesJSON(rules))?.name ?? null;
@@ -53,7 +77,8 @@ let rankToken = 0;
 // rerank asks Go to rank the latest scan under the live rules. Calls that are superseded (the user
 // kept dragging a threshold, or rescanned) are dropped.
 export async function rerank() {
-  const r = result.value, token = ++rankToken;
+  const r = result.value,
+    token = ++rankToken;
   if (!r) return void (vulns.value = []);
   if (!builtinPresets.value.length || rulesJSON(rules) === rulesJSON(builtinPresets.value[0].rules)) {
     vulns.value = r.vulnerabilities; // the scan already used the default rules
@@ -62,7 +87,13 @@ export async function rerank() {
   try {
     const out = await ScanService.Rescore({ ...rules });
     if (token !== rankToken || out.length !== r.vulnerabilities.length) return;
-    vulns.value = out.map((o) => ({ ...r.vulnerabilities[o.index], priority: o.priority, tier: o.tier, tierWhy: o.tierWhy, reasons: o.reasons }));
+    vulns.value = out.map((o) => ({
+      ...r.vulnerabilities[o.index],
+      priority: o.priority,
+      tier: o.tier,
+      tierWhy: o.tierWhy,
+      reasons: o.reasons,
+    }));
   } catch (err) {
     setStatus("Could not apply the scoring rules: " + errText(err), { err: true });
   }
@@ -108,7 +139,8 @@ export function setStatus(msg, { err = false, busy = false } = {}) {
 
 export const logText = ref("");
 // Trivy can be chatty on big images: keep the tail only, so the log <pre> stays bounded.
-const LOG_MAX = 400_000, LOG_KEEP = 300_000;
+const LOG_MAX = 400_000,
+  LOG_KEEP = 300_000;
 Events.On("scan:log", (ev) => {
   const line = Array.isArray(ev.data) ? ev.data[0] : ev.data;
   let text = logText.value + line + "\n";
@@ -138,7 +170,11 @@ export const mode = ref(null);
 export const appInfo = ref(null);
 export const footprint = ref(null);
 
-export const refreshFootprint = () => ScanService.Footprint().then((f) => (footprint.value = f), () => {});
+export const refreshFootprint = () =>
+  ScanService.Footprint().then(
+    (f) => (footprint.value = f),
+    () => {},
+  );
 
 export async function loadVEX() {
   const m = new Map();
@@ -179,17 +215,26 @@ export const cancel = () => ScanService.Cancel();
 
 export function init() {
   // The Go side decides whether this build may update itself (release builds only).
-  ScanService.UpdateInfo().then((u) => (appInfo.value = u), () => {});
+  ScanService.UpdateInfo().then(
+    (u) => (appInfo.value = u),
+    () => {},
+  );
   // Development builds replay recorded scans: say so, and prefill the inputs with something that works.
-  ScanService.Mode().then((m) => {
-    mode.value = m;
-    if (!m.fixtures) return;
-    if (!image.value) image.value = m.image;
-    if (!cmpForm.repo) cmpForm.repo = m.repo;
-    if (!cmpForm.a) cmpForm.a = m.tagA;
-    if (!cmpForm.b) cmpForm.b = m.tagB;
-  }, () => {});
+  ScanService.Mode().then(
+    (m) => {
+      mode.value = m;
+      if (!m.fixtures) return;
+      if (!image.value) image.value = m.image;
+      if (!cmpForm.repo) cmpForm.repo = m.repo;
+      if (!cmpForm.a) cmpForm.a = m.tagA;
+      if (!cmpForm.b) cmpForm.b = m.tagB;
+    },
+    () => {},
+  );
   refreshFootprint();
   initRules();
-  ScanService.PodmanVersion().then((v) => setStatus(v), (err) => setStatus(errText(err), { err: true }));
+  ScanService.PodmanVersion().then(
+    (v) => setStatus(v),
+    (err) => setStatus(errText(err), { err: true }),
+  );
 }

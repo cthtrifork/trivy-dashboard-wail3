@@ -27,8 +27,12 @@ function toggleOne(key, on) {
 function load() {
   const e = existing.value;
   Object.assign(form, {
-    status: e?.status || "", justification: e?.justification || "", impact: e?.impact || "", action: e?.action || "",
-    author: e?.author || lsGet("vex-author"), expires: e?.expires || "",
+    status: e?.status || "",
+    justification: e?.justification || "",
+    impact: e?.impact || "",
+    action: e?.action || "",
+    author: e?.author || lsGet("vex-author"),
+    expires: e?.expires || "",
   });
 }
 load();
@@ -41,16 +45,26 @@ function onToggle(ev) {
 
 async function save() {
   err.value = "";
-  if (!form.status) { err.value = "Choose a status."; return; }
+  if (!form.status) {
+    err.value = "Choose a status.";
+    return;
+  }
   try {
     const targets = [props.v, ...siblings.value.filter((s) => alsoKeys.value.has(s.key))];
     const next = new Map(vex.value);
     // The same statement is valid for every target, so a validation error shows up on the first call, before anything is written.
     for (const t of targets) {
       const saved = await ScanService.VEXSet(result.value.image, {
-        vulnerability: t.id, package: t.package, version: t.installed, purl: t.purl,
-        status: form.status, justification: form.justification, impact: form.impact, action: form.action,
-        author: form.author, expires: form.expires,
+        vulnerability: t.id,
+        package: t.package,
+        version: t.installed,
+        purl: t.purl,
+        status: form.status,
+        justification: form.justification,
+        impact: form.impact,
+        action: form.action,
+        author: form.author,
+        expires: form.expires,
       });
       next.set(saved.key, saved);
       openKeys.add(t.key);
@@ -74,44 +88,66 @@ async function clear() {
 
 <template>
   <details class="vexbox" :open="open" @toggle="onToggle" @click.stop>
-    <summary>{{ existing ? `VEX assessment: ${STATUS_LABEL[existing.status]}${isExpired(existing) ? " (expired)" : ""}` : "Assess this finding (VEX)" }}</summary>
+    <summary>
+      {{
+        existing
+          ? `VEX assessment: ${STATUS_LABEL[existing.status]}${isExpired(existing) ? " (expired)" : ""}`
+          : "Assess this finding (VEX)"
+      }}
+    </summary>
     <div class="vexform">
-      <label>Status
+      <label
+        >Status
         <select v-model="form.status">
           <option value="">— select status —</option>
           <option v-for="(label, k) in STATUS_LABEL" :key="k" :value="k">{{ label }}</option>
         </select>
       </label>
-      <label v-show="form.status === 'not_affected'">Justification (required unless an impact statement is given)
+      <label v-show="form.status === 'not_affected'"
+        >Justification (required unless an impact statement is given)
         <select v-model="form.justification">
           <option value="">— select justification —</option>
           <option v-for="(label, k) in JUSTIFICATIONS" :key="k" :value="k">{{ label }}</option>
         </select>
       </label>
-      <label v-show="form.status">Impact statement
-        <textarea v-model="form.impact" rows="2" placeholder="Explain why (e.g. the service is not exposed, the code path is never loaded)"></textarea>
+      <label v-show="form.status"
+        >Impact statement
+        <textarea
+          v-model="form.impact"
+          rows="2"
+          placeholder="Explain why (e.g. the service is not exposed, the code path is never loaded)"
+        ></textarea>
       </label>
-      <label v-show="form.status === 'affected'">Action statement (required for affected)
-        <textarea v-model="form.action" rows="2" placeholder="What will be done about it (e.g. upgrade to 3.1 in the next release)"></textarea>
+      <label v-show="form.status === 'affected'"
+        >Action statement (required for affected)
+        <textarea
+          v-model="form.action"
+          rows="2"
+          placeholder="What will be done about it (e.g. upgrade to 3.1 in the next release)"
+        ></textarea>
       </label>
       <fieldset v-if="siblings.length" v-show="form.status" class="vexalso">
         <legend>Also apply to the other {{ siblings.length }} component{{ siblings.length === 1 ? "" : "s" }} with {{ v.id }}</legend>
-        <label class="chk"><input type="checkbox" :checked="allChecked" @change="toggleAll"> Select all</label>
+        <label class="chk"><input type="checkbox" :checked="allChecked" @change="toggleAll" /> Select all</label>
         <label v-for="s in siblings" :key="s.key" class="chk">
-          <input type="checkbox" :checked="alsoKeys.has(s.key)" @change="toggleOne(s.key, $event.target.checked)">
+          <input type="checkbox" :checked="alsoKeys.has(s.key)" @change="toggleOne(s.key, $event.target.checked)" />
           <span class="mono">{{ s.package }} {{ s.installed }}</span>
           <span v-if="vex.get(s.key)" class="kv">(has an assessment: {{ STATUS_LABEL[vex.get(s.key).status] }}, will be replaced)</span>
         </label>
       </fieldset>
       <div v-show="form.status" class="vexmeta">
-        <label>Assessed by
-          <input v-model="form.author" type="text" placeholder="Name or team (optional)">
+        <label
+          >Assessed by
+          <input v-model="form.author" type="text" placeholder="Name or team (optional)" />
         </label>
-        <label>Review by
-          <input v-model="form.expires" type="date">
+        <label
+          >Review by
+          <input v-model="form.expires" type="date" />
         </label>
       </div>
-      <div v-show="form.status && form.expires" class="kv">After this date the assessment stays on record but the finding is shown again.</div>
+      <div v-show="form.status && form.expires" class="kv">
+        After this date the assessment stays on record but the finding is shown again.
+      </div>
       <div class="row">
         <button type="button" @click="save">Save</button>
         <button type="button" class="ghost" v-show="existing" @click="clear">Remove assessment</button>

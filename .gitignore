@@ -93,7 +93,8 @@ auth.json
 # Editors and OS
 # ---------------------------------------------------------------------------
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
 *.iml
 *.swp
 *.swo
@@ -106,3 +107,6 @@ desktop.ini
 .claude/settings.local.json
 .claude/scratch/
 
+
+# Go hot reload output (air)
+/tmp/

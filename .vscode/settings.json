@@ -1,0 +1,16 @@
+{
+  "go.useLanguageServer": true,
+  "go.lintTool": "golangci-lint",
+  "go.lintOnSave": "workspace",
+  "editor.formatOnSave": true,
+  "go.formatTool": "goimports",
+  "[go]": { "editor.defaultFormatter": "golang.go" },
+  "[javascript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[vue]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[css]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[html]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[markdown]": { "editor.formatOnSave": false },
+  "eslint.workingDirectories": [{ "directory": "frontend" }],
+  "eslint.useFlatConfig": true
+}
