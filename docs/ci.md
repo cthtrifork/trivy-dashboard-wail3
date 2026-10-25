@@ -35,3 +35,5 @@ Sources:
 - Fork PRs and Dependabot PRs are skipped (read-only token).
 - **No loop:** pushes made by `github-actions[bot]` are ignored (`github.actor` check). Without it the bot's commit re-triggers the workflow, and because rendering is never perfectly identical between runs, each run would commit again.
 - The script is made as reproducible as it reasonably can be: it waits for the force-directed graph to rest instead of sleeping, pins the OpenVEX timestamps, disables animations, and the graph's tie-breaking random numbers are seeded. Fonts on the runner can differ from your machine, so let the workflow regenerate the images rather than committing locally generated ones.
+
+`security.yml` also runs `npm audit --omit=dev --audit-level=high` in `frontend/` (weekly, and when the frontend lockfile changes): runtime dependencies only, HIGH and above. It is deliberately not part of `ci.yml`, so a newly published advisory cannot block unrelated pull requests.

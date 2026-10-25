@@ -9,6 +9,8 @@ on:
       - '**.go'
       - go.mod
       - go.sum
+      - frontend/package.json
+      - frontend/package-lock.json
       - .github/workflows/**
   push:
     branches: [main]
@@ -16,6 +18,8 @@ on:
       - '**.go'
       - go.mod
       - go.sum
+      - frontend/package.json
+      - frontend/package-lock.json
   schedule:
     - cron: '23 5 * * 1' # Mondays 05:23 UTC
   workflow_dispatch:
@@ -82,3 +86,19 @@ jobs:
           # Recorded scan output of a third-party image: full of CVE ids by design, not our dependencies.
           skip-dirs: internal/trivy/fixtures
           exit-code: '1'
+
+  npm-audit:
+    name: npm audit (frontend runtime dependencies)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # --omit=dev: only what ships in the app (vue, @wailsio/runtime). Vite and the Vue plugin are
+      # build tooling, and an advisory there should not fail the weekly run; Dependabot and the
+      # Trivy scan above still report it. HIGH and above fails, lower severities are left to Dependabot.
+      - name: Audit production dependencies
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
