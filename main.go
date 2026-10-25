@@ -26,6 +26,9 @@ func main() {
 		Description: "Scan container images with Trivy running in Podman (" + version + ")",
 		Services:    []application.Service{application.NewService(svc)},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(frontend)},
+		// Linux: the program name is the window's app_id/WM_CLASS, which the packaged
+		// trivy-scanner.desktop (StartupWMClass) matches for the launcher icon and grouping.
+		Linux: application.LinuxOptions{ProgramName: "trivy-scanner"},
 	})
 	// After New (an update restart re-launches this binary and New diverts it into the swap
 	// helper) and before Run, as the Wails self-update tutorial prescribes.

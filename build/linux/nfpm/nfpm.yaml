@@ -1,0 +1,63 @@
+# Config for the .deb and .rpm that scripts/package-linux.sh builds with `wails3 tool package`.
+# ${...} values (version, signing key) come from the environment, which the script sets. nfpm does not
+# expand them in contents paths, so the script stages the binary at bin/trivy-scanner.
+# Docs: https://nfpm.goreleaser.com/configuration/
+
+name: trivy-scanner
+arch: amd64
+platform: linux
+version: ${PKG_VERSION}
+release: "1"
+section: utils
+priority: optional
+maintainer: Trivy Scanner maintainers <noreply@users.noreply.github.com>
+description: |-
+  Scan container images with Trivy running in Podman.
+  Shortlists the vulnerabilities that matter, with a reason for each rank.
+vendor: cthtrifork
+homepage: https://github.com/cthtrifork/trivy-dashboard-wail3
+license: MIT
+
+contents:
+  - src: ./bin/trivy-scanner
+    dst: /usr/bin/trivy-scanner
+    file_info:
+      mode: 0755
+  - src: ./build/linux/trivy-scanner.desktop
+    dst: /usr/share/applications/trivy-scanner.desktop
+  - src: ./build/appicon.png
+    dst: /usr/share/icons/hicolor/256x256/apps/trivy-scanner.png
+  - src: ./frontend/public/favicon.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/trivy-scanner.svg
+  - src: ./LICENSE
+    dst: /usr/share/doc/trivy-scanner/copyright
+  - src: ./README.md
+    dst: /usr/share/doc/trivy-scanner/README.md
+
+# GTK4 + WebKitGTK 6 stack, the baseline the release binary is built against (Ubuntu 24.04).
+depends:
+  - libgtk-4-1
+  - libwebkitgtk-6.0-4
+# Scans run in podman, which can also be a remote one, so it is recommended rather than required.
+recommends:
+  - podman
+
+overrides:
+  rpm:
+    depends:
+      - gtk4
+      - webkitgtk6.0
+
+scripts:
+  postinstall: ./build/linux/nfpm/postinstall.sh
+  postremove: ./build/linux/nfpm/postremove.sh
+
+# Signing is on when PKG_SIGNING_KEY_FILE names an armored private key (the passphrase, if any, is
+# NFPM_PASSPHRASE). Unset, the packages are built unsigned, which is what a dry run does.
+deb:
+  signature:
+    key_file: ${PKG_SIGNING_KEY_FILE}
+    type: origin
+rpm:
+  signature:
+    key_file: ${PKG_SIGNING_KEY_FILE}

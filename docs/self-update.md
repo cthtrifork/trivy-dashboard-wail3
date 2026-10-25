@@ -40,6 +40,10 @@ The updater picks assets by name, so the names are an interface. `scripts/packag
 | `trivy-scanner_<version>_linux_amd64.tar.gz` | people | binary + `README.md` + `LICENSE` |
 | `SHA256SUMS` | the updater and people | digests of both files above; the name must stay fixed |
 
+The release also carries the `.deb`, the `.rpm` and the public key that signed them (see
+[releasing](releasing.md#packages)). `SHA256SUMS` lists those too, but the updater never installs them: it skips
+`.deb` and `.rpm` as it does archives, and a packaged install should be updated through the package instead.
+
 Why two downloads of the same program: the updater installs a single file, or an archive with **exactly one top-level
 entry**. The tarball has three, so it would be rejected, and the default asset matcher would pick it whenever GitHub
 lists it first. `internal/selfupdate` therefore skips archives when matching.

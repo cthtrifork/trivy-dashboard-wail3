@@ -77,3 +77,5 @@ jobs:
     uses: ./.github/workflows/release.yml
     with:
       tag: ${{ needs.tag.outputs.tag }}
+    # The PGP key that signs the .deb and .rpm (RELEASE_GPG_*).
+    secrets: inherit
