@@ -7,6 +7,53 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * BinaryInfo is one application artifact found in the image.
+ */
+export class BinaryInfo {
+    /**
+     * Creates a new BinaryInfo instance.
+     * @param {Partial<BinaryInfo>} [$$source = {}] - The source object to create the BinaryInfo.
+     */
+    constructor($$source = {}) {
+        if (!("path" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["path"] = "";
+        }
+        if (!("kind" in $$source)) {
+            /**
+             * e.g. "Go binary"
+             * @member
+             * @type {string}
+             */
+            this["kind"] = "";
+        }
+        if (!("toolchain" in $$source)) {
+            /**
+             * e.g. "Go 1.26.10", empty if unknown
+             * @member
+             * @type {string}
+             */
+            this["toolchain"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new BinaryInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {BinaryInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new BinaryInfo(/** @type {Partial<BinaryInfo>} */($$parsedSource));
+    }
+}
+
+/**
  * CompareRequest asks for two tags (or digests) of one image to be compared.
  */
 export class CompareRequest {
@@ -702,6 +749,67 @@ export class Reason {
 }
 
 /**
+ * SBOMSummary is a plain-language overview of what an image contains.
+ */
+export class SBOMSummary {
+    /**
+     * Creates a new SBOMSummary instance.
+     * @param {Partial<SBOMSummary>} [$$source = {}] - The source object to create the SBOMSummary.
+     */
+    constructor($$source = {}) {
+        if (!("text" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["text"] = "";
+        }
+        if (!("os" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["os"] = "";
+        }
+        if (!("binaries" in $$source)) {
+            /**
+             * @member
+             * @type {BinaryInfo[]}
+             */
+            this["binaries"] = [];
+        }
+        if (!("packages" in $$source)) {
+            /**
+             * purl type (golang, apk, …) -> count
+             * @member
+             * @type {{ [_ in string]?: number }}
+             */
+            this["packages"] = {};
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SBOMSummary instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {SBOMSummary}
+     */
+    static createFrom($$source = {}) {
+        const $$createField2_0 = $$createType9;
+        const $$createField3_0 = $$createType5;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("binaries" in $$parsedSource) {
+            $$parsedSource["binaries"] = $$createField2_0($$parsedSource["binaries"]);
+        }
+        if ("packages" in $$parsedSource) {
+            $$parsedSource["packages"] = $$createField3_0($$parsedSource["packages"]);
+        }
+        return new SBOMSummary(/** @type {Partial<SBOMSummary>} */($$parsedSource));
+    }
+}
+
+/**
  * ScanRequest is what the UI sends to start a scan.
  */
 export class ScanRequest {
@@ -819,6 +927,13 @@ export class ScanResult {
              */
             this["sbomFormat"] = "";
         }
+        if (!("summary" in $$source)) {
+            /**
+             * @member
+             * @type {SBOMSummary | null}
+             */
+            this["summary"] = null;
+        }
         if (!("depNodes" in $$source)) {
             /**
              * Dependency graph. Nodes are keyed by CycloneDX bom-ref; DepRoots are the
@@ -860,13 +975,14 @@ export class ScanResult {
      * @returns {ScanResult}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType9;
+        const $$createField2_0 = $$createType11;
         const $$createField3_0 = $$createType5;
-        const $$createField4_0 = $$createType11;
+        const $$createField4_0 = $$createType13;
         const $$createField5_0 = $$createType5;
-        const $$createField7_0 = $$createType14;
-        const $$createField8_0 = $$createType6;
-        const $$createField10_0 = $$createType15;
+        const $$createField7_0 = $$createType15;
+        const $$createField8_0 = $$createType18;
+        const $$createField9_0 = $$createType6;
+        const $$createField11_0 = $$createType19;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("vulnerabilities" in $$parsedSource) {
             $$parsedSource["vulnerabilities"] = $$createField2_0($$parsedSource["vulnerabilities"]);
@@ -880,14 +996,17 @@ export class ScanResult {
         if ("componentTypes" in $$parsedSource) {
             $$parsedSource["componentTypes"] = $$createField5_0($$parsedSource["componentTypes"]);
         }
+        if ("summary" in $$parsedSource) {
+            $$parsedSource["summary"] = $$createField7_0($$parsedSource["summary"]);
+        }
         if ("depNodes" in $$parsedSource) {
-            $$parsedSource["depNodes"] = $$createField7_0($$parsedSource["depNodes"]);
+            $$parsedSource["depNodes"] = $$createField8_0($$parsedSource["depNodes"]);
         }
         if ("depRoots" in $$parsedSource) {
-            $$parsedSource["depRoots"] = $$createField8_0($$parsedSource["depRoots"]);
+            $$parsedSource["depRoots"] = $$createField9_0($$parsedSource["depRoots"]);
         }
         if ("enrichment" in $$parsedSource) {
-            $$parsedSource["enrichment"] = $$createField10_0($$parsedSource["enrichment"]);
+            $$parsedSource["enrichment"] = $$createField11_0($$parsedSource["enrichment"]);
         }
         return new ScanResult(/** @type {Partial<ScanResult>} */($$parsedSource));
     }
@@ -1042,7 +1161,7 @@ export class VulnChange {
      * @returns {VulnChange}
      */
     static createFrom($$source = {}) {
-        const $$createField1_0 = $$createType8;
+        const $$createField1_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("vuln" in $$parsedSource) {
             $$parsedSource["vuln"] = $$createField1_0($$parsedSource["vuln"]);
@@ -1254,7 +1373,7 @@ export class Vulnerability {
      * @returns {Vulnerability}
      */
     static createFrom($$source = {}) {
-        const $$createField23_0 = $$createType17;
+        const $$createField23_0 = $$createType21;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("reasons" in $$parsedSource) {
             $$parsedSource["reasons"] = $$createField23_0($$parsedSource["reasons"]);
@@ -1272,13 +1391,17 @@ const $$createType4 = $Create.Array($$createType3);
 const $$createType5 = $Create.Map($Create.Any, $Create.Any);
 const $$createType6 = $Create.Array($Create.Any);
 const $$createType7 = $Create.Array($Create.Any);
-const $$createType8 = Vulnerability.createFrom;
+const $$createType8 = BinaryInfo.createFrom;
 const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = Component.createFrom;
+const $$createType10 = Vulnerability.createFrom;
 const $$createType11 = $Create.Array($$createType10);
-const $$createType12 = DepNode.createFrom;
-const $$createType13 = $Create.Nullable($$createType12);
-const $$createType14 = $Create.Map($Create.Any, $$createType13);
-const $$createType15 = EnrichInfo.createFrom;
-const $$createType16 = Reason.createFrom;
-const $$createType17 = $Create.Array($$createType16);
+const $$createType12 = Component.createFrom;
+const $$createType13 = $Create.Array($$createType12);
+const $$createType14 = SBOMSummary.createFrom;
+const $$createType15 = $Create.Nullable($$createType14);
+const $$createType16 = DepNode.createFrom;
+const $$createType17 = $Create.Nullable($$createType16);
+const $$createType18 = $Create.Map($Create.Any, $$createType17);
+const $$createType19 = EnrichInfo.createFrom;
+const $$createType20 = Reason.createFrom;
+const $$createType21 = $Create.Array($$createType20);

@@ -22,6 +22,7 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
 </script>
 
 <template>
+  <p id="sbom-summary" class="summary" v-if="result?.summary?.text">{{ result.summary.text }}</p>
   <div id="type-cards" v-if="result">
     <!-- the "total" card is informational only -->
     <SummaryCard :count="components.length" label="total" color="var(--accent)" />

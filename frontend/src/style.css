@@ -142,3 +142,4 @@ dialog::backdrop{background:#0009}
 .vt tbody.pad td{padding:0;border:0}
 .vt tbody.pad tr{pointer-events:none}
 .scroll>.pad{flex:none}
+.summary { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; }
