@@ -1,19 +1,22 @@
 <script setup>
 import { computed, reactive, ref, watch } from "vue";
-import { ScanService, result, vex, openVex as openKeys, errText } from "../store.js";
-import { STATUS_LABEL, JUSTIFICATIONS } from "../lib/format.js";
+import { ScanService, result, vex, openVex as openKeys, errText, lsGet, lsSet } from "../store.js";
+import { STATUS_LABEL, JUSTIFICATIONS, isExpired } from "../lib/format.js";
 
 const props = defineProps({ v: { type: Object, required: true } });
 
 const existing = computed(() => vex.value.get(props.v.key));
 // openKeys remembers which boxes the user opened across list re-renders (a save reorders the priorities).
 const open = ref(openKeys.has(props.v.key) || !!existing.value);
-const form = reactive({ status: "", justification: "", impact: "", action: "" });
+const form = reactive({ status: "", justification: "", impact: "", action: "", author: lsGet("vex-author"), expires: "" });
 const err = ref("");
 
 function load() {
   const e = existing.value;
-  Object.assign(form, { status: e?.status || "", justification: e?.justification || "", impact: e?.impact || "", action: e?.action || "" });
+  Object.assign(form, {
+    status: e?.status || "", justification: e?.justification || "", impact: e?.impact || "", action: e?.action || "",
+    author: e?.author || lsGet("vex-author"), expires: e?.expires || "",
+  });
 }
 load();
 watch(existing, load);
@@ -30,7 +33,9 @@ async function save() {
     const saved = await ScanService.VEXSet(result.value.image, {
       vulnerability: props.v.id, package: props.v.package, version: props.v.installed, purl: props.v.purl,
       status: form.status, justification: form.justification, impact: form.impact, action: form.action,
+      author: form.author, expires: form.expires,
     });
+    lsSet("vex-author", form.author.trim());
     openKeys.add(props.v.key);
     vex.value = new Map(vex.value).set(saved.key, saved);
   } catch (e) {
@@ -49,7 +54,7 @@ async function clear() {
 
 <template>
   <details class="vexbox" :open="open" @toggle="onToggle" @click.stop>
-    <summary>{{ existing ? `VEX assessment: ${STATUS_LABEL[existing.status]}` : "Assess this finding (VEX)" }}</summary>
+    <summary>{{ existing ? `VEX assessment: ${STATUS_LABEL[existing.status]}${isExpired(existing) ? " (expired)" : ""}` : "Assess this finding (VEX)" }}</summary>
     <div class="vexform">
       <label>Status
         <select v-model="form.status">
@@ -69,6 +74,15 @@ async function clear() {
       <label v-show="form.status === 'affected'">Action statement (required for affected)
         <textarea v-model="form.action" rows="2" placeholder="What will be done about it (e.g. upgrade to 3.1 in the next release)"></textarea>
       </label>
+      <div v-show="form.status" class="vexmeta">
+        <label>Assessed by
+          <input v-model="form.author" type="text" placeholder="Name or team (optional)">
+        </label>
+        <label>Review by
+          <input v-model="form.expires" type="date">
+        </label>
+      </div>
+      <div v-show="form.status && form.expires" class="kv">After this date the assessment stays on record but the finding is shown again.</div>
       <div class="row">
         <button type="button" @click="save">Save</button>
         <button type="button" class="ghost" v-show="existing" @click="clear">Remove assessment</button>

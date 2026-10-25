@@ -38,7 +38,21 @@ type VEXEntry struct {
 	Justification string `json:"justification"`
 	Impact        string `json:"impact"`
 	Action        string `json:"action"`
-	Updated       string `json:"updated"`
+	// Author and Expires are kept locally and are not part of the OpenVEX
+	// export: the format has no per-statement expiry, and its author is
+	// document-level. Expires is a UTC date (YYYY-MM-DD); after it the
+	// assessment stays on record but no longer hides the finding.
+	Author  string `json:"author"`
+	Expires string `json:"expires"`
+	Updated string `json:"updated"`
+}
+
+const expiryLayout = "2006-01-02"
+
+// Expired reports whether the assessment's review date has passed. The
+// expiry day itself still counts as valid.
+func (e VEXEntry) Expired(now time.Time) bool {
+	return e.Expires != "" && now.UTC().Format(expiryLayout) > e.Expires
 }
 
 // VEXKey identifies a finding independent of scan order.
@@ -72,6 +86,13 @@ func (e *VEXEntry) Validate() error {
 	}
 	if e.Justification != "" && !contains(VEXJustifications, e.Justification) {
 		return fmt.Errorf("unknown justification %q", e.Justification)
+	}
+	e.Author = strings.TrimSpace(e.Author)
+	e.Expires = strings.TrimSpace(e.Expires)
+	if e.Expires != "" {
+		if _, err := time.Parse(expiryLayout, e.Expires); err != nil {
+			return errors.New("expiry must be a date like 2026-12-31")
+		}
 	}
 	switch e.Status {
 	case "not_affected":

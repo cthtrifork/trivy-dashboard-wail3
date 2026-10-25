@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive } from "vue";
 import { result, vex } from "../store.js";
-import { RESOLVED, TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
+import { suppresses, isExpired, JUSTIFICATIONS, TIER_COLOR, tierStyle, STATUS_LABEL, pct } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import SummaryCard from "./SummaryCard.vue";
 import VexBox from "./VexBox.vue";
@@ -12,10 +12,13 @@ const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false, include
 const TIERS = Object.keys(TIER_COLOR);
 const AV = { N: "Network", A: "Adjacent", L: "Local", P: "Physical" };
 
-const isResolved = (v) => RESOLVED.has(vex.value.get(v.key)?.status);
+const isResolved = (v) => suppresses(vex.value.get(v.key));
 const all = computed(() => result.value?.vulnerabilities ?? []);
 const hidden = computed(() => all.value.filter((v) => prio.hideResolved && isResolved(v)));
 const open = computed(() => all.value.filter((v) => !(prio.hideResolved && isResolved(v)) && (!prio.fixableOnly || v.fixed)));
+// The suppressed list is not virtualised, so cap it; the full set is in the VEX dialog.
+const SUPPRESSED_MAX = 100;
+const suppressedShown = computed(() => hidden.value.slice(0, SUPPRESSED_MAX));
 const lowN = computed(() => open.value.filter((v) => v.tier === "Monitor").length);
 const pool = computed(() => (prio.includeLow ? open.value : open.value.filter((v) => v.tier !== "Monitor")));
 const list = computed(() => (prio.top ? pool.value.slice(0, prio.top) : pool.value));
@@ -85,7 +88,7 @@ defineExpose({ count: computed(() => pool.value.length) });
             <Chip v-if="v.hasEpss" :kind="v.epss >= 0.1 ? 'warm' : ''" :title="`Exploitation probability in the next 30 days; percentile ${(v.epssPercentile * 100).toFixed(1)}`">EPSS {{ pct(v.epss) }}</Chip>
             <Chip v-if="attackVector(v)" :kind="attackVector(v) === 'N' ? 'warm' : ''" :title="v.vector">{{ AV[attackVector(v)] }}</Chip>
             <Chip>{{ v.fixed ? "Fix: " + v.fixed : "No fix yet" }}</Chip>
-            <Chip v-if="vex.get(v.key)" kind="vex">VEX: {{ STATUS_LABEL[vex.get(v.key).status] }}</Chip>
+            <Chip v-if="vex.get(v.key)" :kind="isExpired(vex.get(v.key)) ? 'warm' : 'vex'" :title="isExpired(vex.get(v.key)) ? `Expired ${vex.get(v.key).expires}: shown again until reassessed` : ''">VEX: {{ STATUS_LABEL[vex.get(v.key).status] }}{{ isExpired(vex.get(v.key)) ? " · expired" : "" }}</Chip>
           </div>
           <p class="attack">{{ v.attack }}</p>
           <div v-if="v.title" class="kv">{{ v.title }}</div>
@@ -102,6 +105,23 @@ defineExpose({ count: computed(() => pool.value.length) });
       <div v-if="after > 0" class="pad" :style="{ height: after - GAP + 'px' }"></div>
       <div v-if="!list.length" class="empty">Nothing left to show with these filters.</div>
       <div v-else-if="pool.length > list.length" class="kv">{{ pool.length - list.length }} more findings not shown — they rank lower.</div>
+      <details v-if="hidden.length" id="prio-suppressed" class="suppressed">
+        <summary>Suppressed by VEX ({{ hidden.length }})</summary>
+        <div v-for="v in suppressedShown" :key="cardKey(v)" class="sup">
+          <div class="phead">
+            <span class="id">{{ v.id }}</span>
+            <span class="mono">{{ v.package }} {{ v.installed }}</span>
+            <Chip kind="vex">{{ STATUS_LABEL[vex.get(v.key).status] }}</Chip>
+            <Chip v-if="vex.get(v.key).expires" title="The finding reappears after this date">until {{ vex.get(v.key).expires }}</Chip>
+            <Chip v-if="vex.get(v.key).author">{{ vex.get(v.key).author }}</Chip>
+          </div>
+          <div class="kv">
+            {{ [JUSTIFICATIONS[vex.get(v.key).justification], vex.get(v.key).impact].filter(Boolean).join(" — ") }}
+          </div>
+          <VexBox :v="v" />
+        </div>
+        <div v-if="hidden.length > suppressedShown.length" class="kv">{{ hidden.length - suppressedShown.length }} more suppressed findings not listed.</div>
+      </details>
     </template>
   </div>
 </template>

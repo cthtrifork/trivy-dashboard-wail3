@@ -1084,6 +1084,20 @@ export class VEXEntry {
              */
             this["action"] = "";
         }
+        if (!("author" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["author"] = "";
+        }
+        if (!("expires" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["expires"] = "";
+        }
         if (!("updated" in $$source)) {
             /**
              * @member
