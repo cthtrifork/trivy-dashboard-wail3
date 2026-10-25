@@ -137,15 +137,22 @@ func (e *Enricher) fetchEPSS(ctx context.Context, ids []string) (map[string][2]f
 	return out, nil
 }
 
+// KEVCacheFile is the on-disk KEV catalog, or "" when there is no cache directory.
+func (e *Enricher) KEVCacheFile() string {
+	if e.CacheDir == "" {
+		return ""
+	}
+	return filepath.Join(e.CacheDir, "kev.json")
+}
+
 func (e *Enricher) loadKEV(ctx context.Context) (map[string]kevEntry, string, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.kev != nil && time.Since(e.kevAt) < kevMaxAge {
 		return e.kev, e.kevDate, nil
 	}
-	cache := ""
-	if e.CacheDir != "" {
-		cache = filepath.Join(e.CacheDir, "kev.json")
+	cache := e.KEVCacheFile()
+	if cache != "" {
 		if st, err := os.Stat(cache); err == nil && time.Since(st.ModTime()) < kevMaxAge {
 			if b, err := os.ReadFile(cache); err == nil {
 				if m, date, err := parseKEV(b); err == nil {
