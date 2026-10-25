@@ -12,7 +12,7 @@ import (
 // builds contain no fixture data and no code path that could replay it, so the
 // fake-podman flag cannot do anything here; say so rather than ignore it silently.
 func newEngine() (trivy.Engine, Mode) {
-	if envFlag("TRIVY_SCANNER_FAKE_PODMAN") {
+	if loadSettings().FakePodman {
 		log.Print("trivy-scanner: TRIVY_SCANNER_FAKE_PODMAN is ignored: this is a production build and always uses podman")
 	}
 	return nil, Mode{}

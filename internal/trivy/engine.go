@@ -17,6 +17,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/caarlos0/env/v11"
 )
 
 // defaultTrivyRepo is the repository a bare version in the Trivy image setting refers to.
@@ -68,8 +70,22 @@ const (
 	CacheEnv = "TRIVY_SCANNER_CACHE"
 )
 
-// passthroughEnv are Trivy settings forwarded into the scanner container when set.
-var passthroughEnv = []string{"TRIVY_DB_REPOSITORY", "TRIVY_JAVA_DB_REPOSITORY"}
+// engineEnv is the environment the engine reads. CacheEnv must match the Cache tag. The two DB
+// mirror variables are forwarded into the scanner container when set.
+type engineEnv struct {
+	Cache            string `env:"TRIVY_SCANNER_CACHE"`
+	Podman           string `env:"PODMAN"`
+	ContainerHost    string `env:"CONTAINER_HOST"`
+	DockerHost       string `env:"DOCKER_HOST"`
+	DBRepository     string `env:"TRIVY_DB_REPOSITORY"`
+	JavaDBRepository string `env:"TRIVY_JAVA_DB_REPOSITORY"`
+}
+
+// loadEnv reads the environment on each call so tests can change it with t.Setenv.
+func loadEnv() engineEnv {
+	e, _ := env.ParseAs[engineEnv]()
+	return e
+}
 
 // TrivyJob is one `trivy image` invocation.
 type TrivyJob struct {
@@ -114,7 +130,7 @@ func CacheSource() (string, error) { return (&PodmanEngine{}).cacheSource() }
 func (p *PodmanEngine) cacheSource() (string, error) {
 	src := p.Cache
 	if src == "" {
-		src = os.Getenv(CacheEnv)
+		src = loadEnv().Cache
 	}
 	if src == "" {
 		return defaultCache(), nil
@@ -154,7 +170,8 @@ func Remote() bool { return remote() }
 // remote reports whether the podman client talks to another machine's podman, in which case a
 // host path is not ours to create.
 func remote() bool {
-	return os.Getenv("CONTAINER_HOST") != "" || os.Getenv("DOCKER_HOST") != ""
+	e := loadEnv()
+	return e.ContainerHost != "" || e.DockerHost != ""
 }
 
 // runArgs builds the `podman run` arguments for a job (credentials excluded: see RunTrivy).
@@ -187,10 +204,12 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 		args = append(args, "-e", "TRIVY_USERNAME", "-e", "TRIVY_PASSWORD")
 	}
 	// Let air-gapped and rate-limited setups point Trivy at a DB mirror.
-	for _, name := range passthroughEnv {
-		if os.Getenv(name) != "" {
-			args = append(args, "-e", name)
-		}
+	e := loadEnv()
+	if e.DBRepository != "" {
+		args = append(args, "-e", "TRIVY_DB_REPOSITORY")
+	}
+	if e.JavaDBRepository != "" {
+		args = append(args, "-e", "TRIVY_JAVA_DB_REPOSITORY")
 	}
 	// --skip-version-check: no "newer Trivy available" lookup; the version is pinned by us.
 	args = append(args, image, "image", "--cache-dir", cacheMount, "--skip-version-check")
@@ -205,7 +224,7 @@ func (p *PodmanEngine) bin() string {
 	if p.Bin != "" {
 		return p.Bin
 	}
-	if b := os.Getenv("PODMAN"); b != "" {
+	if b := loadEnv().Podman; b != "" {
 		return b
 	}
 	return "podman"
