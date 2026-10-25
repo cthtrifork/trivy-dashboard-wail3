@@ -27,6 +27,8 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
     go test ./internal/...                    # replays the recorded fixtures, no podman needed
 
 Every normal run, `wails3 dev` included, uses the real podman. Nothing is faked unless you ask for it.
+Priority scoring is explainable and tunable (per-rule toggles, EPSS cutoff, fixed-only, tier thresholds, saved presets): [`docs/scoring.md`](docs/scoring.md).
+
 Quitting (closing the window) stops a running scan and removes its container, following Wails' lifecycle guide: [`docs/lifecycle.md`](docs/lifecycle.md).
 
 Running on a headless server that only has podman (no Go), reached from your browser over an SSH tunnel: [`docs/headless.md`](docs/headless.md).
