@@ -119,16 +119,23 @@ func (p *PodmanEngine) cacheSource() (string, error) {
 	if src == "" {
 		return defaultCache(), nil
 	}
+	if IsHostDir(src) {
+		return src, nil
+	}
 	// podman reads "-v a:b" as a volume when a has no slash, and as a host path when it starts
 	// with one. Anything in between ("./cache") would silently become a volume, so refuse it.
-	if strings.ContainsAny(src, "/\\") && !filepath.IsAbs(src) {
+	if strings.ContainsAny(src, "/\\") {
 		return "", fmt.Errorf("%s=%q: use a volume name or an absolute path", CacheEnv, src)
 	}
-	if strings.ContainsRune(src, ':') && !filepath.IsAbs(src) {
+	if strings.ContainsRune(src, ':') {
 		return "", fmt.Errorf("%s=%q: ':' is not allowed in a volume name", CacheEnv, src)
 	}
 	return src, nil
 }
+
+// IsHostDir reports whether a cache source (see CacheSource) is an absolute host directory rather
+// than a podman volume name.
+func IsHostDir(src string) bool { return filepath.IsAbs(src) }
 
 // defaultCache is the cache source when nothing is configured. With a local podman it is a
 // directory in the user's cache dir, so the Trivy DB is a plain, inspectable host directory that
@@ -172,7 +179,7 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 		return nil, err
 	}
 	args := []string{"run", "--rm", "--name", name}
-	if filepath.IsAbs(src) {
+	if IsHostDir(src) {
 		// A host directory: make it when podman is local, and keep SELinux from blocking access
 		// to a directory we do not own the labels of.
 		if !remote() {

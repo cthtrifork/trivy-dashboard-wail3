@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"runtime"
 
 	"github.com/cthtrifork/trivy-dashboard-wail3/internal/trivy"
@@ -79,7 +78,7 @@ func (s *ScanService) Config() AppConfig {
 	add("User config dir", cfg, "")
 	if src, err := trivy.CacheSource(); err != nil {
 		add("Trivy cache", err.Error(), "invalid TRIVY_SCANNER_CACHE")
-	} else if filepath.IsAbs(src) {
+	} else if trivy.IsHostDir(src) {
 		add("Trivy cache", src, "Vulnerability DB on the podman host, mounted at /root/.cache/trivy in the scanner")
 	} else {
 		add("Trivy cache", "podman volume "+src, "Vulnerability DB, mounted at /root/.cache/trivy in the scanner")

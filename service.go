@@ -170,7 +170,7 @@ func (s *ScanService) Footprint() Footprint {
 	f := Footprint{CacheBytes: -1, WebviewBytes: -1}
 	if src, err := trivy.CacheSource(); err == nil {
 		f.CacheLocation = src
-		if filepath.IsAbs(src) {
+		if trivy.IsHostDir(src) {
 			f.CacheBytes = dirSize(src)
 		}
 	}
