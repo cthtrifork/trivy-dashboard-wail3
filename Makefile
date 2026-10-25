@@ -17,7 +17,7 @@ RACE      ?= -race
 SOCKET    ?= $(RUNTIME)/podman/podman.sock
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt vet frontend bindings dev dev-frontend build build-server run demo screenshots \
+.PHONY: help test check fmt lint vet frontend bindings dev dev-frontend build build-server run demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -31,6 +31,10 @@ test: ## Run the tests as CI does (fixtures, no podman needed)
 
 fmt: ## Format the Go code
 	gofmt -w .
+
+lint: ## golangci-lint plus the frontend's ESLint and Prettier check (as CI runs them)
+	golangci-lint run ./...
+	cd frontend && npm run lint && npm run format:check
 
 vet: ## go vet, with and without the production tag
 	go vet ./...
