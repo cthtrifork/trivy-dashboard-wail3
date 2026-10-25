@@ -90,6 +90,31 @@ Rules: never use a new hex in a component, add a token. Color is never the only 
 
 Order inside the card goes from "what is it" to "what should I do", and the reasoning stays collapsed until asked for.
 
+## Tabs
+
+Observed by running the headless server in demo mode (`TRIVY_SCANNER_FAKE_PODMAN=1`) at 1400×900, dark and light, driven with Playwright.
+
+| Tab | Top to bottom |
+|---|---|
+| Priorities | tier stat cards (Act now / Fix soon / Plan / Monitor), Scoring rules disclosure, toolbar (Show top 10/25/all, Hide resolved by VEX, Include low-risk, Only with a fix, Edit/Create VEX (n), effect summary), one-line ranking note, finding cards |
+| Vulnerabilities | severity stat cards (Critical → Unknown) that double as filters, text filter plus "n shown", sortable table: Priority (tier pill), Severity, ID, Package, Installed, Fixed in, CVSS, EPSS, Signals, Title; rows expand for details |
+| Dependencies | search, All / OS / Application segmented control, Vulnerable paths only, Focus select, All labels, Fit, "n of N components"; canvas graph with legend and a right-hand inspector ("Click a node to inspect it."). Node color = kind, orange ring = vulnerable via dependency, size = vulnerability count. Scroll zooms, drag pans, double-click fits |
+| SBOM | one-sentence summary of the image, type stat cards (accent border, not severity colors), filter plus format ("CycloneDX"), sortable table: Name, Version, Type, License, Package URL |
+| Compare | image, Base tag, Target tag, Load tags, Compare; centered hint until a comparison runs |
+| Log | monospace scan log in a bordered panel, fills the height; the only tab pushed right |
+
+Stat cards come in three colorings: tier colors (Priorities), severity colors (Vulnerabilities), accent (SBOM).
+
+Options popover contents: Ignore unfixed, registry username, registry password/token, Trivy version or image, app version with Check for updates.
+
+## Known inconsistencies
+
+Found while running the UI; not fixed by this sheet.
+
+- **Vulnerabilities CVE links use the browser default blue** (`rgb(0,0,238)`) instead of `--accent`, which is close to unreadable on the dark background. Priorities links use `--accent`. Links should share one style.
+- **Options placeholder is clipped** ("Trivy version or image (default t…") at the 260 px popover width.
+- **At 800 px** the demo banner wraps and the open Options popover covers the right-hand tabs. Usable, but untested below 800 px.
+
 ## Key flows
 
 - **Scan**: type an image, Enter or Scan. Status line shows progress; Cancel is available while it runs and removes the container. Results land on Priorities.
@@ -128,5 +153,5 @@ Order inside the card goes from "what is it" to "what should I do", and the reas
 
 ## Open questions
 
-- Narrow-window (< 900 px) layout is untested; the tab bar has no overflow handling.
+- Layout below 800 px is untested; the tab bar has no overflow handling.
 - No documented keyboard shortcuts beyond Enter to scan.
