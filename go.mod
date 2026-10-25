@@ -3,6 +3,7 @@ module github.com/cthtrifork/trivy-dashboard-wail3
 go 1.26.0
 
 require (
+	github.com/CycloneDX/cyclonedx-go v0.12.0
 	github.com/distribution/reference v0.6.0
 	github.com/hashicorp/go-version v1.9.0
 	github.com/knqyf263/go-apk-version v0.0.0-20200609155635-041fdbb8563f
@@ -10,6 +11,7 @@ require (
 	github.com/knqyf263/go-rpm-version v0.0.0-20260811110310-1815e1f1b790
 	github.com/openvex/go-vex v0.2.8
 	github.com/package-url/packageurl-go v0.1.7
+	github.com/pandatix/go-cvss v0.6.4
 	github.com/wailsapp/wails/v3 v3.0.0-beta.34
 )
 

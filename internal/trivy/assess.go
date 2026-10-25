@@ -5,6 +5,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	gocvss20 "github.com/pandatix/go-cvss/20"
+	gocvss30 "github.com/pandatix/go-cvss/30"
+	gocvss31 "github.com/pandatix/go-cvss/31"
+	gocvss40 "github.com/pandatix/go-cvss/40"
 )
 
 // Reason is one explainable contribution to a finding's priority score.
@@ -24,32 +29,50 @@ const (
 	TierMonitor = "Monitor"
 )
 
-// CVSSVector holds the parsed base metrics of a CVSS v2/v3 vector.
+// CVSSVector holds the base metrics of a CVSS v2, v3 or v4 vector that the rules read.
 type CVSSVector struct {
 	Raw     string
-	Version int // 2 or 3
+	Version int // 2, 3 or 4; 0 when the vector is empty or does not parse
 	M       map[string]string
 }
 
-// ParseVector parses "CVSS:3.1/AV:N/AC:L/…" or a v2 "AV:N/AC:L/Au:N/…" vector.
+// ParseVector parses "CVSS:3.1/AV:N/AC:L/…", "CVSS:4.0/…" or a v2 "AV:N/AC:L/Au:N/…" vector.
+// A vector the library rejects yields no metrics, so no rule reads it.
 func ParseVector(raw string) CVSSVector {
 	v := CVSSVector{Raw: raw, M: map[string]string{}}
-	if raw == "" {
+	var get func(string) (string, error)
+	switch {
+	case raw == "":
 		return v
-	}
-	for _, part := range strings.Split(raw, "/") {
-		k, val, ok := strings.Cut(part, ":")
-		if !ok {
-			continue
+	case strings.HasPrefix(raw, "CVSS:4.0/"):
+		c, err := gocvss40.ParseVector(raw)
+		if err != nil {
+			return v
 		}
-		if k == "CVSS" {
-			v.Version = 3
-			continue
+		v.Version, get = 4, c.Get
+	case strings.HasPrefix(raw, "CVSS:3.1/"):
+		c, err := gocvss31.ParseVector(raw)
+		if err != nil {
+			return v
 		}
-		v.M[k] = val
+		v.Version, get = 3, c.Get
+	case strings.HasPrefix(raw, "CVSS:3.0/"):
+		c, err := gocvss30.ParseVector(raw)
+		if err != nil {
+			return v
+		}
+		v.Version, get = 3, c.Get
+	default:
+		c, err := gocvss20.ParseVector(raw)
+		if err != nil {
+			return v
+		}
+		v.Version, get = 2, c.Get
 	}
-	if v.Version == 0 && len(v.M) > 0 {
-		v.Version = 2
+	for _, k := range []string{"AV", "AC", "PR", "Au", "UI", "S", "C", "I", "A", "AT", "VC", "VI", "VA", "SC", "SI", "SA"} {
+		if val, err := get(k); err == nil {
+			v.M[k] = val
+		}
 	}
 	return v
 }

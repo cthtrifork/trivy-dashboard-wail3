@@ -327,3 +327,23 @@ func TestRescoreOrder(t *testing.T) {
 		t.Error("balanced must be the first preset and equal the default rules")
 	}
 }
+
+func TestParseVectorVersions(t *testing.T) {
+	for _, c := range []struct {
+		raw     string
+		version int
+		av, ui  string
+	}{
+		{"CVSS:3.0/AV:A/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H", 3, "A", "R"},
+		{"CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H", 3, "N", "N"},
+		{"CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N", 4, "N", "N"},
+		{"AV:L/AC:L/Au:N/C:P/I:P/A:P", 2, "L", ""},
+		{"CVSS:3.1/AV:N", 0, "", ""}, // incomplete: rejected, so no rule reads it
+		{"garbage", 0, "", ""},
+	} {
+		v := ParseVector(c.raw)
+		if v.Version != c.version || v.M["AV"] != c.av || v.M["UI"] != c.ui {
+			t.Errorf("%s: version %d AV %q UI %q", c.raw, v.Version, v.M["AV"], v.M["UI"])
+		}
+	}
+}
