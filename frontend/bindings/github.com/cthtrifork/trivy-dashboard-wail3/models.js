@@ -48,6 +48,15 @@ export class Footprint {
              */
             this["memoryBytes"] = 0;
         }
+        if (!("webviewBytes" in $$source)) {
+            /**
+             * WebviewBytes is the resident memory of the webview processes; -1 when unknown (not Linux,
+             * or no webview in server mode).
+             * @member
+             * @type {number}
+             */
+            this["webviewBytes"] = 0;
+        }
 
         Object.assign(this, $$source);
     }

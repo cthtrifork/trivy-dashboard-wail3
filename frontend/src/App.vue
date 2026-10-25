@@ -31,7 +31,10 @@ const footprintNote = computed(() => {
   const f = footprint.value;
   if (!f) return "";
   const cache = f.cacheBytes < 0 ? `Trivy cache in podman volume ${f.cacheLocation}` : `Trivy cache ${bytes(f.cacheBytes)}`;
-  return `Footprint: ${cache} · KEV cache ${bytes(f.appCacheBytes)} · ~${bytes(f.memoryBytes)} memory (app only, excl. webview and podman)`;
+  const mem = f.webviewBytes < 0
+    ? `~${bytes(f.memoryBytes)} app memory (excl. webview and podman)`
+    : `~${bytes(f.memoryBytes)} app + ~${bytes(f.webviewBytes)} webview memory (excl. podman)`;
+  return `Footprint: ${cache} · KEV cache ${bytes(f.appCacheBytes)} · ${mem}`;
 });
 
 async function checkForUpdates() {

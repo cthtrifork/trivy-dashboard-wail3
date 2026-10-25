@@ -146,13 +146,16 @@ type Footprint struct {
 	// AppCacheBytes is the app's own cache (the KEV catalog).
 	AppCacheBytes int64 `json:"appCacheBytes"`
 	// MemoryBytes estimates the app's memory: the Go runtime's resident share, excluding the
-	// webview and the podman containers.
+	// webview (see WebviewBytes) and the podman containers.
 	MemoryBytes int64 `json:"memoryBytes"`
+	// WebviewBytes is the resident memory of the webview processes; -1 when unknown (not Linux,
+	// or no webview in server mode).
+	WebviewBytes int64 `json:"webviewBytes"`
 }
 
 // Footprint measures the cache directories and the Go runtime's memory.
 func (s *ScanService) Footprint() Footprint {
-	f := Footprint{CacheBytes: -1}
+	f := Footprint{CacheBytes: -1, WebviewBytes: -1}
 	if src, err := trivy.CacheSource(); err == nil {
 		f.CacheLocation = src
 		if filepath.IsAbs(src) {
@@ -165,6 +168,9 @@ func (s *ScanService) Footprint() Footprint {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	f.MemoryBytes = int64(m.Sys - m.HeapReleased)
+	if !headless {
+		f.WebviewBytes = childrenRSS()
+	}
 	return f
 }
 
