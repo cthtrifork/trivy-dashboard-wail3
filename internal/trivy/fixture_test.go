@@ -249,3 +249,14 @@ func TestPURLMatching(t *testing.T) {
 		}
 	}
 }
+
+func TestFixtureSBOMSummary(t *testing.T) {
+	res, err := fixtureScanner().Scan(context.Background(), ScanRequest{Image: "docker.io/library/traefik:3.7.13"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "usr/local/bin/traefik is a Go binary built with Go 1.26.8, on Alpine Linux 3.24.2. 378 components (357 golang, 18 apk)."
+	if res.Summary == nil || res.Summary.Text != want {
+		t.Errorf("summary = %+v, want text %q", res.Summary, want)
+	}
+}
