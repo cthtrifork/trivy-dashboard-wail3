@@ -1,0 +1,38 @@
+name: Linux build dependencies
+description: >-
+  Installs the GTK4 + WebKitGTK 6 build headers Wails v3 needs (package list from the Wails CI).
+  The downloaded .deb files are cached per runner image, so a warm run installs them with dpkg
+  and skips apt-get update and the mirror downloads.
+
+runs:
+  using: composite
+  steps:
+    # ImageVersion changes whenever GitHub rebuilds the runner image, so the cached debs always
+    # match the preinstalled package set (the closure saved is exactly what that image was missing).
+    - id: cache
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      with:
+        path: ~/apt-debs
+        key: apt-debs-${{ runner.os }}-${{ env.ImageVersion }}-${{ hashFiles('.github/actions/linux-build-deps/action.yml') }}
+
+    - name: Install from cache
+      id: warm
+      if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        if sudo dpkg -i ~/apt-debs/*.deb; then
+          echo "installed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "::warning::cached packages failed to install, falling back to apt"
+        fi
+
+    - name: Install with apt
+      if: steps.warm.outputs.installed != 'true'
+      shell: bash
+      run: |
+        sudo apt-get -o Acquire::Languages=none update -qq
+        sudo apt-get -o Dpkg::Use-Pty=0 install -y --no-install-recommends \
+          build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
+        # Keep the downloaded debs (exactly the closure this image lacked) for the cache post step.
+        mkdir -p ~/apt-debs
+        cp /var/cache/apt/archives/*.deb ~/apt-debs/

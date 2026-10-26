@@ -97,11 +97,7 @@ jobs:
             echo "::error::Tagged commit is not on main"; exit 1
           fi
 
-      - name: Install Linux build dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
+      - uses: ./.github/actions/linux-build-deps
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
