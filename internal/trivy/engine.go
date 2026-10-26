@@ -213,8 +213,9 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 		args = append(args, "-e", "TRIVY_JAVA_DB_REPOSITORY")
 	}
 	// --skip-version-check: no "newer Trivy available" lookup; the version is pinned by us.
+	// --severity-source redhat,auto prefers Red Hat severities, then the vendor default.
 	// --disable-telemetry and --offline-scan keep Trivy from phoning home beyond the DB download.
-	args = append(args, image, "image", "--cache-dir", cacheMount, "--skip-version-check", "--disable-telemetry", "--offline-scan")
+	args = append(args, image, "image", "--cache-dir", cacheMount, "--skip-version-check", "--disable-telemetry", "--offline-scan", "--severity-source", "redhat,auto")
 	args = append(args, job.Flags...)
 	if job.Image != "" { // a DB-only job has no image
 		args = append(args, job.Image)

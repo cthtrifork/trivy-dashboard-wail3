@@ -147,7 +147,7 @@ func TestRunArgsDisableTelemetryAndGoOffline(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, f := range []string{"--disable-telemetry", "--offline-scan", "--skip-version-check"} {
+	for _, f := range []string{"--disable-telemetry", "--offline-scan", "--severity-source", "--skip-version-check"} {
 		if !slices.Contains(args, f) {
 			t.Errorf("missing %s in %v", f, args)
 		}

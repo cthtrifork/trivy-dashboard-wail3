@@ -131,11 +131,11 @@ onMounted(init);
           <label title="Include findings suppressed by VEX or ignore files"
             ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Show suppressed</label
           >
-          <label title="Include findings the vendor will not fix"
-            ><input type="checkbox" id="show-will-not-fix" v-model="opts.showWillNotFix" /> Show will_not_fix</label
+          <label title="Hide findings the vendor will not fix"
+            ><input type="checkbox" id="ignore-will-not-fix" v-model="opts.ignoreWillNotFix" /> Ignore will_not_fix</label
           >
-          <label title="Include findings the vendor says do not affect the package"
-            ><input type="checkbox" id="show-not-affected" v-model="opts.showNotAffected" /> Show not_affected</label
+          <label title="Hide findings the vendor says do not affect the package"
+            ><input type="checkbox" id="ignore-not-affected" v-model="opts.ignoreNotAffected" /> Ignore not_affected</label
           >
           <label title="Record an under investigation VEX statement for every finding that has none"
             ><input type="checkbox" id="mark-uninvestigated" v-model="opts.markUnderInvestigation" /> Mark all as under investigation</label

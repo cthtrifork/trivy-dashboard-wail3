@@ -54,8 +54,8 @@ async function run() {
     password: opts.password,
     ignoreUnfixed: opts.ignoreUnfixed,
     showSuppressed: opts.showSuppressed,
-    showWillNotFix: opts.showWillNotFix,
-    showNotAffected: opts.showNotAffected,
+    showWillNotFix: !opts.ignoreWillNotFix,
+    showNotAffected: !opts.ignoreNotAffected,
     trivyImage: opts.trivyImage.trim(),
   };
   for (const k of ["repo", "a", "b"]) lsSet("cmp-" + k, cmpForm[k]);

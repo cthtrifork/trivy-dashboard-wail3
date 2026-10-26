@@ -302,7 +302,7 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	}
 	s.logf("Scanning %s for vulnerabilities with %s…", image, trivyImage)
 	// --list-all-pkgs puts every installed package in the report, not just the vulnerable ones.
-	job.Flags = []string{"--skip-db-update", "--format", "json", "--scanners", "vuln", "--list-all-pkgs", "--severity-source", "redhat,auto"}
+	job.Flags = []string{"--skip-db-update", "--format", "json", "--scanners", "vuln", "--list-all-pkgs"}
 	if req.IgnoreUnfixed {
 		job.Flags = append(job.Flags, "--ignore-unfixed")
 	}
