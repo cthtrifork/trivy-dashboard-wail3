@@ -78,17 +78,26 @@ Rules: never use a new hex in a component, add a token. Color is never the only 
 | Disclosure (`details`) | `▸` summary in `--mute` | Scoring rules, Score · why, Suppressed by VEX (n), Options |
 | Banner | full-width strip under the header | demo mode warning only |
 
-### Finding card (Priorities)
+### Finding row (Priorities)
 
-1. Rank `#n` and CVE link (accent, opens the advisory) · tier pill right-aligned
-2. Title (bold)
-3. Package and version (monospace)
-4. Chips: severity + CVSS, KEV, EPSS, attack vector, fix versions (or "No fix yet"), VEX status
-5. **What it means**: one plain-language paragraph on a tinted band; says when the finding only matters (running and reachable)
-6. `Score N · why` disclosure listing each fired rule with its points
-7. VEX box: dashed `+ Add VEX assessment` chip, which becomes a status chip once assessed
+Findings are table rows, not cards, so a long list stays scannable. Two segmented filters above the list (Severity, Priority; each segment shows a count that respects the other filter) narrow it; an empty selection means "all". Picking a Priority by hand overrides "Include low-risk", so choosing Monitor shows Monitor.
 
-Order inside the card goes from "what is it" to "what should I do", and the reasoning stays collapsed until asked for.
+Collapsed row, left to right:
+
+1. Severity stripe (CVSS severity colour) and severity pill
+2. CVSS score with a 0 to 10 meter in the same colour
+3. Title (bold), then `#n`, CVE link (accent, opens the advisory) and package and version (monospace)
+4. Priority tier with its colour square, and a KEV chip when listed
+5. Fix versions, or "None"
+
+Clicking the row (or Enter on the title button) expands it, from "what is it" to "what should I do":
+
+1. Chips: ransomware use, EPSS, attack vector, fix versions (or "No fix yet"), VEX status
+2. **What it means**: one plain-language paragraph on a tinted band; says when the finding only matters (running and reachable)
+3. `Score N · why` disclosure listing each fired rule with its points
+4. VEX box: dashed `+ Add VEX assessment` chip, which becomes a status chip once assessed
+
+The reasoning stays collapsed until asked for. Below 760 px the header row is hidden and each row stacks.
 
 ## Tabs
 
@@ -96,14 +105,14 @@ Observed by running the headless server in demo mode (`TRIVY_SCANNER_FAKE_PODMAN
 
 | Tab | Top to bottom |
 |---|---|
-| Priorities | tier stat cards (Act now / Fix soon / Plan / Monitor), Scoring rules disclosure, toolbar (Show top 10/25/all, Hide resolved by VEX, Include low-risk, Only with a fix, Edit/Create VEX (n), effect summary), one-line ranking note, finding cards |
+| Priorities | Severity and Priority segmented filters with counts, Scoring rules disclosure, toolbar (Show top 10/25/all, Hide resolved by VEX, Include low-risk, Only with a fix, Edit/Create VEX (n), effect summary), one-line ranking note, column header row (Severity, Score, Finding, Priority, Fix) and finding rows |
 | Vulnerabilities | severity stat cards (Critical → Unknown) that double as filters, text filter plus "n shown", sortable table: Priority (tier pill), Severity, ID, Package, Installed, Fixed in, CVSS, EPSS, Signals, Title; rows expand for details |
 | Dependencies | search, All / OS / Application segmented control, Vulnerable paths only, Focus select, All labels, Fit, "n of N components"; canvas graph with legend and a right-hand inspector ("Click a node to inspect it."). Node color = kind, orange ring = vulnerable via dependency, size = vulnerability count. Scroll zooms, drag pans, double-click fits |
 | SBOM | one-sentence summary of the image, type stat cards (accent border, not severity colors), filter plus format ("CycloneDX"), sortable table: Name, Version, Type, License, Package URL |
 | Compare | image, Base tag, Target tag, Load tags, Compare; centered hint until a comparison runs |
 | Log | monospace scan log in a bordered panel, fills the height; the only tab pushed right |
 
-Stat cards come in three colorings: tier colors (Priorities), severity colors (Vulnerabilities), accent (SBOM).
+Stat cards come in two colorings: severity colors (Vulnerabilities) and accent (SBOM). Priorities uses segmented filters instead.
 
 Interactions checked by running them:
 
