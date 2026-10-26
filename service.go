@@ -231,6 +231,24 @@ func (s *ScanService) Rescore(rules trivy.Rules) []trivy.Rescored {
 	return trivy.Rescore(vulns, rules)
 }
 
+// CheckIgnoreFile reports why the text is not a usable .trivyignore.yaml, or "" when it is (or is
+// blank). The UI shows it under the field while the user types.
+func (s *ScanService) CheckIgnoreFile(text string) string {
+	return errText(trivy.CheckIgnoreFile(text))
+}
+
+// CheckIgnorePolicy is CheckIgnoreFile for the Rego ignore policy.
+func (s *ScanService) CheckIgnorePolicy(text string) string {
+	return errText(trivy.CheckIgnorePolicy(text))
+}
+
+func errText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}
+
 // Cancel aborts the running scan.
 func (s *ScanService) Cancel() { s.scanner.Cancel() }
 

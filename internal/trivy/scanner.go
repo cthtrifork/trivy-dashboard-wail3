@@ -296,11 +296,11 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	if err != nil {
 		return nil, err
 	}
-	policy, err := checkIgnoreText("ignore policy", req.IgnorePolicy)
+	policy, err := checkIgnoreText("ignore policy", req.IgnorePolicy, CheckIgnorePolicy)
 	if err != nil {
 		return nil, err
 	}
-	ignoreFile, err := checkIgnoreText("ignore file", req.IgnoreFile)
+	ignoreFile, err := checkIgnoreText("ignore file", req.IgnoreFile, CheckIgnoreFile)
 	if err != nil {
 		return nil, err
 	}
@@ -362,9 +362,10 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 // variable, and Windows limits a whole environment block to 32 KiB.
 const maxIgnoreText = 24 * 1024
 
-// checkIgnoreText returns the policy or ignore file to use, or "" when it is blank. Rego and YAML
-// themselves are checked by Trivy, whose error reaches the user through the scan log.
-func checkIgnoreText(what, src string) (string, error) {
+// checkIgnoreText returns the policy or ignore file to use, or "" when it is blank. validate is the
+// quick sanity check from ignore.go; Rego and YAML themselves are checked by Trivy, whose error
+// reaches the user through the scan log.
+func checkIgnoreText(what, src string, validate func(string) error) (string, error) {
 	if strings.TrimSpace(src) == "" {
 		return "", nil
 	}
@@ -373,6 +374,9 @@ func checkIgnoreText(what, src string) (string, error) {
 	}
 	if strings.ContainsRune(src, 0) {
 		return "", fmt.Errorf("%s contains a NUL byte", what)
+	}
+	if err := validate(src); err != nil {
+		return "", fmt.Errorf("%s: %w", what, err)
 	}
 	return src, nil
 }

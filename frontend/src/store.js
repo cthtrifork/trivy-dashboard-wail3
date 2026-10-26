@@ -1,6 +1,6 @@
 // Shared state and the calls into the Go ScanService. A plain module of refs instead of a store
 // library: the app has one scan result and a handful of settings.
-import { computed, reactive, ref, shallowRef } from "vue";
+import { computed, reactive, ref, shallowRef, watch } from "vue";
 import { Events } from "@wailsio/runtime";
 import { ScanService } from "../bindings/github.com/cthtrifork/trivy-dashboard-wail3";
 
@@ -167,6 +167,30 @@ export const opts = reactive({
   ignoreFile: lsGet("ignore-file"),
 });
 export const saveTrivyImage = () => lsSet("trivy-image", opts.trivyImage.trim());
+// Quick sanity checks of the two texts, run by Go as the user types (empty means fine). Trivy
+// stays the authority: these only catch the usual mistakes before a scan starts.
+export const ignorePolicyError = ref("");
+export const ignoreFileError = ref("");
+function checkWhileTyping(source, check, error) {
+  let timer;
+  watch(
+    source,
+    (text) => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        try {
+          error.value = await check(text);
+        } catch {
+          error.value = "";
+        }
+      }, 300);
+    },
+    { immediate: true },
+  );
+}
+checkWhileTyping(() => opts.ignorePolicy, ScanService.CheckIgnorePolicy, ignorePolicyError);
+checkWhileTyping(() => opts.ignoreFile, ScanService.CheckIgnoreFile, ignoreFileError);
+
 export const saveIgnorePolicy = () => lsSet("ignore-policy", opts.ignorePolicy);
 export const saveIgnoreFile = () => lsSet("ignore-file", opts.ignoreFile);
 // loadIgnorePolicyFile and loadIgnoreFile fill the text from a file the user picked.

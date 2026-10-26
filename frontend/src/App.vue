@@ -10,6 +10,8 @@ import {
   loadIgnorePolicyFile,
   saveIgnoreFile,
   loadIgnoreFile,
+  ignorePolicyError,
+  ignoreFileError,
   scanning,
   comparing,
   status,
@@ -167,6 +169,7 @@ onMounted(init);
               title="Findings for which the policy defines ignore are left out of the scan. Empty means none."
               @change="saveIgnorePolicy"
             ></textarea>
+            <span v-if="ignorePolicyError" class="field-err" id="ignore-policy-err">{{ ignorePolicyError }}</span>
           </label>
           <input
             id="ignore-policy-file"
@@ -187,6 +190,7 @@ onMounted(init);
               title="Vulnerabilities listed here are left out of the scan. Empty means none."
               @change="saveIgnoreFile"
             ></textarea>
+            <span v-if="ignoreFileError" class="field-err" id="ignore-file-err">{{ ignoreFileError }}</span>
           </label>
           <input
             id="ignore-file-file"

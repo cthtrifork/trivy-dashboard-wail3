@@ -201,3 +201,18 @@ func TestIgnorePolicyAndFileOnlyFilterTheVulnerabilityScan(t *testing.T) {
 		}
 	}
 }
+
+func TestScanRejectsInvalidIgnoreTextBeforeRunningTrivy(t *testing.T) {
+	r, s := newRec(t)
+	for _, req := range []ScanRequest{
+		{Image: "traefik:3.7.13", IgnorePolicy: "package main\n"},
+		{Image: "traefik:3.7.13", IgnoreFile: "CVE-1\n"},
+	} {
+		if _, err := s.Scan(context.Background(), req); err == nil {
+			t.Errorf("%+v accepted", req)
+		}
+	}
+	if len(r.jobs) != 0 {
+		t.Errorf("trivy ran %d jobs for invalid input", len(r.jobs))
+	}
+}

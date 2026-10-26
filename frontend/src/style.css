@@ -121,6 +121,9 @@ summary {
   color: var(--mute);
   font-size: 12px;
 }
+.opts-body .field-err {
+  color: var(--CRITICAL);
+}
 .opts-body textarea {
   font-family: ui-monospace, monospace;
   font-size: 12px;
