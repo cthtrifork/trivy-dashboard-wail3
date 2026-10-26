@@ -62,14 +62,18 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      - name: Install Playwright and Chromium
-        run: |
-          npm install --no-save --no-package-lock "playwright@${PLAYWRIGHT_VERSION}"
-          npx playwright install --with-deps chromium
-          # scripts/screenshots.mjs pins Inter for the UI; DejaVu Sans Mono is the monospace default.
-          sudo apt-get install -y --no-install-recommends fonts-inter fonts-dejavu-core
+      # The runner image already has Google Chrome, so install only the Playwright client library
+      # (playwright-core, no browser download) and drive that Chrome.
+      - name: Install Playwright client
+        run: npm install --no-save --no-package-lock "playwright-core@${PLAYWRIGHT_VERSION}"
+
+      # scripts/screenshots.mjs pins Inter for the UI; DejaVu Sans Mono is the monospace default.
+      - name: Install fonts
+        run: sudo apt-get install -y --no-install-recommends fonts-inter fonts-dejavu-core
 
       - name: Generate screenshots
+        env:
+          SCREENSHOT_BROWSER_CHANNEL: chrome
         run: make screenshots
 
       - name: Upload 01-priorities
