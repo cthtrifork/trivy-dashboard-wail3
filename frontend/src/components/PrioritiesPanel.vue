@@ -3,7 +3,6 @@ import { computed, reactive, ref } from "vue";
 import { result, vulns, vex } from "../store.js";
 import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
-import SummaryCard from "./SummaryCard.vue";
 import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
 import SuppressedRow from "./SuppressedRow.vue";
@@ -12,6 +11,14 @@ import { useVirtualList } from "../lib/virtual.js";
 const emit = defineEmits(["export"]);
 const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false, includeLow: false });
 const TIERS = Object.keys(TIER_COLOR);
+const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
+// Empty set = no filter. Both are view filters that run after ranking, like the toolbar ones.
+const sevFilter = reactive(new Set());
+const tierFilter = reactive(new Set());
+const expanded = reactive(new Set());
+const flip = (set, x) => (set.has(x) ? set.delete(x) : set.add(x));
+const sevStyle = (v) => ({ "--c": `var(--${SEVERITIES.includes(v.severity) ? v.severity : "UNKNOWN"})` });
+const label = (s) => s[0] + s.slice(1).toLowerCase();
 const AV = { N: "Network", A: "Adjacent", L: "Local", P: "Physical" };
 
 const isResolved = (v) => suppresses(vex.value.get(v.key));
@@ -33,17 +40,29 @@ const supPages = computed(() => Math.max(1, Math.ceil(supGroups.value.length / S
 const supCurrent = computed(() => Math.min(supPage.value, supPages.value - 1));
 const suppressedShown = computed(() => supGroups.value.slice(supCurrent.value * SUPPRESSED_PAGE, (supCurrent.value + 1) * SUPPRESSED_PAGE));
 const lowN = computed(() => open.value.filter((v) => v.tier === "Monitor").length);
-const pool = computed(() => (prio.includeLow ? open.value : open.value.filter((v) => v.tier !== "Monitor")));
+// Picking tiers by hand wins over "Include low-risk": asking for Monitor shows Monitor.
+const passTier = (v) => (tierFilter.size ? tierFilter.has(v.tier) : prio.includeLow || v.tier !== "Monitor");
+const passSev = (v) => !sevFilter.size || sevFilter.has(v.severity);
+const pool = computed(() => open.value.filter((v) => passTier(v) && passSev(v)));
 const list = computed(() => (prio.top ? pool.value.slice(0, prio.top) : pool.value));
-const tierCount = computed(() => Object.fromEntries(TIERS.map((t) => [t, open.value.filter((v) => v.tier === t).length])));
+// Each filter's counts respect the other one, so a segment never promises rows the list will not show.
+const tierCount = computed(() => Object.fromEntries(TIERS.map((t) => [t, open.value.filter((v) => passSev(v) && v.tier === t).length])));
+const sevCount = computed(() => Object.fromEntries(SEVERITIES.map((s) => [s, open.value.filter((v) => passTier(v) && v.severity === s).length])));
+const sevShown = computed(() => SEVERITIES.filter((s) => s !== "UNKNOWN" || sevCount.value.UNKNOWN || sevFilter.has(s)));
+const actN = computed(() => open.value.filter((v) => v.tier === "Act now" || v.tier === "Fix soon").length);
+const filtered = computed(() => sevFilter.size > 0 || tierFilter.size > 0);
+const clearFilters = () => {
+  sevFilter.clear();
+  tierFilter.clear();
+};
 const kevN = computed(() => open.value.filter((v) => v.kev).length);
 
 const note = computed(
   () =>
-    `${all.value.length} findings → ${tierCount.value["Act now"] + tierCount.value["Fix soon"]} worth acting on` +
+    `${all.value.length} findings → ${actN.value} worth acting on` +
     (kevN.value ? `, ${kevN.value} known exploited` : "") +
     (hidden.value.length ? ` · ${hidden.value.length} hidden by VEX` : "") +
-    (!prio.includeLow && lowN.value ? ` · ${lowN.value} low-risk not shown` : ""),
+    (!prio.includeLow && !tierFilter.size && lowN.value ? ` · ${lowN.value} low-risk not shown` : ""),
 );
 const signals = computed(() => {
   const en = result.value?.enrichment || {};
@@ -55,19 +74,48 @@ const signals = computed(() => {
     (en.warnings?.length ? " ⚠ " + en.warnings.join("; ") + " — ranking uses CVSS only for the missing signals." : "")
   );
 });
-// "all" can be thousands of cards: render only the ones in view. The list is a flex column with a
-// 10px gap, so a spacer stands in for its rows minus the one gap the flexbox adds next to it.
-const GAP = 10;
-const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(list, { key: (v) => cardKey(v), estimate: 250, gap: GAP });
+// "all" can be thousands of rows: render only the ones in view. Rows sit flush (no flex gap), so a
+// spacer stands in for its rows with no correction; GAP stays so the spacer maths is the same as elsewhere.
+const GAP = 0;
+const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(list, { key: (v) => cardKey(v), estimate: 46, gap: GAP });
 const cardKey = (v) => v.key + "|" + v.target;
+const toggleRow = (v) => flip(expanded, cardKey(v));
 const attackVector = (v) => /AV:([NALP])/.exec(v.vector)?.[1];
 
 defineExpose({ count: computed(() => pool.value.length) });
 </script>
 
 <template>
-  <div id="prio-summary">
-    <SummaryCard v-for="t in TIERS" :key="t" :count="tierCount[t]" :label="t" :color="`var(${TIER_COLOR[t]})`" />
+  <div id="prio-filters">
+    <span class="flabel">Severity</span>
+    <div class="pseg" id="prio-sev">
+      <button
+        v-for="s in sevShown"
+        :key="s"
+        type="button"
+        :class="{ on: sevFilter.has(s) }"
+        :style="{ '--c': `var(--${s})` }"
+        :aria-pressed="sevFilter.has(s)"
+        @click="flip(sevFilter, s)"
+      >
+        <i></i>{{ label(s) }} <b>{{ sevCount[s] }}</b>
+      </button>
+    </div>
+    <span class="flabel">Priority</span>
+    <div class="pseg" id="prio-tier">
+      <button
+        v-for="t in TIERS"
+        :key="t"
+        type="button"
+        :class="{ on: tierFilter.has(t) }"
+        :style="{ '--c': `var(${TIER_COLOR[t]})` }"
+        :aria-pressed="tierFilter.has(t)"
+        @click="flip(tierFilter, t)"
+      >
+        <i></i>{{ t }} <b>{{ tierCount[t] }}</b>
+      </button>
+    </div>
+    <button v-if="filtered" type="button" class="ghost" id="prio-clear" @click="clearFilters">Clear filters</button>
   </div>
   <RulesEditor />
   <div class="toolbar">
@@ -91,23 +139,35 @@ defineExpose({ count: computed(() => pool.value.length) });
     <template v-else>
       <div class="kv">{{ signals }}</div>
       <div v-if="before > 0" class="pad" :style="{ height: before - GAP + 'px' }"></div>
-      <div v-for="{ item: v, index } in visible" :key="cardKey(v)" v-measure="cardKey(v)" class="pcard" :style="tierStyle(v.tier)">
-        <div class="ptop">
-          <span class="rank">#{{ index + 1 }}</span>
-          <a v-if="detailUrl(v)" class="id" :href="detailUrl(v)" title="Open CVE details" @click.prevent="openUrl(detailUrl(v))">{{
-            v.id
-          }}</a>
-          <span v-else class="id">{{ v.id }}</span>
-          <span class="sev tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }}</span>
-        </div>
-        <div class="pmain">
-          <div v-if="v.title" class="ptitle">{{ v.title }}</div>
-          <div class="mono">{{ v.package }} {{ v.installed }}</div>
-          <div class="chips">
-            <Chip title="CVSS severity">{{ v.severity }}{{ v.score ? ` ${v.score.toFixed(1)}` : "" }}</Chip>
-            <Chip v-if="v.kev" kind="hot" :title="`Added to CISA KEV on ${v.kevAdded}; due ${v.kevDue}. ${v.kevAction}`"
-              >KEV{{ v.kevRansomware ? " · ransomware" : "" }}</Chip
+      <div class="ptable-head" aria-hidden="true">
+        <span>Severity</span><span>Score</span><span>Finding</span><span>Priority</span><span>Fix</span>
+      </div>
+      <div v-for="{ item: v, index } in visible" :key="cardKey(v)" v-measure="cardKey(v)" class="prow" :class="{ open: expanded.has(cardKey(v)) }" :style="sevStyle(v)">
+        <div class="prow-main">
+          <span class="sev sevpill" :class="v.severity">{{ v.severity }}</span>
+          <span class="meter">
+            <b>{{ v.score ? v.score.toFixed(1) : "–" }}</b>
+            <i :style="{ '--w': (v.score || 0) * 10 + '%' }"></i>
+          </span>
+          <span class="pfind">
+            <span class="ptitle"
+              ><button type="button" class="pexpand" :aria-expanded="expanded.has(cardKey(v))" @click.stop="toggleRow(v)">{{ v.title || v.id }}</button></span
             >
+            <span class="psub">
+              <span class="rank">#{{ index + 1 }}</span>
+              <a v-if="detailUrl(v)" class="id" :href="detailUrl(v)" title="Open CVE details" @click.prevent.stop="openUrl(detailUrl(v))">{{ v.id }}</a>
+              <span v-else class="id">{{ v.id }}</span>
+              <span class="mono">{{ v.package }} {{ v.installed }}</span>
+            </span>
+          </span>
+          <span class="ptier" :style="tierStyle(v.tier)" :title="v.tierWhy"
+            ><i></i>{{ v.tier }}<Chip v-if="v.kev" kind="hot" :title="`Added to CISA KEV on ${v.kevAdded}; due ${v.kevDue}. ${v.kevAction}`">KEV</Chip></span
+          >
+          <span class="pfix">{{ v.fixed || "None" }}</span>
+        </div>
+        <div v-if="expanded.has(cardKey(v))" class="pdetail">
+          <div class="chips">
+            <Chip v-if="v.kev && v.kevRansomware" kind="hot">Ransomware use</Chip>
             <Chip
               v-if="v.hasEpss"
               :kind="v.epss >= 0.1 ? 'warm' : ''"
@@ -123,27 +183,27 @@ defineExpose({ count: computed(() => pool.value.length) });
               >VEX: {{ STATUS_LABEL[vex.get(v.key).status] }}{{ isExpired(vex.get(v.key)) ? " · expired" : "" }}</Chip
             >
           </div>
-        </div>
-        <div class="pmeans">
-          <small>What it means</small>
-          <p class="attack">{{ v.attack }}</p>
-        </div>
-        <div class="pfoot">
-          <details class="scorebox">
-            <summary>Score {{ v.priority }} · why</summary>
-            <ul class="why">
-              <li v-for="(r, j) in v.reasons" :key="j">
-                <span :class="['pts', { pos: r.points > 0 }]">{{ r.points > 0 ? "+" : "" }}{{ r.points }}</span>
-                <span
-                  >{{ r.text }} <code class="rule" title="The rule that fired, with the current thresholds">{{ r.rule }}</code></span
-                >
-              </li>
-              <li class="tierwhy">
-                <span class="pts">tier</span><span>{{ v.tierWhy }}</span>
-              </li>
-            </ul>
-          </details>
-          <VexBox :v="v" />
+          <div class="pmeans">
+            <small>What it means</small>
+            <p class="attack">{{ v.attack }}</p>
+          </div>
+          <div class="pfoot">
+            <details class="scorebox">
+              <summary>Score {{ v.priority }} · why</summary>
+              <ul class="why">
+                <li v-for="(r, j) in v.reasons" :key="j">
+                  <span :class="['pts', { pos: r.points > 0 }]">{{ r.points > 0 ? "+" : "" }}{{ r.points }}</span>
+                  <span
+                    >{{ r.text }} <code class="rule" title="The rule that fired, with the current thresholds">{{ r.rule }}</code></span
+                  >
+                </li>
+                <li class="tierwhy">
+                  <span class="pts">tier</span><span>{{ v.tierWhy }}</span>
+                </li>
+              </ul>
+            </details>
+            <VexBox :v="v" />
+          </div>
         </div>
       </div>
       <div v-if="after > 0" class="pad" :style="{ height: after - GAP + 'px' }"></div>

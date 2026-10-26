@@ -486,57 +486,251 @@ textarea {
   width: 100%;
   resize: vertical;
 }
-#prio-summary {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
 #prio-note {
   color: var(--mute);
   font-size: 12px;
-}
-.pcard {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  flex: none;
-  overflow: hidden;
-}
-.ptop {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px 0;
-}
-.ptop .sev.tier {
-  margin-left: auto;
 }
 .rank {
   font-size: 13px;
   font-family: ui-monospace, monospace;
   color: var(--mute);
 }
-.ptop .id {
-  font-weight: 600;
-  font-size: 15px;
-  color: var(--accent);
+#prio-filters {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
 }
-.pmain {
+#prio-filters .ghost {
+  grid-column: 2;
+  justify-self: start;
+}
+.flabel {
+  color: var(--mute);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pseg {
+  display: flex;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.pseg button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  background: var(--panel);
+  color: var(--text);
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  padding: 6px 12px;
+}
+.pseg button:last-child {
+  border-right: 0;
+}
+.pseg button i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--c);
+}
+.pseg button b {
+  color: var(--mute);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.pseg button.on {
+  background: var(--bg);
+  font-weight: 600;
+  box-shadow: inset 0 -3px 0 var(--c);
+}
+#prio-list {
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+#prio-list > .kv,
+#prio-list > .empty {
+  padding: 8px 12px;
+}
+.ptable-head,
+.prow-main {
+  display: grid;
+  grid-template-columns: 92px 92px minmax(0, 1fr) 150px 90px;
+  gap: 12px;
+  align-items: center;
+  padding: 0 12px;
+}
+.ptable-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  flex: none;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  color: var(--mute);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.prow {
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  box-shadow: inset 4px 0 0 var(--c);
+}
+.prow.open {
+  background: color-mix(in srgb, var(--bg) 60%, var(--panel));
+}
+.prow-main {
+  position: relative;
+  min-height: 46px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  cursor: pointer;
+}
+.prow-main:hover {
+  background: color-mix(in srgb, var(--c) 7%, transparent);
+}
+.sev.sevpill {
+  justify-self: start;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sev.sevpill.MEDIUM {
+  color: #3a2c00;
+}
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.meter i {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  min-width: 24px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+.meter i::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--w);
+  background: var(--c);
+}
+.pfind {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.ptitle {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pexpand {
+  all: unset;
+  cursor: pointer;
+}
+/* Stretched button: the whole row toggles, while the CVE link and the tier tooltip stay on top. */
+.pexpand::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.psub .id,
+.ptier {
+  position: relative;
+  z-index: 1;
+}
+.pexpand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.psub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  color: var(--mute);
+}
+.psub .id {
+  color: var(--accent);
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+.ptier {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-weight: 600;
+}
+.ptier i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--c);
+}
+.pfix {
+  color: var(--mute);
+  overflow-wrap: anywhere;
+}
+.pdetail {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 6px 14px 12px;
-  min-width: 0;
+  padding: 0 12px 12px 116px;
 }
-.pmain .ptitle {
+.pdetail .chips {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.35;
 }
-.pmain .chips {
-  margin: 0;
+.pdetail .pmeans {
+  border-radius: 6px;
+}
+.pdetail .pfoot {
+  padding: 0;
+  border-top: 0;
+}
+@media (max-width: 760px) {
+  .ptable-head {
+    display: none;
+  }
+  .prow-main {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 6px 12px;
+  }
+  .prow-main .pfind {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .prow-main .ptier,
+  .prow-main .pfix {
+    grid-column: 1 / -1;
+  }
+  .pdetail {
+    padding-left: 16px;
+  }
+  #prio-filters {
+    grid-template-columns: 1fr;
+  }
+  #prio-filters .ghost {
+    grid-column: 1;
+  }
 }
 .pmeans {
   background: var(--bg);
