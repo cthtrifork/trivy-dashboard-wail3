@@ -134,8 +134,8 @@ func TestVEX(t *testing.T) {
 		t.Fatalf("list: %v %v", got, err)
 	}
 
-	product := ProductPURL(img, []string{"ghcr.io/acme/app@sha256:abc123"})
-	raw, err := ExportOpenVEX(got, product, "Jane", "Security")
+	product := ProductPURL(img)
+	raw, err := ExportOpenVEX(got, product, "", "Jane", "Security")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,15 +166,16 @@ func TestVEX(t *testing.T) {
 	}
 	s0 := doc.Statements[0]
 	if s0.Vulnerability.Name != "CVE-1" || s0.Status != "not_affected" || s0.Justification != "vulnerable_code_not_in_execute_path" ||
-		s0.Products[0].ID != "pkg:oci/app@sha256%3Aabc123?repository_url=ghcr.io%2Facme%2Fapp" ||
+		s0.Products[0].ID != "pkg:oci/app" ||
 		s0.Products[0].Subcomponents[0].ID != base.PURL {
 		t.Fatalf("stmt: %+v", s0)
 	}
 	if !strings.Contains(string(raw), "pkg:generic/lodash@4") {
 		t.Error("fallback subcomponent id missing")
 	}
-	if _, err := ExportOpenVEX(got, product, " ", ""); err == nil {
-		t.Error("author required")
+	ph, err := ExportOpenVEX(got, product, "https://example.com/vex.json", " ", "")
+	if err != nil || !strings.Contains(string(ph), `"author": "<author>"`) || !strings.Contains(string(ph), `"@id": "https://example.com/vex.json"`) {
+		t.Errorf("placeholder author / kept id: %v %s", err, ph)
 	}
 
 	if err := st.Delete(img, got[0].Key); err != nil {
@@ -183,7 +184,7 @@ func TestVEX(t *testing.T) {
 	if l, _ := st.List(img); len(l) != 1 {
 		t.Fatalf("after delete: %v", l)
 	}
-	if p := ProductPURL("nginx:1.27", nil); p != "pkg:oci/nginx?repository_url=nginx&tag=1.27" {
+	if p := ProductPURL("nginx:1.27"); p != "pkg:oci/nginx" {
 		t.Errorf("tag purl: %s", p)
 	}
 	if ImageRepo("docker://localhost:5000/a/b:1@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") != "localhost:5000/a/b" {

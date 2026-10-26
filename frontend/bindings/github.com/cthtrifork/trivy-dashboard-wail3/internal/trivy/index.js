@@ -9,6 +9,7 @@ export {
     CompareSide,
     Component,
     DepNode,
+    DocMeta,
     EnrichInfo,
     ImportReport,
     PkgChange,

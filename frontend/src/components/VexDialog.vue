@@ -35,11 +35,25 @@ async function refresh() {
 }
 watch(form, refresh);
 
+// An imported document's author and role win over what was typed before: exporting with both
+// empty makes the Go side use the imported ones, and the placeholder when there are none.
+async function loadMeta() {
+  try {
+    const doc = JSON.parse(await ScanService.VEXExport(result.value.image, "", ""));
+    const imported = doc.author && doc.author !== "<author>";
+    form.author = imported ? doc.author : lsGet("vex-author");
+    form.role = imported ? (doc.role ?? "") : lsGet("vex-role");
+  } catch {
+    /* no assessments yet: the stored values stay */
+  }
+}
+
 async function open() {
   msg.value = vex.value.size ? "" : "No assessments yet: open a finding and set a VEX status first.";
   text.value = "";
   paste.value = "";
   dlg.value.showModal();
+  await loadMeta();
   await refresh();
 }
 
@@ -54,6 +68,7 @@ async function apply() {
   try {
     const rep = await ScanService.VEXImport(result.value.image, doc, markRest.value);
     await loadVEX();
+    await loadMeta();
     await refresh();
     const w = rep.warnings?.length ?? 0;
     msg.value =
@@ -148,7 +163,7 @@ defineExpose({ open });
       </button>
     </div>
     <div class="form-grid">
-      <label>Author <input id="vex-author" v-model="form.author" placeholder="Your name or organisation" /></label>
+      <label>Author <input id="vex-author" v-model="form.author" placeholder="&lt;author&gt;" /></label>
       <label>Role <input id="vex-role" v-model="form.role" placeholder="e.g. Security Engineer (optional)" /></label>
     </div>
     <textarea id="vex-preview" ref="preview" :value="text" readonly rows="14" spellcheck="false"></textarea>

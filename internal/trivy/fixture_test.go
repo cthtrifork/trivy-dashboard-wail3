@@ -46,7 +46,7 @@ func TestFixtureScanOldVersion(t *testing.T) {
 	if res.OS != "alpine 3.24.2" || len(res.Components) != 378 {
 		t.Errorf("os=%q components=%d", res.OS, len(res.Components))
 	}
-	if !strings.HasPrefix(res.ProductPURL, "pkg:oci/traefik@sha256%3A") {
+	if !strings.HasPrefix(res.ProductPURL, "pkg:oci/traefik") || strings.Contains(res.ProductPURL, "@") {
 		t.Errorf("product purl: %s", res.ProductPURL)
 	}
 	// Priority ordering and rule engine ran on real data.
@@ -356,7 +356,7 @@ func TestOpenVEXRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	entries, _ := st.List(img)
-	raw, err := ExportOpenVEX(entries, ProductPURL(img, nil), "Jane", "")
+	raw, err := ExportOpenVEX(entries, ProductPURL(img), "", "Jane", "")
 	if err != nil {
 		t.Fatal(err)
 	}

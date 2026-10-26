@@ -273,9 +273,19 @@ func (s *ScanService) VEXExport(image, author, role string) (string, error) {
 	product := s.product[trivy.ImageRepo(image)]
 	s.mu.Unlock()
 	if product == "" {
-		product = trivy.ProductPURL(image, nil)
+		product = trivy.ProductPURL(image)
 	}
-	doc, err := trivy.ExportOpenVEX(entries, product, author, role)
+	meta, err := s.vex.Meta(image)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(author) == "" {
+		author = meta.Author
+	}
+	if strings.TrimSpace(role) == "" {
+		role = meta.Role
+	}
+	doc, err := trivy.ExportOpenVEX(entries, product, meta.ID, author, role)
 	return string(doc), err
 }
 
@@ -299,6 +309,9 @@ func (s *ScanService) VEXImport(image, doc string, markRest bool) (trivy.ImportR
 		return rep, errors.New("no valid statement in the document: " + strings.Join(rep.Warnings, "; "))
 	}
 	if err := s.vex.SetMany(image, entries); err != nil {
+		return rep, err
+	}
+	if err := s.vex.SetMeta(image, rep.Doc); err != nil {
 		return rep, err
 	}
 	if markRest {
