@@ -1,6 +1,7 @@
 package trivy
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -219,34 +220,37 @@ func (s *VEXStore) Clear() error {
 	return nil
 }
 
-// ProductPURL builds the OCI package URL that identifies the scanned image,
-// using the registry digest when trivy reported one.
-func ProductPURL(image string, repoDigests []string) string {
+// ProductPURL builds the OCI package URL that identifies the scanned image.
+// It carries only the image name, with no digest, tag or repository, so the
+// same document covers every tag of the image.
+func ProductPURL(image string) string {
 	repo := ImageRepo(image)
-	name := repo[strings.LastIndex(repo, "/")+1:]
-	for _, d := range repoDigests {
-		r, dig, ok := strings.Cut(d, "@")
-		if ok && strings.HasPrefix(dig, "sha256:") {
-			rn := r[strings.LastIndex(r, "/")+1:]
-			return "pkg:oci/" + rn + "@" + strings.ReplaceAll(dig, ":", "%3A") + "?repository_url=" + url.QueryEscape(r)
-		}
-	}
-	p := "pkg:oci/" + name
-	q := url.Values{"repository_url": {repo}}
-	if rest := strings.TrimPrefix(NormalizeImage(image), repo); strings.HasPrefix(rest, ":") {
-		q.Set("tag", rest[1:])
-	}
-	return p + "?" + q.Encode()
+	return "pkg:oci/" + repo[strings.LastIndex(repo, "/")+1:]
 }
+
+// DocMeta is the document-level data of an imported OpenVEX file that is kept
+// so the next export reuses it.
+type DocMeta struct {
+	ID     string `json:"id"`
+	Author string `json:"author"`
+	Role   string `json:"role"`
+}
+
+// AuthorPlaceholder stands in for the author until one is imported or typed, so
+// the document is always shown.
+const AuthorPlaceholder = "<author>"
 
 // ExportOpenVEX renders entries as an OpenVEX document using go-vex, which
 // stamps the current spec version and derives the canonical document id.
-func ExportOpenVEX(entries []VEXEntry, product, author, role string) ([]byte, error) {
+// A non-empty id (an imported document's @id) is kept; an empty author becomes
+// AuthorPlaceholder.
+func ExportOpenVEX(entries []VEXEntry, product, id, author, role string) ([]byte, error) {
 	if len(entries) == 0 {
 		return nil, errors.New("no VEX assessments to export")
 	}
-	if strings.TrimSpace(author) == "" {
-		return nil, errors.New("author is required in an OpenVEX document")
+	author = strings.TrimSpace(author)
+	if author == "" {
+		author = AuthorPlaceholder
 	}
 	sorted := append([]VEXEntry(nil), entries...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Key < sorted[j].Key })
@@ -274,10 +278,17 @@ func ExportOpenVEX(entries []VEXEntry, product, author, role string) ([]byte, er
 		st.Products = []vex.Product{prod}
 		doc.Statements = append(doc.Statements, st)
 	}
-	if _, err := doc.GenerateCanonicalID(); err != nil {
+	if id = strings.TrimSpace(id); id != "" {
+		doc.ID = id
+	} else if _, err := doc.GenerateCanonicalID(); err != nil {
 		return nil, err
 	}
-	return json.MarshalIndent(&doc, "", "  ")
+	b, err := json.MarshalIndent(&doc, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	// The placeholder author has angle brackets, which encoding/json escapes.
+	return bytes.ReplaceAll(bytes.ReplaceAll(b, []byte(`\u003c`), []byte("<")), []byte(`\u003e`), []byte(">")), nil
 }
 
 // ImportReport summarises what ImportOpenVEX did with a pasted document.
@@ -286,6 +297,7 @@ type ImportReport struct {
 	Skipped  int      `json:"skipped"`  // statements kept as they are because no finding of this scan matched them
 	Marked   int      `json:"marked"`   // findings left without a statement that were marked under_investigation
 	Warnings []string `json:"warnings"`
+	Doc      DocMeta  `json:"doc"` // @id, author and role of the document
 }
 
 // ParseOpenVEX turns an OpenVEX document (v0.2.0, as read by go-vex) into assessments for the given findings. A statement with
@@ -302,6 +314,7 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 		return nil, rep, errors.New("document has no statements")
 	}
 
+	rep.Doc = DocMeta{ID: doc.ID, Author: strings.TrimSpace(doc.Author), Role: strings.TrimSpace(doc.AuthorRole)}
 	byKey := map[string]VEXEntry{}
 	for i, st := range doc.Statements {
 		ids := []string{string(st.Vulnerability.Name)}
@@ -428,6 +441,47 @@ func containsFold(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func (s *VEXStore) metaPath() string { return s.Path + ".meta" }
+
+// Meta returns the document data kept from the last import of the image.
+func (s *VEXStore) Meta(image string) (DocMeta, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	m, err := s.loadMeta()
+	return m[ImageRepo(image)], err
+}
+
+// SetMeta keeps the document data of an imported file for later exports.
+func (s *VEXStore) SetMeta(image string, d DocMeta) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	m, err := s.loadMeta()
+	if err != nil {
+		return err
+	}
+	m[ImageRepo(image)] = d
+	b, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(s.Path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(s.metaPath(), b, 0o600)
+}
+
+func (s *VEXStore) loadMeta() (map[string]DocMeta, error) {
+	m := map[string]DocMeta{}
+	b, err := os.ReadFile(s.metaPath())
+	if errors.Is(err, os.ErrNotExist) {
+		return m, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return m, json.Unmarshal(b, &m)
 }
 
 // SetMany stores already-validated entries, keeping their Updated stamps.

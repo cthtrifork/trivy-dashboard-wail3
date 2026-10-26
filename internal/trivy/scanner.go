@@ -454,7 +454,7 @@ func parseVulns(data []byte, res *ScanResult) error {
 			})
 		}
 	}
-	res.ProductPURL = ProductPURL(res.Image, rep.Metadata.RepoDigests)
+	res.ProductPURL = ProductPURL(res.Image)
 	for i := range res.Vulnerabilities {
 		Assess(&res.Vulnerabilities[i])
 	}

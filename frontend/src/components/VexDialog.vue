@@ -34,10 +34,23 @@ async function refresh() {
 }
 watch(form, refresh);
 
+// An imported document's author wins over what was typed before: exporting with both
+// empty makes the Go side use the imported ones, and the placeholder when there are none.
+async function loadMeta() {
+  try {
+    const doc = JSON.parse(await ScanService.VEXExport(result.value.image, "", ""));
+    const imported = doc.author && doc.author !== "<author>";
+    form.author = imported ? doc.author : lsGet("vex-author");
+  } catch {
+    /* no assessments yet: the stored values stay */
+  }
+}
+
 async function open() {
   msg.value = vex.value.size ? "" : "No assessments yet: open a finding and set a VEX status first.";
   text.value = "";
   dlg.value.showModal();
+  await loadMeta();
   await refresh();
 }
 
@@ -102,7 +115,7 @@ defineExpose({ open });
       </button>
     </div>
     <div class="form-grid one">
-      <label>Author <input id="vex-author" v-model="form.author" placeholder="Your name or organisation" /></label>
+      <label>Author <input id="vex-author" v-model="form.author" placeholder="&lt;author&gt;" /></label>
     </div>
     <JsonBox ta-id="vex-preview" ref="preview" :model-value="text" readonly :rows="14" />
     <div id="vex-msg" class="kv">{{ msg }}</div>

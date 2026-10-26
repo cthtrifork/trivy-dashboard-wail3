@@ -13,17 +13,20 @@ if (!url || !outDir) {
 
 function loadPlaywright() {
   const here = createRequire(import.meta.url);
-  try {
-    return here("playwright");
-  } catch {
-    const root = execSync("npm root -g", { encoding: "utf8" }).trim();
-    return createRequire(path.join(root, "noop.js"))("playwright");
+  for (const name of ["playwright", "playwright-core"]) {
+    try {
+      return here(name);
+    } catch {}
   }
+  const root = execSync("npm root -g", { encoding: "utf8" }).trim();
+  return createRequire(path.join(root, "noop.js"))("playwright");
 }
 const { chromium } = loadPlaywright();
 
 mkdirSync(outDir, { recursive: true });
-const browser = await chromium.launch();
+// SCREENSHOT_BROWSER_CHANNEL=chrome drives an installed Google Chrome (preinstalled on GitHub's
+// runners) instead of Playwright's own Chromium download.
+const browser = await chromium.launch({ channel: process.env.SCREENSHOT_BROWSER_CHANNEL || undefined });
 const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
 // system-ui resolves to whatever sans font the machine has, so the PNGs differed between a laptop
 // and CI on every run. Pin it to Inter (CI installs fonts-inter); monospace is DejaVu Sans Mono.
