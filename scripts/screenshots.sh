@@ -7,7 +7,8 @@
 #
 # Requirements: Go, Node 20+, and Playwright with Chromium
 #   npm install --no-save playwright && npx playwright install chromium
-# (a global Playwright install also works).
+# (a global Playwright install also works). With Google Chrome installed, `npm install --no-save
+# playwright-core` and SCREENSHOT_BROWSER_CHANNEL=chrome skip the Chromium download (CI does this).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
