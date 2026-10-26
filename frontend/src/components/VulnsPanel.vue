@@ -86,12 +86,12 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
         <col style="width: 110px" />
         <col style="width: 90px" />
         <col style="width: 140px" />
-        <col style="width: 16%" />
+        <col style="width: 14%" />
         <col style="width: 100px" />
-        <col style="width: 100px" />
-        <col style="width: 92px" />
+        <col style="width: 140px" />
+        <col style="width: 140px" />
         <col style="width: 60px" />
-        <col style="width: 150px" />
+        <col style="width: 180px" />
         <col />
       </colgroup>
       <thead>

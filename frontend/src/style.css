@@ -383,6 +383,16 @@ td {
 tr.row {
   cursor: pointer;
 }
+/* Short cells stay on one line (a pill or version list that wraps reads as broken); the title takes the slack. */
+#vuln-table td {
+  white-space: nowrap;
+  word-break: normal;
+}
+#vuln-table td:last-child {
+  white-space: normal;
+  min-width: 260px;
+  word-break: break-word;
+}
 tr.row:hover td {
   background: #ffffff08;
 }
