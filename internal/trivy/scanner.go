@@ -2,10 +2,13 @@ package trivy
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -64,7 +67,11 @@ type Vulnerability struct {
 	URL         string  `json:"url"`
 	Target      string  `json:"target"`
 	Score       float64 `json:"score"`
-	PURL        string  `json:"purl"`
+	// ScoreSource is the data source Score came from (see pickScore) and Ratings lists what every
+	// source said, so the UI can show why a MEDIUM carries a 9.1 from somewhere else.
+	ScoreSource string   `json:"scoreSource"`
+	Ratings     []Rating `json:"ratings"`
+	PURL        string   `json:"purl"`
 
 	// Exploitation signals and prioritisation (see enrich.go / assess.go).
 	Vector         string   `json:"vector"`
@@ -416,6 +423,7 @@ func parseVulns(data []byte, res *ScanResult) error {
 				Description      string
 				PrimaryURL       string
 				PkgIdentifier    struct{ PURL string }
+				VendorSeverity   map[string]int
 				CVSS             map[string]struct {
 					V3Vector string
 					V2Vector string
@@ -439,16 +447,13 @@ func parseVulns(data []byte, res *ScanResult) error {
 			if _, ok := severityRank[sev]; !ok {
 				sev = "UNKNOWN"
 			}
-			var score float64
-			for _, c := range v.CVSS {
-				score = max(score, c.V3Score, c.V2Score)
-			}
+			score, scoreSource := pickScore(v.CVSS)
 			vector := pickVector(v.CVSS)
 			res.SeverityCounts[sev]++
 			res.Vulnerabilities = append(res.Vulnerabilities, Vulnerability{
 				ID: v.VulnerabilityID, Package: v.PkgName, Installed: v.InstalledVersion,
 				Fixed: v.FixedVersion, Severity: sev, Status: v.Status, Title: v.Title,
-				Description: v.Description, URL: v.PrimaryURL, Target: r.Target, Score: score,
+				Description: v.Description, URL: v.PrimaryURL, Target: r.Target, Score: score, ScoreSource: scoreSource, Ratings: ratings(v.VendorSeverity, v.CVSS),
 				PURL: v.PkgIdentifier.PURL, Vector: vector,
 				Key: VEXKey(v.VulnerabilityID, v.PkgIdentifier.PURL, v.PkgName, v.InstalledVersion),
 			})
@@ -484,29 +489,90 @@ func ranksBefore(a, b *Vulnerability) bool {
 }
 
 // pickScore prefers Red Hat's CVSS score (v3, else v2), then NVD's, then the highest score any source
-// published. Sources disagree by several points (one CVE carries 9.1 and 5.3), and the maximum alone
-// would show 9.1 next to a MEDIUM rating.
+// published, and names the source it took it from. Sources disagree by several points (one CVE carries
+// 9.1 and 5.3), and the maximum alone would show 9.1 next to a MEDIUM rating.
 func pickScore(cvss map[string]struct {
 	V3Vector string
 	V2Vector string
 	V3Score  float64
 	V2Score  float64
-}) float64 {
+}) (float64, string) {
 	for _, src := range []string{"redhat", "nvd"} {
 		if c, ok := cvss[src]; ok {
 			if c.V3Score > 0 {
-				return c.V3Score
+				return c.V3Score, src
 			}
 			if c.V2Score > 0 {
-				return c.V2Score
+				return c.V2Score, src
 			}
 		}
 	}
 	var score float64
-	for _, c := range cvss {
-		score = max(score, c.V3Score, c.V2Score)
+	var from string
+	for _, src := range slices.Sorted(maps.Keys(cvss)) { // sorted: equal maxima must not depend on map order
+		if s := max(cvss[src].V3Score, cvss[src].V2Score); s > score {
+			score, from = s, src
+		}
 	}
-	return score
+	return score, from
+}
+
+// Rating is one data source's verdict on a finding. Severity is empty and Score 0 when the source
+// published only the other.
+type Rating struct {
+	Source   string  `json:"source"`
+	Severity string  `json:"severity"`
+	Score    float64 `json:"score"`
+}
+
+// vendorSeverity names Trivy's numeric VendorSeverity values.
+var vendorSeverity = map[int]string{1: "LOW", 2: "MEDIUM", 3: "HIGH", 4: "CRITICAL"}
+
+// ratings merges the per-source severities and CVSS scores into one list, Red Hat and NVD first (the
+// sources pickScore prefers), then the rest alphabetically.
+func ratings(sev map[string]int, cvss map[string]struct {
+	V3Vector string
+	V2Vector string
+	V3Score  float64
+	V2Score  float64
+}) []Rating {
+	byName := map[string]*Rating{}
+	get := func(src string) *Rating {
+		if r, ok := byName[src]; ok {
+			return r
+		}
+		r := &Rating{Source: src}
+		byName[src] = r
+		return r
+	}
+	for src, n := range sev {
+		get(src).Severity = vendorSeverity[n] // 0 = unknown: left empty
+	}
+	for src, c := range cvss {
+		get(src).Score = max(c.V3Score, c.V2Score)
+	}
+	rank := func(src string) int {
+		switch src {
+		case "redhat":
+			return 0
+		case "nvd":
+			return 1
+		}
+		return 2
+	}
+	out := make([]Rating, 0, len(byName))
+	for _, r := range byName {
+		if r.Severity != "" || r.Score > 0 {
+			out = append(out, *r)
+		}
+	}
+	slices.SortFunc(out, func(a, b Rating) int {
+		if c := cmp.Compare(rank(a.Source), rank(b.Source)); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.Source, b.Source)
+	})
+	return out
 }
 
 // pickVector prefers NVD's CVSS v3 vector, then any v3, then v2.

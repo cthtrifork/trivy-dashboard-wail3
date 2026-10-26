@@ -5,6 +5,28 @@ const CVSS_FLOOR = { CRITICAL: 9, HIGH: 7, MEDIUM: 4, LOW: 0.1 };
 export const cvssFloor = (severity) => CVSS_FLOOR[severity] ?? 0;
 // Score used to order rows: reported CVSS, else the band floor, so an unscored HIGH sorts with the 7s.
 export const effectiveScore = (v) => v.score || cvssFloor(v.severity);
+// Trivy's data-source ids as people know them; anything else is shown as Trivy names it.
+const SOURCES = {
+  redhat: "Red Hat",
+  nvd: "NVD",
+  ghsa: "GitHub Advisory",
+  alma: "AlmaLinux",
+  rocky: "Rocky Linux",
+  azure: "Azure Linux",
+  bitnami: "Bitnami",
+  ubuntu: "Ubuntu",
+  debian: "Debian",
+  alpine: "Alpine",
+  amazon: "Amazon Linux",
+  "oracle-oval": "Oracle Linux",
+  photon: "Photon OS",
+  suse: "SUSE",
+  "cbl-mariner": "CBL-Mariner",
+  "arch-linux": "Arch Linux",
+  k8s: "Kubernetes",
+  osv: "OSV",
+};
+export const sourceName = (id) => SOURCES[id] ?? id;
 export const pct = (x) => (x * 100 < 0.1 ? "<0.1%" : (x * 100).toFixed(x >= 0.1 ? 0 : 1) + "%");
 
 export const TIER_COLOR = { "Act now": "--CRITICAL", "Fix soon": "--HIGH", Plan: "--MEDIUM", Monitor: "--UNKNOWN" };

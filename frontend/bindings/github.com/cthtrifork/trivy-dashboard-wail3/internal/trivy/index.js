@@ -14,6 +14,7 @@ export {
     ImportReport,
     PkgChange,
     Preset,
+    Rating,
     Reason,
     Rescored,
     Rules,

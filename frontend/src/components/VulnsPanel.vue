@@ -6,6 +6,7 @@ import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
 import Chip from "./Chip.vue";
 import CvssMeter from "./CvssMeter.vue";
+import Ratings from "./Ratings.vue";
 import SummaryCard from "./SummaryCard.vue";
 import VexBox from "./VexBox.vue";
 
@@ -139,6 +140,7 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
                 <dt>Status</dt>
                 <dd>{{ v.status || "—" }}</dd>
               </dl>
+              <Ratings :v="v" />
               <div class="vdesc">{{ v.description || "No description." }}</div>
               <p v-if="detailUrl(v)">
                 <a class="mono" :href="detailUrl(v)" @click.prevent="open(detailUrl(v))">{{ detailUrl(v) }}</a>

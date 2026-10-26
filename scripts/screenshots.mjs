@@ -129,6 +129,12 @@ await page.fill("#vuln-filter", "");
 // Expand a finding that has no VEX assessment, so the trigger reads "Assess this finding".
 await page.click("#vuln-table tbody:not(.pad) tr.row >> nth=1");
 await shot("05-vulnerability-details");
+// MEDIUM from Red Hat with a 9.1 from Bitnami: the expanded row lists every source's rating.
+await page.fill("#vuln-filter", "CVE-2026-78663");
+await page.click("#vuln-table tbody:not(.pad) tr.row >> nth=0");
+await page.locator(".ratings").first().scrollIntoViewIfNeeded();
+await shot("05b-vulnerability-ratings-by-source");
+await page.fill("#vuln-filter", "");
 
 // ---- Dependencies ----
 // A runaway layout shows up as a blank canvas, so fail loudly instead of saving it.

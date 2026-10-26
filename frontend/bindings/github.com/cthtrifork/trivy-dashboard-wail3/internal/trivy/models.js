@@ -880,6 +880,52 @@ export class Preset {
 }
 
 /**
+ * Rating is one data source's verdict on a finding. Severity is empty and Score 0 when the source
+ * published only the other.
+ */
+export class Rating {
+    /**
+     * Creates a new Rating instance.
+     * @param {Partial<Rating>} [$$source = {}] - The source object to create the Rating.
+     */
+    constructor($$source = {}) {
+        if (!("source" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["source"] = "";
+        }
+        if (!("severity" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["severity"] = "";
+        }
+        if (!("score" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["score"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Rating instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {Rating}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Rating(/** @type {Partial<Rating>} */($$parsedSource));
+    }
+}
+
+/**
  * Reason is one explainable contribution to a finding's priority score.
  */
 export class Reason {
@@ -1709,6 +1755,22 @@ export class Vulnerability {
              */
             this["score"] = 0;
         }
+        if (!("scoreSource" in $$source)) {
+            /**
+             * ScoreSource is the data source Score came from (see pickScore) and Ratings lists what every
+             * source said, so the UI can show why a MEDIUM carries a 9.1 from somewhere else.
+             * @member
+             * @type {string}
+             */
+            this["scoreSource"] = "";
+        }
+        if (!("ratings" in $$source)) {
+            /**
+             * @member
+             * @type {Rating[]}
+             */
+            this["ratings"] = [];
+        }
         if (!("purl" in $$source)) {
             /**
              * @member
@@ -1834,10 +1896,14 @@ export class Vulnerability {
      * @returns {Vulnerability}
      */
     static createFrom($$source = {}) {
-        const $$createField24_0 = $$createType11;
+        const $$createField12_0 = $$createType25;
+        const $$createField26_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("ratings" in $$parsedSource) {
+            $$parsedSource["ratings"] = $$createField12_0($$parsedSource["ratings"]);
+        }
         if ("reasons" in $$parsedSource) {
-            $$parsedSource["reasons"] = $$createField24_0($$parsedSource["reasons"]);
+            $$parsedSource["reasons"] = $$createField26_0($$parsedSource["reasons"]);
         }
         return new Vulnerability(/** @type {Partial<Vulnerability>} */($$parsedSource));
     }
@@ -1868,3 +1934,5 @@ const $$createType20 = DepNode.createFrom;
 const $$createType21 = $Create.Nullable($$createType20);
 const $$createType22 = $Create.Map($Create.Any, $$createType21);
 const $$createType23 = EnrichInfo.createFrom;
+const $$createType24 = Rating.createFrom;
+const $$createType25 = $Create.Array($$createType24);

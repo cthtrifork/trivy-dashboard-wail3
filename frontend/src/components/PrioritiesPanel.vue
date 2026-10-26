@@ -4,6 +4,7 @@ import { result, vulns, vex } from "../store.js";
 import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import CvssMeter from "./CvssMeter.vue";
+import Ratings from "./Ratings.vue";
 import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
 import SuppressedRow from "./SuppressedRow.vue";
@@ -178,6 +179,7 @@ defineExpose({ count: computed(() => pool.value.length) });
               >VEX: {{ STATUS_LABEL[vex.get(v.key).status] }}{{ isExpired(vex.get(v.key)) ? " · expired" : "" }}</Chip
             >
           </div>
+          <Ratings :v="v" />
           <div class="pmeans">
             <small>What it means</small>
             <p class="attack">{{ v.attack }}</p>
