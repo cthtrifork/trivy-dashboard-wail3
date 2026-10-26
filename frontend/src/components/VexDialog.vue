@@ -7,8 +7,6 @@ const preview = ref(null);
 const form = reactive({ author: lsGet("vex-author"), role: lsGet("vex-role") });
 const text = ref("");
 const msg = ref("");
-const paste = ref("");
-const markRest = ref(false);
 
 // How much of the scan the assessments cover: every CVE should end up assessed, and the
 // under_investigation ones are what is left to decide.
@@ -38,34 +36,8 @@ watch(form, refresh);
 async function open() {
   msg.value = vex.value.size ? "" : "No assessments yet: open a finding and set a VEX status first.";
   text.value = "";
-  paste.value = "";
   dlg.value.showModal();
   await refresh();
-}
-
-// Apply a pasted OpenVEX document: the Go side matches its statements to this scan's findings and
-// saves them as assessments, then the lists and the preview pick them up.
-async function apply() {
-  const doc = paste.value.trim();
-  if (!doc) {
-    msg.value = "Paste an OpenVEX document first.";
-    return;
-  }
-  try {
-    const rep = await ScanService.VEXImport(result.value.image, doc, markRest.value);
-    await loadVEX();
-    await refresh();
-    const w = rep.warnings?.length ?? 0;
-    msg.value =
-      `Imported ${rep.imported} assessment${rep.imported === 1 ? "" : "s"}` +
-      (rep.skipped ? ` · ${rep.skipped} statement${rep.skipped === 1 ? "" : "s"} kept that match no finding of this scan` : "") +
-      (rep.marked ? ` · ${rep.marked} more marked under investigation` : "") +
-      (w ? ` · ${w} warning${w === 1 ? "" : "s"}: ${rep.warnings.join("; ")}` : "") +
-      ".";
-    paste.value = "";
-  } catch (e) {
-    msg.value = errText(e);
-  }
 }
 
 // Cover every finding that has no assessment yet, so nothing is silently missing from the export.
@@ -117,29 +89,11 @@ defineExpose({ open });
 
 <template>
   <dialog id="vex-dialog" ref="dlg">
-    <h3>Edit/Create VEX</h3>
+    <h3>Edit/Export VEX</h3>
     <p class="kv">
       One statement per assessed finding for <b>{{ result?.image }}</b
       >. Statements carry over to future scans of the same image.
     </p>
-    <details id="vex-import">
-      <summary>Import an existing OpenVEX file</summary>
-      <p class="kv">
-        Paste an OpenVEX document. Its statements are matched to this scan's findings, saved as assessments (replacing existing ones for the
-        same finding; other assessments are kept), and the shortlist is updated.
-      </p>
-      <label class="chk"
-        ><input id="vex-mark-rest" v-model="markRest" type="checkbox" /> Mark findings the file does not cover as under investigation</label
-      >
-      <textarea
-        id="vex-paste"
-        v-model="paste"
-        rows="8"
-        spellcheck="false"
-        placeholder='{"@context": "https://openvex.dev/ns/v0.2.0", "statements": [...]}'
-      ></textarea>
-      <div class="dlg-actions"><button type="button" id="vex-apply" @click="apply">Apply to scan</button></div>
-    </details>
     <div id="vex-coverage" class="kv">
       {{ coverage.done }} of {{ coverage.total }} findings assessed · {{ coverage.open }} under investigation · {{ coverage.none }} without a
       statement

@@ -34,12 +34,14 @@ import DepsPanel from "./components/DepsPanel.vue";
 import SbomPanel from "./components/SbomPanel.vue";
 import ComparePanel from "./components/ComparePanel.vue";
 import VexDialog from "./components/VexDialog.vue";
+import VexImportDialog from "./components/VexImportDialog.vue";
 import VexDrawer from "./components/VexDrawer.vue";
 import HelpDialog from "./components/HelpDialog.vue";
 
 const tab = ref("prio");
 const prio = ref(null);
 const vexDialog = ref(null);
+const vexImport = ref(null);
 const helpDialog = ref(null);
 const logEl = ref(null);
 
@@ -317,7 +319,7 @@ onMounted(init);
 
   <main>
     <section id="tab-prio" class="panel" :class="{ active: tab === 'prio' }">
-      <PrioritiesPanel ref="prio" @export="vexDialog.open()" />
+      <PrioritiesPanel ref="prio" @export="vexDialog.open()" @import="vexImport.open()" />
     </section>
     <section id="tab-vulns" class="panel" :class="{ active: tab === 'vulns' }"><VulnsPanel /></section>
     <section id="tab-deps" class="panel" :class="{ active: tab === 'deps' }"><DepsPanel /></section>
@@ -329,6 +331,7 @@ onMounted(init);
   </main>
 
   <VexDialog ref="vexDialog" />
+  <VexImportDialog ref="vexImport" />
   <VexDrawer />
   <HelpDialog ref="helpDialog" />
   <div id="status" :class="[status.err ? 'err' : '', status.busy ? 'spin' : '']">{{ status.msg }}</div>

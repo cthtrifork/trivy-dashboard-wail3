@@ -105,7 +105,7 @@ Observed by running the headless server in demo mode (`TRIVY_SCANNER_FAKE_PODMAN
 
 | Tab | Top to bottom |
 |---|---|
-| Priorities | Severity and Priority segmented filters with counts, Scoring rules disclosure, toolbar (Show top 10/25/all, Hide resolved by VEX, Include low-risk, Only with a fix, Edit/Create VEX (n), effect summary), one-line ranking note, column header row (Severity, Score, Finding, Priority, Fix) and finding rows |
+| Priorities | Severity and Priority segmented filters with counts, Scoring rules disclosure, toolbar (Show top 10/25/all, Hide resolved by VEX, Include low-risk, Only with a fix, Import VEX, Edit/Export VEX (n), effect summary), one-line ranking note, column header row (Severity, Score, Finding, Priority, Fix) and finding rows |
 | Vulnerabilities | severity stat cards (Critical → Unknown) that double as filters, text filter plus "n shown", sortable table: Priority (tier pill), Severity, ID, Package, Installed, Fixed in, CVSS, EPSS, Signals, Title; rows expand for details |
 | Dependencies | search, All / OS / Application segmented control, Vulnerable paths only, Focus select, All labels, Fit, "n of N components"; canvas graph with legend and a right-hand inspector ("Click a node to inspect it."). Node color = kind, orange ring = vulnerable via dependency, size = vulnerability count. Scroll zooms, drag pans, double-click fits |
 | SBOM | one-sentence summary of the image, type stat cards (accent border, not severity colors), filter plus format ("CycloneDX"), sortable table: Name, Version, Type, License, Package URL |
@@ -139,7 +139,7 @@ Found while running the UI; not fixed by this sheet.
 - **Scan**: type an image, Enter or Scan. Status line shows progress; Cancel is available while it runs and removes the container. Results land on Priorities.
 - **Triage**: stat cards summarise tiers; toolbar filters (`Show top 10`, Hide resolved by VEX, Include low-risk, Only with a fix) re-filter without rescanning. A summary line states the effect ("29 findings → 0 worth acting on · 8 low-risk not shown").
 - **Tune**: Scoring rules disclosure re-ranks immediately; the header shows the active preset name, or `custom`.
-- **Record a decision**: Add VEX assessment on a card, (opens a docked drawer), then Edit/Create VEX (n) to review and export OpenVEX.
+- **Record a decision**: Add VEX assessment on a card, (opens a docked drawer), then Edit/Export VEX (n) to review and export OpenVEX, or Import VEX to merge an existing OpenVEX file.
 - **Explore**: Vulnerabilities (filterable table, row details), Dependencies (canvas graph: select, focus, all components), SBOM list, Compare two scans.
 
 ## States
