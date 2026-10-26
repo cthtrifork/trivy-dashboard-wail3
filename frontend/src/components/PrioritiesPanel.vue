@@ -141,8 +141,9 @@ defineExpose({ count: computed(() => pool.value.length) });
       <div v-for="{ item: v, index } in visible" :key="cardKey(v)" v-measure="cardKey(v)" class="prow" :class="{ open: expanded.has(cardKey(v)) }" :style="sevStyle(v)">
         <div class="prow-main">
           <span class="sev sevpill" :class="v.severity">{{ v.severity }}</span>
-          <span class="meter">
-            <b :title="v.score ? '' : COLUMN_HELP.estimated">{{ v.score ? v.score.toFixed(1) : cvssFloor(v.severity) ? "~" + cvssFloor(v.severity).toFixed(1) : "–" }}</b>
+          <span class="meter" :class="{ est: !v.score && cvssFloor(v.severity) }">
+            <b :title="v.score ? 'Reported CVSS score' : COLUMN_HELP.estimated">{{ v.score ? v.score.toFixed(1) : cvssFloor(v.severity) ? "~" + cvssFloor(v.severity).toFixed(1) : "–" }}</b>
+            <em v-if="!v.score && cvssFloor(v.severity)" :title="COLUMN_HELP.estimated">est.</em>
             <i :style="{ '--w': (v.score || cvssFloor(v.severity)) * 10 + '%' }"></i>
           </span>
           <span class="pfind">

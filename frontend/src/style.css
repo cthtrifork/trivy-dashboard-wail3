@@ -782,6 +782,24 @@ textarea {
   width: var(--w);
   background: var(--c);
 }
+/* A band-floor fallback, not a reported CVSS score: italic number, "est." tag and a hatched bar. */
+.meter em {
+  font-size: 10px;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.meter.est b {
+  font-style: italic;
+  color: var(--mute);
+}
+.meter.est i::after {
+  background: repeating-linear-gradient(135deg, var(--c) 0 3px, transparent 3px 6px);
+}
 .pfind {
   display: flex;
   flex-direction: column;

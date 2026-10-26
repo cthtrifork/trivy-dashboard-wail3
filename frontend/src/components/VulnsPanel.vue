@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive } from "vue";
 import { result, vulns, vex, SEVERITIES, sevStyle } from "../store.js";
-import { tierStyle, pct, detailUrl, openUrl as open, COLUMN_HELP } from "../lib/format.js";
+import { tierStyle, pct, detailUrl, openUrl as open, COLUMN_HELP, cvssFloor } from "../lib/format.js";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
 import Chip from "./Chip.vue";
@@ -119,9 +119,10 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
           <td class="mono">{{ v.installed }}</td>
           <td class="mono">{{ v.fixed || "—" }}</td>
           <td>
-            <span class="meter" :style="sevStyle(v.severity)">
-              <b>{{ v.score ? v.score.toFixed(1) : "–" }}</b>
-              <i :style="{ '--w': (v.score || 0) * 10 + '%' }"></i>
+            <span class="meter" :class="{ est: !v.score && cvssFloor(v.severity) }" :style="sevStyle(v.severity)">
+              <b :title="v.score ? 'Reported CVSS score' : COLUMN_HELP.estimated">{{ v.score ? v.score.toFixed(1) : cvssFloor(v.severity) ? "~" + cvssFloor(v.severity).toFixed(1) : "–" }}</b>
+              <em v-if="!v.score && cvssFloor(v.severity)" :title="COLUMN_HELP.estimated">est.</em>
+              <i :style="{ '--w': (v.score || cvssFloor(v.severity)) * 10 + '%' }"></i>
             </span>
           </td>
           <td>{{ v.hasEpss ? pct(v.epss) : "—" }}</td>
