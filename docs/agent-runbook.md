@@ -43,22 +43,15 @@ The sandbox needs two adjustments (neither belongs in the committed config):
 
 ### Real scans in the container
 
-The app starts Trivy in nested podman, and neither the Trivy DB download nor the registry pull sees the proxy settings. For a sandbox test, wrap podman so every `run` gets them, and point `PODMAN` at the wrapper (it must live inside the workspace, e.g. `tmp/`, so the container can see it):
+The app forwards `HTTPS_PROXY`/`NO_PROXY` into the Trivy container (and uses the host network for a loopback proxy), and `TRIVY_SCANNER_CA_BUNDLE` mounts a CA bundle, so with the override config above a scan only needs the bundle named:
 
 ```sh
-#!/bin/sh
-if [ "$1" = run ]; then shift; exec /usr/bin/podman run -e HTTPS_PROXY -v /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro --network host "$@"; fi
-exec /usr/bin/podman "$@"
+export TRIVY_SCANNER_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt PODMAN_IGNORE_CGROUPSV1_WARNING=1
 ```
 
-Then seed the DB once, because a failed refresh is only a log line and the scan then dies with "--skip-db-update cannot be specified on the first run":
+`mirror.gcr.io/library/<image>` names scan fine (the DB comes from `mirror.gcr.io/aquasec/trivy-db:2`). A failed DB download now shows up in the scan error. If podman says "current system boot ID differs from cached boot ID" after restarting dockerd, delete `/tmp/storage-run-1000/containers` and `/tmp/storage-run-1000/libpod/tmp` in the container (or recreate it).
 
-```sh
-podman run --rm -e HTTPS_PROXY -v /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro \
-  -v ~/.cache/trivy-scanner/trivy:/c --network host docker.io/aquasec/trivy:0.76.1 image --download-db-only --cache-dir /c
-```
-
-`mirror.gcr.io/library/<image>` names scan fine (the DB comes from `mirror.gcr.io/aquasec/trivy-db:2`). Set `PODMAN_IGNORE_CGROUPSV1_WARNING=1` to silence podman's cgroup warning. Verified with `alpine:3.18` (0 findings), `nginx:1.25` (810) and `python:3.9-slim` (468).
+Earlier scans (before the proxy passthrough) were verified with `alpine:3.18` (0 findings), `nginx:1.25` (810) and `python:3.9-slim` (468).
 
 ## Exercising the app headlessly
 
