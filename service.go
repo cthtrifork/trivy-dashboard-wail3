@@ -47,6 +47,10 @@ type Mode struct {
 	TagB     string `json:"tagB"`
 	// TrivyImage is the default Trivy image, shown as the placeholder of the Options field.
 	TrivyImage string `json:"trivyImage"`
+	// RegistryToken is true when GITHUB_TOKEN is set; the token itself never leaves Go.
+	// RegistryUser is the login that goes with it. Both only prefill the Options fields (ghcr.io).
+	RegistryToken bool   `json:"registryToken"`
+	RegistryUser  string `json:"registryUser"`
 }
 
 // enrichCacheDir holds the downloaded EPSS and KEV data.
@@ -67,6 +71,9 @@ func vexFile() string {
 func NewScanService() *ScanService {
 	engine, mode := newEngine()
 	mode.TrivyImage = trivy.DefaultTrivyImage()
+	if user, _, ok := trivy.GithubLogin(); ok {
+		mode.RegistryToken, mode.RegistryUser = true, user
+	}
 	if mode.Fixtures {
 		log.Print("trivy-scanner: " + mode.Detail)
 	}

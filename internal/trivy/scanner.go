@@ -324,7 +324,8 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	if err != nil {
 		return nil, err
 	}
-	job := TrivyJob{Image: image, Username: req.Username, Password: req.Password, TrivyImage: trivyImage}
+	username, password := withDefaultCredentials(image, req.Username, req.Password)
+	job := TrivyJob{Image: image, Username: username, Password: password, TrivyImage: trivyImage}
 	logLine := func(l string) { s.logf("%s", l) }
 
 	if err := s.ensureDB(ctx, trivyImage, logLine); err != nil {

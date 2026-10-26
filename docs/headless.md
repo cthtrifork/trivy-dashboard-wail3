@@ -36,6 +36,10 @@ podman run -d --name trivy-scanner --restart unless-stopped \
   localhost/trivy-scanner
 ```
 
+### GitHub token for ghcr.io
+
+If `GITHUB_TOKEN` is set when you run `make headless` (or `make headless-up`), it is passed into the container (with `GITHUB_ACTOR`/`GITHUB_USER` as the login, default `github`). Scans of `ghcr.io/...` images then use it as the registry password when the Options fields are empty. The token is only sent to ghcr.io, never to other registries, and stays on the Go side: the UI shows a masked placeholder, not the value. Typed credentials always win. The same variables are forwarded into the dev container from your host environment.
+
 Then, **from your machine**:
 
 ```sh
