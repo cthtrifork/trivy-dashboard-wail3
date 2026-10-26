@@ -313,6 +313,22 @@ export class Mode {
              */
             this["trivyImage"] = "";
         }
+        if (!("registryToken" in $$source)) {
+            /**
+             * RegistryToken is true when GITHUB_TOKEN is set; the token itself never leaves Go.
+             * RegistryUser is the login that goes with it. Both only prefill the Options fields (ghcr.io).
+             * @member
+             * @type {boolean}
+             */
+            this["registryToken"] = false;
+        }
+        if (!("registryUser" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["registryUser"] = "";
+        }
 
         Object.assign(this, $$source);
     }

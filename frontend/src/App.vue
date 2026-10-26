@@ -187,8 +187,14 @@ onMounted(() => {
           <label title="Record an under investigation VEX statement for every finding that has none"
             ><input type="checkbox" id="mark-uninvestigated" v-model="opts.markUnderInvestigation" /> Mark all as under investigation</label
           >
-          <input id="username" v-model="opts.username" placeholder="Registry username" autocomplete="off" />
-          <input id="password" v-model="opts.password" type="password" placeholder="Registry password / token" autocomplete="off" />
+          <input id="username" v-model="opts.username" :placeholder="mode?.registryToken ? mode.registryUser + ' (GITHUB_TOKEN, ghcr.io)' : 'Registry username'" autocomplete="off" />
+          <input
+            id="password"
+            v-model="opts.password"
+            type="password"
+            :placeholder="mode?.registryToken ? '••••••••  GITHUB_TOKEN (ghcr.io)' : 'Registry password / token'"
+            autocomplete="off"
+          />
           <input
             id="trivy-image"
             v-model="opts.trivyImage"

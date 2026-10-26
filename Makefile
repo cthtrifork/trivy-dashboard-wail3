@@ -117,6 +117,7 @@ headless-up: headless-image ## (Re)create and start the container, listening on 
 		--network host --security-opt label=disable \
 		-e WAILS_SERVER_PORT=$(PORT) \
 		-e TRIVY_SCANNER_CACHE=$(CACHE) \
+		$(if $(GITHUB_TOKEN),-e GITHUB_TOKEN -e GITHUB_ACTOR -e GITHUB_USER) \
 		-v "$(SOCKET):/run/podman/podman.sock" \
 		-v $(NAME)-data:/data \
 		$(IMAGE)
