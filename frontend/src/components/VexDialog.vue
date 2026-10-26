@@ -58,6 +58,7 @@ async function apply() {
     const w = rep.warnings?.length ?? 0;
     msg.value =
       `Imported ${rep.imported} assessment${rep.imported === 1 ? "" : "s"}` +
+      (rep.skipped ? ` · ${rep.skipped} statement${rep.skipped === 1 ? "" : "s"} kept that match no finding of this scan` : "") +
       (rep.marked ? ` · ${rep.marked} more marked under investigation` : "") +
       (w ? ` · ${w} warning${w === 1 ? "" : "s"}: ${rep.warnings.join("; ")}` : "") +
       ".";

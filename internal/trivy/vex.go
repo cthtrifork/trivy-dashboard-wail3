@@ -250,17 +250,18 @@ func ExportOpenVEX(entries []VEXEntry, product, author, role string) ([]byte, er
 			return nil, fmt.Errorf("%s: %w", e.Vulnerability, err)
 		}
 		sub := e.PURL
-		if sub == "" {
+		if sub == "" && e.Package != "" {
 			sub = "pkg:generic/" + url.PathEscape(e.Package) + "@" + url.PathEscape(e.Version)
 		}
 		st := e.statement()
 		if ts, err := time.Parse(time.RFC3339, e.Updated); err == nil {
 			st.Timestamp = &ts
 		}
-		st.Products = []vex.Product{{
-			Component:     vex.Component{ID: product},
-			Subcomponents: []vex.Subcomponent{{Component: vex.Component{ID: sub}}},
-		}}
+		prod := vex.Product{Component: vex.Component{ID: product}}
+		if sub != "" {
+			prod.Subcomponents = []vex.Subcomponent{{Component: vex.Component{ID: sub}}}
+		}
+		st.Products = []vex.Product{prod}
 		doc.Statements = append(doc.Statements, st)
 	}
 	if _, err := doc.GenerateCanonicalID(); err != nil {
@@ -272,7 +273,7 @@ func ExportOpenVEX(entries []VEXEntry, product, author, role string) ([]byte, er
 // ImportReport summarises what ImportOpenVEX did with a pasted document.
 type ImportReport struct {
 	Imported int      `json:"imported"` // findings that received an assessment
-	Skipped  int      `json:"skipped"`  // statements that matched nothing or were invalid
+	Skipped  int      `json:"skipped"`  // statements kept as they are because no finding of this scan matched them
 	Marked   int      `json:"marked"`   // findings left without a statement that were marked under_investigation
 	Warnings []string `json:"warnings"`
 }
@@ -336,8 +337,20 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 			matched = true
 		}
 		if !matched {
+			// Keep it so merging a file and exporting again does not drop
+			// statements about other tags or packages of the image.
 			rep.Skipped++
-			rep.Warnings = append(rep.Warnings, fmt.Sprintf("statement %d (%s): no matching finding in this scan", i+1, ids[0]))
+			rep.Warnings = append(rep.Warnings, fmt.Sprintf("statement %d (%s): no finding in this scan, kept as it is", i+1, ids[0]))
+			for _, e := range unmatchedEntries(st, ids[0], subs, stamp) {
+				if err := e.Validate(); err != nil {
+					rep.Warnings = append(rep.Warnings, fmt.Sprintf("statement %d (%s): %v", i+1, ids[0], err))
+					continue
+				}
+				e.Key = VEXKey(e.Vulnerability, e.PURL, e.Package, e.Version)
+				if old, ok := byKey[e.Key]; !ok || e.Updated >= old.Updated {
+					byKey[e.Key] = e
+				}
+			}
 		}
 	}
 	out := make([]VEXEntry, 0, len(byKey))
@@ -345,8 +358,45 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 		out = append(out, e)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
-	rep.Imported = len(out)
+	rep.Imported = len(out) - kept(out, findings)
 	return out, rep, nil
+}
+
+// unmatchedEntries turns a statement that hit no finding into one entry per
+// subcomponent (or one without a package when it names none).
+func unmatchedEntries(st vex.Statement, id string, subs []string, stamp time.Time) []VEXEntry {
+	base := VEXEntry{
+		Vulnerability: id, Status: string(st.Status), Justification: string(st.Justification),
+		Impact: st.ImpactStatement, Action: st.ActionStatement, Updated: stamp.Format(time.RFC3339),
+	}
+	if len(subs) == 0 {
+		return []VEXEntry{base}
+	}
+	out := make([]VEXEntry, 0, len(subs))
+	for _, sub := range subs {
+		e := base
+		e.PURL = sub
+		if u, err := packageurl.FromString(sub); err == nil {
+			e.Package, e.Version = u.Name, u.Version
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
+// kept counts the entries that belong to no finding.
+func kept(entries []VEXEntry, findings []Vulnerability) int {
+	known := make(map[string]bool, len(findings))
+	for _, v := range findings {
+		known[v.Key] = true
+	}
+	n := 0
+	for _, e := range entries {
+		if !known[e.Key] {
+			n++
+		}
+	}
+	return n
 }
 
 // openVEXDoc decodes an OpenVEX v0.2.0 document with go-vex.

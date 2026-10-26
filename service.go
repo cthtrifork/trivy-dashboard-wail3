@@ -296,7 +296,7 @@ func (s *ScanService) VEXImport(image, doc string, markRest bool) (trivy.ImportR
 		return rep, err
 	}
 	if len(entries) == 0 {
-		return rep, errors.New("no statement in the document matched a finding of this scan")
+		return rep, errors.New("no valid statement in the document: " + strings.Join(rep.Warnings, "; "))
 	}
 	if err := s.vex.SetMany(image, entries); err != nil {
 		return rep, err

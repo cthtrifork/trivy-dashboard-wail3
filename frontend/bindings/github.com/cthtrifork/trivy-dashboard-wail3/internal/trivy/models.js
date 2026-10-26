@@ -620,7 +620,7 @@ export class ImportReport {
         }
         if (!("skipped" in $$source)) {
             /**
-             * statements that matched nothing or were invalid
+             * statements kept as they are because no finding of this scan matched them
              * @member
              * @type {number}
              */
