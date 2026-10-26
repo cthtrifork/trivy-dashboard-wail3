@@ -14,7 +14,8 @@ export const tierStyle = (tier) => ({ "--c": `var(${TIER_COLOR[tier]})`, "--on":
 export const COLUMN_HELP = {
   priority: "Our own ranking: exploitation evidence (CISA KEV, EPSS) first, then reachability and severity. Higher number = fix sooner.",
   severity: "Severity rating from the vulnerability database (Critical, High, Medium, Low).",
-  score: "CVSS base score, 0 to 10. How bad the flaw is in the worst case, not how likely it is to be exploited.",
+  score:
+    "CVSS base score, 0 to 10, from Red Hat, else NVD, else the highest any source published. How bad the flaw is in the worst case, not how likely it is to be exploited.",
   epss: "EPSS: estimated probability that the flaw is exploited in the wild within the next 30 days.",
   signals: "KEV = listed by CISA as known exploited. VEX = a statement you recorded about this finding.",
   estimated: "No CVSS score is published; this is the lowest score of the severity band.",

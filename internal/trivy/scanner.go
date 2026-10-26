@@ -483,6 +483,32 @@ func ranksBefore(a, b *Vulnerability) bool {
 	return a.Score > b.Score
 }
 
+// pickScore prefers Red Hat's CVSS score (v3, else v2), then NVD's, then the highest score any source
+// published. Sources disagree by several points (one CVE carries 9.1 and 5.3), and the maximum alone
+// would show 9.1 next to a MEDIUM rating.
+func pickScore(cvss map[string]struct {
+	V3Vector string
+	V2Vector string
+	V3Score  float64
+	V2Score  float64
+}) float64 {
+	for _, src := range []string{"redhat", "nvd"} {
+		if c, ok := cvss[src]; ok {
+			if c.V3Score > 0 {
+				return c.V3Score
+			}
+			if c.V2Score > 0 {
+				return c.V2Score
+			}
+		}
+	}
+	var score float64
+	for _, c := range cvss {
+		score = max(score, c.V3Score, c.V2Score)
+	}
+	return score
+}
+
 // pickVector prefers NVD's CVSS v3 vector, then any v3, then v2.
 func pickVector(cvss map[string]struct {
 	V3Vector string
