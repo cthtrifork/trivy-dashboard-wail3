@@ -53,6 +53,9 @@ async function run() {
     username: opts.username,
     password: opts.password,
     ignoreUnfixed: opts.ignoreUnfixed,
+    showSuppressed: opts.showSuppressed,
+    showWillNotFix: !opts.ignoreWillNotFix,
+    showNotAffected: !opts.ignoreNotAffected,
     trivyImage: opts.trivyImage.trim(),
     ignorePolicy: opts.ignorePolicy,
   };

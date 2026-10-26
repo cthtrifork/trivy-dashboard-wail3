@@ -21,6 +21,11 @@ type ScanRequest struct {
 	Username      string `json:"username"`
 	Password      string `json:"password"`
 	IgnoreUnfixed bool   `json:"ignoreUnfixed"`
+	// Findings Trivy hides by default. These are "show" flags so the zero value is the default:
+	// suppressed (VEX/ignore-file) findings and the will_not_fix and not_affected statuses stay out.
+	ShowSuppressed  bool `json:"showSuppressed"`
+	ShowWillNotFix  bool `json:"showWillNotFix"`
+	ShowNotAffected bool `json:"showNotAffected"`
 	// TrivyImage selects the Trivy image or version to scan with. Empty means the default.
 	TrivyImage string `json:"trivyImage"`
 	// IgnorePolicy is the source of a Rego policy passed to Trivy's --ignore-policy: findings for
@@ -29,6 +34,18 @@ type ScanRequest struct {
 	// MarkUnderInvestigation records an under_investigation VEX assessment for every
 	// finding that has none after the scan (handled by the service, which owns the store).
 	MarkUnderInvestigation bool `json:"markUnderInvestigation"`
+}
+
+// ignoreStatus is the --ignore-status value: will_not_fix and not_affected unless shown.
+func (r ScanRequest) ignoreStatus() string {
+	var ignore []string
+	if !r.ShowWillNotFix {
+		ignore = append(ignore, "will_not_fix")
+	}
+	if !r.ShowNotAffected {
+		ignore = append(ignore, "not_affected")
+	}
+	return strings.Join(ignore, ",")
 }
 
 // Vulnerability is one finding, flattened from trivy's JSON report.
@@ -295,6 +312,12 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	job.Flags = []string{"--skip-db-update", "--format", "json", "--scanners", "vuln", "--list-all-pkgs"}
 	if req.IgnoreUnfixed {
 		job.Flags = append(job.Flags, "--ignore-unfixed")
+	}
+	if req.ShowSuppressed {
+		job.Flags = append(job.Flags, "--show-suppressed")
+	}
+	if ignore := req.ignoreStatus(); ignore != "" {
+		job.Flags = append(job.Flags, "--ignore-status", ignore)
 	}
 	job.IgnorePolicy = policy // only the vulnerability report is filtered, not the SBOM
 	vulnJSON, err := s.engine().RunTrivy(ctx, job, logLine)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -121,5 +122,34 @@ func TestDependencyGraph(t *testing.T) {
 	}
 	if len(n["lo"].Parents) != 2 {
 		t.Fatalf("lo parents: %v", n["lo"].Parents)
+	}
+}
+
+func TestScanFlagsHideNoiseByDefault(t *testing.T) {
+	for _, tc := range []struct {
+		req  ScanRequest
+		want string
+	}{
+		{ScanRequest{}, "will_not_fix,not_affected"},
+		{ScanRequest{ShowWillNotFix: true}, "not_affected"},
+		{ScanRequest{ShowNotAffected: true}, "will_not_fix"},
+		{ScanRequest{ShowWillNotFix: true, ShowNotAffected: true}, ""},
+	} {
+		if got := tc.req.ignoreStatus(); got != tc.want {
+			t.Errorf("%+v: ignoreStatus = %q, want %q", tc.req, got, tc.want)
+		}
+	}
+}
+
+func TestRunArgsDisableTelemetryAndGoOffline(t *testing.T) {
+	t.Setenv("CONTAINER_HOST", "unix:///run/podman/podman.sock")
+	args, err := (&PodmanEngine{}).runArgs(TrivyJob{Image: "alpine:3"}, "n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"--disable-telemetry", "--offline-scan", "--severity-source", "--skip-version-check"} {
+		if !slices.Contains(args, f) {
+			t.Errorf("missing %s in %v", f, args)
+		}
 	}
 }

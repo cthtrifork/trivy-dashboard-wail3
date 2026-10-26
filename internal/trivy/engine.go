@@ -219,7 +219,9 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 		args = append(args, "-e", "TRIVY_JAVA_DB_REPOSITORY")
 	}
 	// --skip-version-check: no "newer Trivy available" lookup; the version is pinned by us.
-	trivyArgs := []string{"image", "--cache-dir", cacheMount, "--skip-version-check"}
+	// --severity-source redhat,auto prefers Red Hat severities, then the vendor default.
+	// --disable-telemetry and --offline-scan keep Trivy from phoning home beyond the DB download.
+	trivyArgs := []string{"image", "--cache-dir", cacheMount, "--skip-version-check", "--disable-telemetry", "--offline-scan", "--severity-source", "redhat,auto"}
 	if job.IgnorePolicy != "" {
 		// The policy travels as an environment variable and is written to a file inside the
 		// container, so it works with a remote podman too (a bind mount would need the file on
