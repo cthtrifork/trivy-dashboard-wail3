@@ -98,7 +98,6 @@ await page.click("#vex-close");
 
 // Import the document back: the dialog reports what matched.
 await page.click("#vex-menu-btn");
-await shot("03a0-export-menu");
 await page.click("#vex-menu-import");
 // A broken document first: the editor flags the syntax error inline.
 await setEditor("#vex-paste", exported.replace('"statements": [', '"statements" [').split("\n").slice(0, 14).join("\n"));
@@ -107,7 +106,6 @@ await page.hover("#vex-paste .cm-lint-marker-error"); // show the message toolti
 await shot("03a-priorities-import-error");
 await setEditor("#vex-paste", exported);
 await page.check("#vex-mark-rest");
-await shot("03a2-priorities-import-paste");
 await page.click("#vex-apply");
 await page.waitForSelector("#vex-import-log");
 await shot("03b-priorities-import-openvex");
