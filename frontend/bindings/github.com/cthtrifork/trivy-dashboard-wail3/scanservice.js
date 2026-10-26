@@ -206,14 +206,16 @@ export function VEXExport(image, author, role) {
  * scan of the image and saves the matching assessments. A statement replaces
  * the stored assessment of the finding it matches; other stored assessments are
  * kept. With markRest, findings still without an assessment afterwards are
- * marked under_investigation.
+ * marked under_investigation; a non-empty minSeverity limits that to findings
+ * of that severity or worse.
  * @param {string} image
  * @param {string} doc
  * @param {boolean} markRest
+ * @param {string} minSeverity
  * @returns {$CancellablePromise<trivy$0.ImportReport>}
  */
-export function VEXImport(image, doc, markRest) {
-    return $Call.ByID(494835202, image, doc, markRest).then(/** @type {($result: any) => any} */(($result) => {
+export function VEXImport(image, doc, markRest, minSeverity) {
+    return $Call.ByID(494835202, image, doc, markRest, minSeverity).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType14($result);
     }));
 }

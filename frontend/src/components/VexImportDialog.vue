@@ -6,6 +6,8 @@ import { ScanService, result, loadVEX, errText } from "../store.js";
 const dlg = ref(null);
 const paste = ref("");
 const markRest = ref(false);
+const minSeverity = ref("");
+const imported = ref(false);
 const busy = ref(false);
 const error = ref("");
 // What the last import did, one line per event, newest import only.
@@ -34,12 +36,16 @@ function open() {
   error.value = "";
   report.value = null;
   paste.value = "";
+  imported.value = false;
   dlg.value.showModal();
 }
 
 async function loadFile(ev) {
   const f = ev.target.files?.[0];
-  if (f) paste.value = await f.text();
+  if (f) {
+    paste.value = await f.text();
+    imported.value = false;
+  }
   ev.target.value = "";
 }
 
@@ -53,9 +59,9 @@ async function apply() {
   busy.value = true;
   error.value = "";
   try {
-    report.value = await ScanService.VEXImport(result.value.image, doc, markRest.value);
+    report.value = await ScanService.VEXImport(result.value.image, doc, markRest.value, markRest.value ? minSeverity.value : "");
     await loadVEX();
-    paste.value = "";
+    imported.value = true;
   } catch (e) {
     error.value = errText(e);
   } finally {
@@ -76,6 +82,16 @@ defineExpose({ open });
     <label class="chk"
       ><input id="vex-mark-rest" v-model="markRest" type="checkbox" /> Mark findings the file does not cover as under investigation</label
     >
+    <label v-if="markRest" class="chk"
+      >Only findings of severity
+      <select id="vex-mark-min" v-model="minSeverity">
+        <option value="">any (all findings)</option>
+        <option value="CRITICAL">Critical</option>
+        <option value="HIGH">High or more</option>
+        <option value="MEDIUM">Medium or more</option>
+        <option value="LOW">Low or more</option>
+      </select></label
+    >
     <JsonBox
       v-model="paste"
       vex
@@ -85,7 +101,7 @@ defineExpose({ open });
     />
     <div class="dlg-actions">
       <label class="ghost file-btn">Choose file…<input type="file" accept=".json,application/json" hidden @change="loadFile" /></label>
-      <button type="button" id="vex-apply" :disabled="busy" @click="apply">{{ busy ? "Importing…" : "Import" }}</button>
+      <button type="button" id="vex-apply" :disabled="busy" @click="apply">{{ busy ? "Importing…" : imported ? "Reimport" : "Import" }}</button>
     </div>
     <div v-if="error" class="vex-log-line warn" id="vex-import-error">
       <span class="ico">!</span><span>{{ error }}</span>

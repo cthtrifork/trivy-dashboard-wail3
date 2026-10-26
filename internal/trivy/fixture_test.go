@@ -280,7 +280,7 @@ func TestMarkUnassessedAndMerge(t *testing.T) {
 	if _, err := st.Set(img, VEXEntry{Vulnerability: first.ID, Package: first.Package, Version: first.Installed, PURL: first.PURL, Status: "fixed"}); err != nil {
 		t.Fatal(err)
 	}
-	n, err := st.MarkUnassessed(img, res.Vulnerabilities, "Jane")
+	n, err := st.MarkUnassessed(img, res.Vulnerabilities, "Jane", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,7 +299,7 @@ func TestMarkUnassessedAndMerge(t *testing.T) {
 			t.Errorf("bad placeholder %+v", e)
 		}
 	}
-	if n, _ := st.MarkUnassessed(img, res.Vulnerabilities, ""); n != 0 {
+	if n, _ := st.MarkUnassessed(img, res.Vulnerabilities, "", ""); n != 0 {
 		t.Errorf("second run marked %d, want 0", n)
 	}
 
@@ -338,7 +338,7 @@ func TestMarkUnassessedAndMerge(t *testing.T) {
 	if err := st2.SetMany(img, entries); err != nil {
 		t.Fatal(err)
 	}
-	if n, _ := st2.MarkUnassessed(img, res.Vulnerabilities, ""); n != len(keys)-len(entries)+1 {
+	if n, _ := st2.MarkUnassessed(img, res.Vulnerabilities, "", ""); n != len(keys)-len(entries)+1 {
 		t.Errorf("marked %d after import, want %d", n, len(keys)-len(entries)+1)
 	}
 }
@@ -380,5 +380,37 @@ func TestVEXStoreClear(t *testing.T) {
 	}
 	if got, _ := st.List("docker.io/library/traefik:3"); len(got) != 0 {
 		t.Fatalf("still %d entries after Clear", len(got))
+	}
+}
+
+// A minimum severity limits which uncovered findings are marked.
+func TestMarkUnassessedMinSeverity(t *testing.T) {
+	res, err := fixtureScanner().Scan(context.Background(), ScanRequest{Image: "docker.io/library/traefik:3.7.13"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const img = "docker.io/library/traefik:3.7.13"
+	want := map[string]bool{}
+	for _, v := range res.Vulnerabilities {
+		if severityRank[v.Severity] <= severityRank["HIGH"] {
+			want[v.Key] = true
+		}
+	}
+	if len(want) == 0 || len(want) == len(res.Vulnerabilities) {
+		t.Skip("fixture has no severity spread")
+	}
+	st := &VEXStore{Path: filepath.Join(t.TempDir(), "vex.json")}
+	n, err := st.MarkUnassessed(img, res.Vulnerabilities, "", "high")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != len(want) {
+		t.Fatalf("marked %d, want %d", n, len(want))
+	}
+	got, _ := st.List(img)
+	for _, e := range got {
+		if !want[e.Key] {
+			t.Errorf("marked a finding below HIGH: %+v", e)
+		}
 	}
 }
