@@ -59,6 +59,7 @@ The container is headless only: `CGO_ENABLED=0` and `GOFLAGS=-tags=server` are s
 ## Troubleshooting
 
 - *"unable to connect to frontend server"*: Vite is not up; run `make dev` rather than starting `air` by hand.
+- *"The connection was reset" on localhost:8080* (Zed, Docker-published ports): the app must not bind only to the container's loopback. `devcontainer.json` sets `WAILS_SERVER_HOST=0.0.0.0` for that; rebuild the container if yours predates it, or run `WAILS_SERVER_HOST=0.0.0.0 make dev`.
 - *Port in use*: `WAILS_SERVER_PORT=9090 make dev`.
 - Going through a forwarded URL other than `localhost` (Codespaces web URL) can trip Wails' loopback `Host` check; use the editor's local port forward instead.
 - *Podman storage errors* (overlay on an unsupported filesystem, common on Docker Desktop): `printf '[storage]\ndriver = "vfs"\n' > ~/.config/containers/storage.conf` (slower, always works), then `podman system reset`.
