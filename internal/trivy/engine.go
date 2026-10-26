@@ -61,6 +61,13 @@ const (
 	// cacheMount is where the Trivy cache sits inside the scanner container. It is passed to
 	// Trivy as --cache-dir so the location never depends on the image's HOME.
 	cacheMount = "/root/.cache/trivy"
+	// The ignore policy and ignore file travel into the scanner container as environment
+	// variables; the container writes them to these paths for Trivy's --ignore-policy and
+	// --ignorefile.
+	ignorePolicyEnv  = "SCANNER_IGNORE_POLICY"
+	ignorePolicyPath = "/tmp/ignore.rego"
+	ignoreFileEnv    = "SCANNER_IGNORE_FILE"
+	ignoreFilePath   = "/tmp/ignorefile.yaml"
 	// DefaultCacheSource is the podman named volume used when there is no better default: a
 	// remote podman socket, or no user cache directory. A named volume lives wherever podman
 	// itself runs, so it is right for any podman, local or remote.
@@ -96,6 +103,10 @@ type TrivyJob struct {
 	Flags      []string // e.g. --format json --scanners vuln
 	Username   string   // optional registry credentials
 	Password   string
+	// IgnorePolicy is the source of a Rego ignore policy for `--ignore-policy`; empty means none.
+	IgnorePolicy string
+	// IgnoreFile is the source of a .trivyignore.yaml for `--ignorefile`; empty means none.
+	IgnoreFile string
 }
 
 // Engine is whatever actually runs Trivy and talks to registries.
@@ -213,9 +224,30 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 		args = append(args, "-e", "TRIVY_JAVA_DB_REPOSITORY")
 	}
 	// --skip-version-check: no "newer Trivy available" lookup; the version is pinned by us.
-	// --severity-source redhat,auto prefers Red Hat severities, then the vendor default.
+	// --vuln-severity-source redhat,auto prefers Red Hat severities, then the vendor default.
 	// --disable-telemetry and --offline-scan keep Trivy from phoning home beyond the DB download.
-	args = append(args, image, "image", "--cache-dir", cacheMount, "--skip-version-check", "--disable-telemetry", "--offline-scan", "--severity-source", "redhat,auto")
+	trivyArgs := []string{"image", "--cache-dir", cacheMount, "--skip-version-check", "--disable-telemetry", "--offline-scan", "--vuln-severity-source", "redhat,auto"}
+	// The policy and ignore file travel as environment variables and are written to files inside
+	// the container, so they work with a remote podman too (a bind mount would need the files on
+	// the podman host). The wrapper replaces the image's entrypoint, hence "trivy" below.
+	var script string
+	for _, f := range []struct{ text, env, path, flag string }{
+		{job.IgnorePolicy, ignorePolicyEnv, ignorePolicyPath, "--ignore-policy"},
+		{job.IgnoreFile, ignoreFileEnv, ignoreFilePath, "--ignorefile"},
+	} {
+		if f.text == "" {
+			continue
+		}
+		args = append(args, "-e", f.env)
+		script += `printf '%s' "$` + f.env + `" > ` + f.path + ` && `
+		trivyArgs = append(trivyArgs, f.flag, f.path)
+	}
+	if script != "" {
+		args = append(args, "--entrypoint", "sh", image, "-c", script+`exec trivy "$@"`, "sh")
+	} else {
+		args = append(args, image)
+	}
+	args = append(args, trivyArgs...)
 	args = append(args, job.Flags...)
 	if job.Image != "" { // a DB-only job has no image
 		args = append(args, job.Image)
@@ -256,6 +288,12 @@ func (p *PodmanEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(stri
 	env := os.Environ()
 	if job.Username != "" {
 		env = append(env, "TRIVY_USERNAME="+job.Username, "TRIVY_PASSWORD="+job.Password)
+	}
+	if job.IgnorePolicy != "" {
+		env = append(env, ignorePolicyEnv+"="+job.IgnorePolicy)
+	}
+	if job.IgnoreFile != "" {
+		env = append(env, ignoreFileEnv+"="+job.IgnoreFile)
 	}
 
 	cmd := exec.CommandContext(ctx, p.bin(), args...)

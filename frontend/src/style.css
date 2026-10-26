@@ -114,6 +114,21 @@ summary {
   border-radius: 8px;
   box-shadow: 0 8px 24px #0006;
 }
+.opts-body .policy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--mute);
+  font-size: 12px;
+}
+.opts-body .field-err {
+  color: var(--CRITICAL);
+}
+.opts-body textarea {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  resize: vertical;
+}
 #meta {
   margin-top: 8px;
   color: var(--mute);
