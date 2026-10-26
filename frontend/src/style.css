@@ -714,7 +714,7 @@ textarea {
 .ptable-head,
 .prow-main {
   display: grid;
-  grid-template-columns: 92px 92px minmax(0, 1fr) 150px 90px;
+  grid-template-columns: 92px 128px minmax(0, 1fr) 150px 90px;
   gap: 12px;
   align-items: center;
   padding: 0 12px;
@@ -783,6 +783,10 @@ textarea {
   background: var(--c);
 }
 /* A band-floor fallback, not a reported CVSS score: italic number, "est." tag and a hatched bar. */
+.meter b,
+.meter em {
+  white-space: nowrap;
+}
 .meter em {
   font-size: 10px;
   font-style: normal;
