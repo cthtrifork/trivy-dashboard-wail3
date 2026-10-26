@@ -133,13 +133,20 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
         </tr>
         <tr v-if="expanded.has(rowKey(v))" class="detail">
           <td colspan="10">
-            <p class="attack">{{ v.attack }}</p>
-            {{ `Target: ${v.target}\nStatus: ${v.status || "—"}\n\n${v.description || "No description."}\n\n` }}
-            <template v-if="detailUrl(v)"
-              ><a class="mono" :href="detailUrl(v)" @click.prevent="open(detailUrl(v))">{{ detailUrl(v) }}</a
-              >{{ "\n" }}</template
-            >
-            <VexBox :v="v" />
+            <div class="vdetail">
+              <p class="attack">{{ v.attack }}</p>
+              <dl class="vmeta">
+                <dt>Target</dt>
+                <dd>{{ v.target }}</dd>
+                <dt>Status</dt>
+                <dd>{{ v.status || "—" }}</dd>
+              </dl>
+              <div class="vdesc">{{ v.description || "No description." }}</div>
+              <p v-if="detailUrl(v)">
+                <a class="mono" :href="detailUrl(v)" @click.prevent="open(detailUrl(v))">{{ detailUrl(v) }}</a>
+              </p>
+              <VexBox :v="v" />
+            </div>
           </td>
         </tr>
       </tbody>

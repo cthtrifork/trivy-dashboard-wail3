@@ -401,7 +401,35 @@ tr.row:hover td {
 }
 tr.detail td {
   background: var(--bg);
-  white-space: pre-wrap;
+}
+.vdetail {
+  max-width: 90ch;
+  padding: 12px 8px 16px 16px;
+  border-left: 2px solid var(--line);
+  line-height: 1.55;
+  white-space: normal;
+}
+.vdetail p {
+  margin: 0 0 12px;
+}
+.vmeta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0 0 12px;
+  color: var(--mute);
+}
+.vmeta dt {
+  font-weight: 600;
+}
+.vmeta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.vdesc {
+  margin: 0 0 12px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 tr.detail a {
   color: var(--accent);
