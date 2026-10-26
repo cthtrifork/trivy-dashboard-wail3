@@ -78,7 +78,6 @@ await page.waitForTimeout(400);
 
 await page.click("#export-vex-btn");
 await page.fill("#vex-author", "Security Team");
-await page.fill("#vex-role", "Platform Security");
 await page.waitForFunction(() => document.querySelector("#vex-preview").value.includes("@context"));
 // The document and its statements are stamped with the current time, and the document id is a hash
 // over them; pin all of it so reruns produce identical pixels.

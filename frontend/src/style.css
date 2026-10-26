@@ -939,6 +939,9 @@ dialog::backdrop {
   gap: 10px;
   margin: 10px 0;
 }
+.form-grid.one {
+  grid-template-columns: 1fr;
+}
 .form-grid label {
   display: flex;
   flex-direction: column;

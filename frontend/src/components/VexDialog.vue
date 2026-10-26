@@ -5,7 +5,7 @@ import { ScanService, result, vex, loadVEX, errText, lsGet, lsSet } from "../sto
 
 const dlg = ref(null);
 const preview = ref(null);
-const form = reactive({ author: lsGet("vex-author"), role: lsGet("vex-role") });
+const form = reactive({ author: lsGet("vex-author") });
 const text = ref("");
 const msg = ref("");
 
@@ -26,7 +26,7 @@ const coverage = computed(() => {
 async function refresh() {
   msg.value = "";
   try {
-    text.value = await ScanService.VEXExport(result.value.image, form.author, form.role);
+    text.value = await ScanService.VEXExport(result.value.image, form.author, "");
   } catch (e) {
     text.value = "";
     msg.value = errText(e);
@@ -65,9 +65,8 @@ async function copy() {
 
 async function save() {
   lsSet("vex-author", form.author);
-  lsSet("vex-role", form.role);
   try {
-    const path = await ScanService.VEXSave(result.value.image, form.author, form.role);
+    const path = await ScanService.VEXSave(result.value.image, form.author, "");
     msg.value = path ? "Saved to " + path : "";
     return;
   } catch (e) {
@@ -102,9 +101,8 @@ defineExpose({ open });
         Mark the {{ coverage.none }} as under investigation
       </button>
     </div>
-    <div class="form-grid">
+    <div class="form-grid one">
       <label>Author <input id="vex-author" v-model="form.author" placeholder="Your name or organisation" /></label>
-      <label>Role <input id="vex-role" v-model="form.role" placeholder="e.g. Security Engineer (optional)" /></label>
     </div>
     <JsonBox ta-id="vex-preview" ref="preview" :model-value="text" readonly :rows="14" />
     <div id="vex-msg" class="kv">{{ msg }}</div>
