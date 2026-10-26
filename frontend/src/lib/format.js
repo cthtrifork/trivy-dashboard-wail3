@@ -2,7 +2,7 @@ import { Browser } from "@wailsio/runtime";
 export const pct = (x) => (x * 100 < 0.1 ? "<0.1%" : (x * 100).toFixed(x >= 0.1 ? 0 : 1) + "%");
 
 export const TIER_COLOR = { "Act now": "--CRITICAL", "Fix soon": "--HIGH", Plan: "--MEDIUM", Monitor: "--UNKNOWN" };
-export const tierStyle = (tier) => ({ "--c": `var(${TIER_COLOR[tier]})` });
+export const tierStyle = (tier) => ({ "--c": `var(${TIER_COLOR[tier]})`, "--on": `var(--on${TIER_COLOR[tier]})` });
 
 export const STATUS_LABEL = {
   affected: "Affected",
