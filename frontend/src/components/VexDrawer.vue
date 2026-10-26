@@ -12,6 +12,13 @@ const IMPACT_PLACEHOLDER = {
   fixed: "Describe the fix, e.g. upgraded to 3.1 and redeployed on 2026-10-20",
   under_investigation: "Say what you know so far and what is still being checked",
 };
+const JUSTIFICATION_PLACEHOLDER = {
+  component_not_present: "Explain why, e.g. the package is only a build dependency and is removed from the final image",
+  vulnerable_code_not_present: "Explain why, e.g. the affected function is compiled out or patched in our build",
+  vulnerable_code_not_in_execute_path: "Explain why, e.g. we never call the affected API or load that module",
+  vulnerable_code_cannot_be_controlled_by_adversary: "Explain why, e.g. the input only comes from our own trusted config",
+  inline_mitigations_already_exist: "Describe the mitigation, e.g. a WAF rule or sandbox blocks the attack path",
+};
 const PRESETS = [
   { label: "30 days", days: 30 },
   { label: "90 days", days: 90 },
@@ -23,6 +30,9 @@ const form = reactive({ status: "", justification: "", impact: "", action: "", a
 const err = ref("");
 const saving = ref(false);
 
+const impactPlaceholder = computed(
+  () => (form.status === "not_affected" && JUSTIFICATION_PLACEHOLDER[form.justification]) || IMPACT_PLACEHOLDER[form.status],
+);
 const existing = computed(() => (v.value ? vex.value.get(v.value.key) : undefined));
 const meaning = computed(() => (v.value ? glance(v.value) : null));
 const link = computed(() => (v.value ? detailUrl(v.value) : ""));
@@ -222,7 +232,7 @@ async function clear() {
               id="vex-impact"
               v-model="form.impact"
               rows="4"
-              :placeholder="IMPACT_PLACEHOLDER[form.status]"
+              :placeholder="impactPlaceholder"
             ></textarea>
           </div>
         </div>
