@@ -201,7 +201,7 @@ func TestFixtureSBOMFallback(t *testing.T) {
 
 // A real-world OpenVEX file (versionless subcomponent PURLs) is applied to the
 // recorded scan: zlib, musl + musl-utils, stdlib and (no subcomponents) all four
-// otel packages match; the docker/cli statement matches nothing and is skipped.
+// otel packages match; the docker/cli statement matches nothing and is kept as it is.
 func TestImportOpenVEXAgainstFixture(t *testing.T) {
 	res, err := fixtureScanner().Scan(context.Background(), ScanRequest{Image: "docker.io/library/traefik:3.7.13"})
 	if err != nil {
@@ -215,7 +215,7 @@ func TestImportOpenVEXAgainstFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(entries) != 8 || rep.Imported != 8 || rep.Skipped != 1 {
+	if len(entries) != 9 || rep.Imported != 8 || rep.Skipped != 1 {
 		t.Fatalf("entries=%d report=%+v", len(entries), rep)
 	}
 	for _, e := range entries {
@@ -316,7 +316,8 @@ func TestMarkUnassessedAndMerge(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, _ = st.List(img)
-	if len(got) != len(keys) {
+	// the one statement that matches no finding is kept too, so the export holds it
+	if len(got) != len(keys)+1 {
 		t.Fatalf("import changed the entry count to %d", len(got))
 	}
 	imported := map[string]bool{}
@@ -337,8 +338,8 @@ func TestMarkUnassessedAndMerge(t *testing.T) {
 	if err := st2.SetMany(img, entries); err != nil {
 		t.Fatal(err)
 	}
-	if n, _ := st2.MarkUnassessed(img, res.Vulnerabilities, ""); n != len(keys)-len(entries) {
-		t.Errorf("marked %d after import, want %d", n, len(keys)-len(entries))
+	if n, _ := st2.MarkUnassessed(img, res.Vulnerabilities, ""); n != len(keys)-len(entries)+1 {
+		t.Errorf("marked %d after import, want %d", n, len(keys)-len(entries)+1)
 	}
 }
 
