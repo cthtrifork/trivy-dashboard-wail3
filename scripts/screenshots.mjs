@@ -76,7 +76,7 @@ await shot("02-priorities-vex-editor");
 await drawer.locator('.drawer-actions button:has-text("Save")').click();
 await page.waitForTimeout(400);
 
-await page.click("#vex-export-btn");
+await page.click("#export-vex-btn");
 await page.fill("#vex-author", "Security Team");
 await page.fill("#vex-role", "Platform Security");
 await page.waitForFunction(() => document.querySelector("#vex-preview").value.includes("@context"));
@@ -89,7 +89,17 @@ await page.evaluate(() => {
     .replace(/(openvex\.dev\/docs\/public\/vex-)[0-9a-f]+/g, "$1" + "0".repeat(64));
 });
 await shot("03-priorities-export-openvex");
+const exported = await page.inputValue("#vex-preview");
 await page.click("#vex-close");
+
+// Import the document back: the dialog reports what matched.
+await page.click("#vex-import-btn");
+await page.fill("#vex-paste", exported);
+await page.check("#vex-mark-rest");
+await page.click("#vex-apply");
+await page.waitForSelector("#vex-import-log");
+await shot("03b-priorities-import-openvex");
+await page.click("#vex-import-close");
 
 // ---- Vulnerabilities ----
 await tab("vulns");

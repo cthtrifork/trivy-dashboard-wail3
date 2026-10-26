@@ -8,7 +8,7 @@ import VexBox from "./VexBox.vue";
 import SuppressedRow from "./SuppressedRow.vue";
 import { useVirtualList } from "../lib/virtual.js";
 
-const emit = defineEmits(["export", "import"]);
+const emit = defineEmits(["import"]);
 const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false, includeLow: false });
 const TIERS = Object.keys(TIER_COLOR);
 const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
@@ -131,7 +131,6 @@ defineExpose({ count: computed(() => pool.value.length) });
     <label class="chk"><input type="checkbox" id="prio-low" v-model="prio.includeLow" /> Include low-risk (Monitor)</label>
     <label class="chk"><input type="checkbox" id="prio-fixable" v-model="prio.fixableOnly" /> Only with a fix</label>
     <button type="button" class="ghost" id="vex-import-btn" @click="emit('import')">Import VEX</button>
-    <button type="button" class="ghost" id="vex-export-btn" @click="emit('export')">Edit/Export VEX ({{ vex.size }})</button>
     <span id="prio-note">{{ note }}</span>
   </div>
   <div id="prio-list" class="scroll" ref="scroller">

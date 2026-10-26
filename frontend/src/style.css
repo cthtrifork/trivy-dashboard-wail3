@@ -165,6 +165,11 @@ button:disabled {
   opacity: 0.5;
   cursor: default;
 }
+#export-vex-btn {
+  background: var(--ok);
+  color: #04140c;
+  white-space: nowrap;
+}
 #cancel-btn {
   background: var(--CRITICAL);
 }
@@ -1007,7 +1012,6 @@ dialog::backdrop {
 .vex-log-line.info .ico {
   color: var(--mute);
 }
-#vex-export-btn,
 #vex-import-btn {
   white-space: nowrap;
 }

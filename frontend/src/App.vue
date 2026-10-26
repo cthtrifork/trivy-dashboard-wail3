@@ -4,6 +4,7 @@ import {
   ScanService,
   sevStyle,
   result,
+  vex,
   image,
   recent,
   opts,
@@ -290,6 +291,9 @@ onMounted(init);
           </div>
         </div>
         <button id="scan-btn" type="submit" :disabled="scanning">Scan</button>
+        <button id="export-vex-btn" type="button" :disabled="!result" title="Edit and export VEX assessments" @click="vexDialog.open()">
+          Export VEX<template v-if="vex.size"> ({{ vex.size }})</template>
+        </button>
         <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
       </div>
     </form>
@@ -319,7 +323,7 @@ onMounted(init);
 
   <main>
     <section id="tab-prio" class="panel" :class="{ active: tab === 'prio' }">
-      <PrioritiesPanel ref="prio" @export="vexDialog.open()" @import="vexImport.open()" />
+      <PrioritiesPanel ref="prio" @import="vexImport.open()" />
     </section>
     <section id="tab-vulns" class="panel" :class="{ active: tab === 'vulns' }"><VulnsPanel /></section>
     <section id="tab-deps" class="panel" :class="{ active: tab === 'deps' }"><DepsPanel /></section>
