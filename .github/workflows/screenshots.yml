@@ -315,6 +315,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH: bot/update-screenshots
         run: |
+          # Chrome's anti-aliasing can move a handful of pixels between runs (e.g. an edge in the
+          # dependency graph). Treat an image that is identical within a 5% colour fuzz as unchanged,
+          # so noise alone does not open a PR. Skipped when ImageMagick is missing.
+          if command -v compare >/dev/null; then
+            git diff --name-only -- docs/screenshots | while read -r f; do
+              git show "HEAD:$f" > "$RUNNER_TEMP/old.png" 2>/dev/null || continue
+              if [ "$(compare -metric AE -fuzz 5% "$RUNNER_TEMP/old.png" "$f" null: 2>&1)" = "0" ]; then
+                echo "Ignoring render noise in $f"
+                git checkout -- "$f"
+              fi
+            done
+          fi
           if [ -z "$(git status --porcelain -- docs/screenshots)" ]; then
             echo "Screenshots are up to date." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
