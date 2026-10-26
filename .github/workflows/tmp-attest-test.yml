@@ -19,7 +19,7 @@ jobs:
           mkdir dist
           echo "tmp attest test $GITHUB_SHA" > dist/trivy-scanner_linux_amd64
           cat > dist/trivy-scanner_v0.0.0-tmp.sbom.cdx.json <<'J'
-          {"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"components":[]}
+          {"$schema":"http://cyclonedx.org/schema/bom-1.5.schema.json","bomFormat":"CycloneDX","specVersion":"1.5","serialNumber":"urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79","version":1,"metadata":{"timestamp":"2026-10-26T00:00:00Z","component":{"type":"application","name":"trivy-scanner","bom-ref":"app"}},"components":[{"type":"library","name":"example","version":"1.0.0","bom-ref":"pkg:golang/example@1.0.0","purl":"pkg:golang/example@1.0.0"}]}
           J
 
       - name: Locate SBOM
