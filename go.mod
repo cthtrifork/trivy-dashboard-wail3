@@ -14,6 +14,7 @@ require (
 	github.com/package-url/packageurl-go v0.1.7
 	github.com/pandatix/go-cvss v0.6.4
 	github.com/wailsapp/wails/v3 v3.0.0-beta.34
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -30,5 +31,4 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -8,6 +8,12 @@ import {
   recent,
   opts,
   saveTrivyImage,
+  saveIgnorePolicy,
+  loadIgnorePolicyFile,
+  saveIgnoreFile,
+  loadIgnoreFile,
+  ignorePolicyError,
+  ignoreFileError,
   scanning,
   comparing,
   status,
@@ -182,6 +188,48 @@ onMounted(init);
             spellcheck="false"
             title="Empty uses the default version. Enter a version such as 0.77.0, or a full image reference."
             @change="saveTrivyImage"
+          />
+          <label class="policy"
+            >Ignore policy (Rego, <code>--ignore-policy</code>)
+            <textarea
+              id="ignore-policy"
+              v-model="opts.ignorePolicy"
+              rows="6"
+              placeholder="package trivy&#10;&#10;ignore if input.PkgName == &quot;linux-libc-dev&quot;"
+              autocomplete="off"
+              spellcheck="false"
+              title="Findings for which the policy defines ignore are left out of the scan. Empty means none."
+              @change="saveIgnorePolicy"
+            ></textarea>
+            <span v-if="ignorePolicyError" class="field-err" id="ignore-policy-err">{{ ignorePolicyError }}</span>
+          </label>
+          <input
+            id="ignore-policy-file"
+            type="file"
+            accept=".rego,text/plain"
+            title="Load the policy from a .rego file"
+            @change="loadIgnorePolicyFile($event.target.files[0])"
+          />
+          <label class="policy"
+            >Ignore file (<code>.trivyignore.yaml</code>, <code>--ignorefile</code>)
+            <textarea
+              id="ignore-file"
+              v-model="opts.ignoreFile"
+              rows="6"
+              placeholder="vulnerabilities:&#10;  - id: CVE-2024-12345&#10;    statement: Not reachable in our setup"
+              autocomplete="off"
+              spellcheck="false"
+              title="Vulnerabilities listed here are left out of the scan. Empty means none."
+              @change="saveIgnoreFile"
+            ></textarea>
+            <span v-if="ignoreFileError" class="field-err" id="ignore-file-err">{{ ignoreFileError }}</span>
+          </label>
+          <input
+            id="ignore-file-file"
+            type="file"
+            accept=".yaml,.yml,text/yaml,text/plain"
+            title="Load the ignore file from a .trivyignore.yaml file"
+            @change="loadIgnoreFile($event.target.files[0])"
           />
           <div class="opts-update">
             <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>
