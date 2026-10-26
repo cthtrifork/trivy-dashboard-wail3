@@ -1,6 +1,6 @@
 # UX design sheet
 
-One page describing how the UI looks and behaves, so new screens and components stay consistent. It documents what `frontend/src/style.css` and the components do today; when they change, change this sheet in the same PR. Screenshots live in `docs/screenshots/`.
+One page describing how the UI looks and behaves, so new screens and components stay consistent. It documents what `frontend/src/styles/` and the components do today; when they change, change this sheet in the same PR. Screenshots live in `docs/screenshots/`.
 
 ## Design intent
 
@@ -29,7 +29,7 @@ One page describing how the UI looks and behaves, so new screens and components 
 
 ## Tokens
 
-Defined as CSS custom properties on `:root` in `frontend/src/style.css`.
+Defined as CSS custom properties on `:root` in `frontend/src/styles/`.
 
 | Token | Dark | Light | Use |
 |---|---|---|---|

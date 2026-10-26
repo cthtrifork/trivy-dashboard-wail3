@@ -1,0 +1,88 @@
+/* Generic dialogs, form grids, JSON editor box and the VEX import dialog. */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 10px 0;
+}
+.form-grid.one {
+  grid-template-columns: 1fr;
+}
+.form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--mute);
+}
+.dlg-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+.json-box {
+  height: calc(var(--rows) * 1.45 * 13px + 14px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.file-btn {
+  cursor: pointer;
+}
+.vex-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+.vex-stats > div {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--mute);
+  font-size: 12px;
+}
+.vex-stats b {
+  display: block;
+  font-size: 18px;
+  color: var(--text);
+}
+.vex-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 200px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.vex-log-line {
+  display: flex;
+  gap: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.vex-log-line:last-child {
+  border-bottom: 0;
+}
+.vex-log-line .ico {
+  flex: none;
+  width: 14px;
+  text-align: center;
+  font-weight: 700;
+}
+.vex-log-line.ok .ico {
+  color: var(--ok);
+}
+.vex-log-line.warn .ico {
+  color: var(--HIGH);
+}
+.vex-log-line.skip .ico,
+.vex-log-line.info .ico {
+  color: var(--mute);
+}
+#vex-import-btn {
+  white-space: nowrap;
+}

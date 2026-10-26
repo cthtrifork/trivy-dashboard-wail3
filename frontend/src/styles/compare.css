@@ -1,0 +1,82 @@
+/* Compare tab. */
+.toolbar.wrap {
+  flex-wrap: wrap;
+}
+#cmp-repo {
+  min-width: 280px;
+}
+.sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  flex: none;
+}
+.side {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.side h4 {
+  margin: 0 0 2px;
+  font-size: 14px;
+  word-break: break-all;
+}
+.sevrow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 3px 0;
+  font-size: 13px;
+}
+.sevrow .sev {
+  min-width: 70px;
+  text-align: center;
+}
+.sevrow .n {
+  font-weight: 600;
+  min-width: 28px;
+  text-align: right;
+}
+.delta {
+  font-size: 12px;
+  font-weight: 600;
+}
+.delta.good {
+  color: #2fb344;
+}
+.delta.bad {
+  color: var(--CRITICAL);
+}
+.delta.flat {
+  color: var(--mute);
+}
+.verdict {
+  flex: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--c, var(--accent));
+}
+.chg {
+  display: inline-block;
+  min-width: 22px;
+  text-align: center;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 0 6px;
+  color: #fff;
+  background: var(--c);
+}
+.cmp-controls {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: none;
+}
+.cmp-table {
+  flex: 1;
+  min-height: 240px;
+}

@@ -1,0 +1,187 @@
+/* Header: brand, scan row, image field and recent list, VEX split button, options popover. */
+header {
+  padding: 10px 52px 16px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.head-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 32px;
+}
+.brand {
+  font-size: 15px;
+}
+.scan-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+.scan-row button {
+  height: 50px;
+  padding: 0 32px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.image-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+}
+#image {
+  width: 100%;
+  box-sizing: border-box;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 17px;
+  font-family: ui-monospace, monospace;
+}
+#recent-list {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  margin: 0;
+  padding: 6px 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px #0008;
+}
+#recent-list > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+#recent-list > div.active,
+#recent-list [role="option"]:hover {
+  background: var(--line);
+}
+#recent-list .recent-head,
+#recent-list .recent-hint {
+  cursor: default;
+  color: var(--mute);
+  font-size: 11px;
+}
+#recent-list .recent-head {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+#recent-list .recent-hint {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-bottom: 2px;
+}
+.recent-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: ui-monospace, monospace;
+}
+.recent-when {
+  color: var(--mute);
+  font-size: 12px;
+}
+#vex-split {
+  position: relative;
+  display: flex;
+}
+#vex-split button {
+  background: transparent;
+  color: var(--ok);
+  box-shadow: inset 0 0 0 1.5px var(--ok);
+  white-space: nowrap;
+}
+#vex-split button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+}
+#vex-split #export-vex-btn {
+  border-radius: 6px 0 0 6px;
+}
+#vex-split #vex-menu-btn {
+  border-radius: 0 6px 6px 0;
+  padding: 8px 10px;
+  margin-left: -1.5px;
+}
+#vex-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px #0004;
+}
+#vex-split #vex-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  box-shadow: none;
+  color: var(--text);
+}
+#cancel-btn {
+  background: var(--CRITICAL);
+}
+.opts-body {
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  width: 260px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px #0006;
+}
+.opts-body .policy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--mute);
+  font-size: 12px;
+}
+.opts-body .field-err {
+  color: var(--CRITICAL);
+}
+.opts-body textarea {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+#meta {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--mute);
+  font-size: 12px;
+}
+.opts-update {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  margin-top: 2px;
+}
+.opts-update button:disabled {
+  cursor: not-allowed;
+}
+.opts-update button,
+.opts-update .kv {
+  white-space: nowrap;
+}
