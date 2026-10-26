@@ -179,6 +179,50 @@ func TestInvalidTrivyImageIsRejectedBeforeAnyJob(t *testing.T) {
 	}
 }
 
+// failEngine fails every scan job the way Trivy does with an empty cache; a DB job fails with
+// the real cause.
+type failEngine struct{ *FixtureEngine }
+
+func (failEngine) RunTrivy(_ context.Context, job TrivyJob, _ func(string)) ([]byte, error) {
+	if slices.Contains(job.Flags, "--download-db-only") {
+		return nil, errors.New("pulling trivy-db: connection refused")
+	}
+	return nil, errors.New("--skip-db-update cannot be specified on the first run")
+}
+
+func TestScanFailureNamesTheDBDownloadError(t *testing.T) {
+	s := &Scanner{Engine: failEngine{NewFixtureEngine()}}
+	_, err := s.Scan(context.Background(), ScanRequest{Image: "alpine:3"})
+	if err == nil || !strings.Contains(err.Error(), "connection refused") {
+		t.Errorf("the download error must reach the user, got: %v", err)
+	}
+}
+
+func TestRunArgsProxyAndCABundle(t *testing.T) {
+	t.Setenv("HTTPS_PROXY", "http://127.0.0.1:3128")
+	t.Setenv("HTTP_PROXY", "")
+	t.Setenv("NO_PROXY", "corp.example")
+	t.Setenv("TRIVY_SCANNER_CA_BUNDLE", "/etc/ca.pem")
+	args, err := (&PodmanEngine{Cache: "my-cache"}).runArgs(TrivyJob{Image: "x"}, "n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"HTTPS_PROXY", "NO_PROXY", "host", "/etc/ca.pem:/etc/ssl/certs/ca-certificates.crt:ro"} {
+		if !slices.Contains(args, want) {
+			t.Errorf("missing %q in %v", want, args)
+		}
+	}
+	if slices.Contains(args, "HTTP_PROXY") || strings.Contains(strings.Join(args, " "), "3128") {
+		t.Errorf("unset variables are not forwarded and values stay out of argv: %v", args)
+	}
+
+	t.Setenv("HTTPS_PROXY", "http://proxy.corp.example:3128")
+	args, _ = (&PodmanEngine{Cache: "my-cache"}).runArgs(TrivyJob{Image: "x"}, "n")
+	if slices.Contains(args, "host") {
+		t.Errorf("a remote proxy does not need the host network: %v", args)
+	}
+}
+
 func TestIgnorePolicyAndFileOnlyFilterTheVulnerabilityScan(t *testing.T) {
 	r, s := newRec(t)
 	const policy = "package trivy\n\nignore if input.PkgName == \"x\"\n"
