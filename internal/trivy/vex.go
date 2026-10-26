@@ -29,6 +29,9 @@ var (
 type VEXEntry struct {
 	Key           string `json:"key"`
 	Vulnerability string `json:"vulnerability"`
+	// Description is the vulnerability description of an imported statement,
+	// kept so the next export writes it back.
+	Description   string `json:"description"`
 	Package       string `json:"package"`
 	Version       string `json:"version"`
 	PURL          string `json:"purl"`
@@ -104,7 +107,7 @@ func (e *VEXEntry) Validate() error {
 // earlier status).
 func (e VEXEntry) statement() vex.Statement {
 	st := vex.Statement{
-		Vulnerability: vex.Vulnerability{Name: vex.VulnerabilityID(e.Vulnerability)},
+		Vulnerability: vex.Vulnerability{Name: vex.VulnerabilityID(e.Vulnerability), Description: e.Description},
 		Status:        vex.Status(e.Status),
 	}
 	switch st.Status {
@@ -194,6 +197,9 @@ func (s *VEXStore) Set(image string, e VEXEntry) (VEXEntry, error) {
 	if f[repo] == nil {
 		f[repo] = map[string]VEXEntry{}
 	}
+	if old, ok := f[repo][e.Key]; ok && e.Description == "" {
+		e.Description = old.Description // the editor does not show it, so do not drop it
+	}
 	f[repo][e.Key] = e
 	return e, s.save(f)
 }
@@ -234,6 +240,12 @@ type DocMeta struct {
 	ID     string `json:"id"`
 	Author string `json:"author"`
 	Role   string `json:"role"`
+	// Version, Timestamp (RFC 3339, when the document was first issued) and
+	// Tooling are carried over so a re-export is the next version of the same
+	// document rather than a new one.
+	Version   int    `json:"version"`
+	Timestamp string `json:"timestamp"`
+	Tooling   string `json:"tooling"`
 }
 
 // AuthorPlaceholder stands in for the author until one is imported or typed, so
@@ -242,13 +254,15 @@ const AuthorPlaceholder = "<author>"
 
 // ExportOpenVEX renders entries as an OpenVEX document using go-vex, which
 // stamps the current spec version and derives the canonical document id.
-// A non-empty id (an imported document's @id) is kept; an empty author becomes
-// AuthorPlaceholder.
-func ExportOpenVEX(entries []VEXEntry, product, id, author, role string) ([]byte, error) {
+// A non-empty meta.ID (an imported document's @id) is kept, and so are its
+// timestamp and tooling; its version is incremented, since the export changes
+// the document. An empty author becomes AuthorPlaceholder.
+func ExportOpenVEX(entries []VEXEntry, product string, meta DocMeta) ([]byte, error) {
 	if len(entries) == 0 {
 		return nil, errors.New("no VEX assessments to export")
 	}
-	author = strings.TrimSpace(author)
+	id, role := meta.ID, meta.Role
+	author := strings.TrimSpace(meta.Author)
 	if author == "" {
 		author = AuthorPlaceholder
 	}
@@ -258,7 +272,15 @@ func ExportOpenVEX(entries []VEXEntry, product, id, author, role string) ([]byte
 	doc := vex.New()
 	doc.Author = author
 	doc.AuthorRole = strings.TrimSpace(role)
-	doc.Tooling = "Trivy Scanner (Wails)"
+	doc.Tooling = strings.TrimSpace(meta.Tooling)
+	if meta.Version > 0 {
+		doc.Version = meta.Version + 1
+		now := time.Now().UTC()
+		doc.LastUpdated = &now
+	}
+	if ts, err := time.Parse(time.RFC3339, meta.Timestamp); err == nil {
+		doc.Timestamp = &ts
+	}
 	for _, e := range sorted {
 		if err := e.Validate(); err != nil {
 			return nil, fmt.Errorf("%s: %w", e.Vulnerability, err)
@@ -314,7 +336,13 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 		return nil, rep, errors.New("document has no statements")
 	}
 
-	rep.Doc = DocMeta{ID: doc.ID, Author: strings.TrimSpace(doc.Author), Role: strings.TrimSpace(doc.AuthorRole)}
+	rep.Doc = DocMeta{
+		ID: doc.ID, Author: strings.TrimSpace(doc.Author), Role: strings.TrimSpace(doc.AuthorRole),
+		Version: doc.Version, Tooling: strings.TrimSpace(doc.Tooling),
+	}
+	if doc.Timestamp != nil {
+		rep.Doc.Timestamp = doc.Timestamp.UTC().Format(time.RFC3339Nano)
+	}
 	byKey := map[string]VEXEntry{}
 	for i, st := range doc.Statements {
 		ids := []string{string(st.Vulnerability.Name)}
@@ -345,8 +373,8 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 			e := VEXEntry{
 				Vulnerability: v.ID, Package: v.Package, Version: v.Installed, PURL: v.PURL,
 				Status: string(st.Status), Justification: string(st.Justification),
-				Impact: st.ImpactStatement, Action: st.ActionStatement,
-				Updated: stamp.Format(time.RFC3339),
+				Impact: st.ImpactStatement, Action: st.ActionStatement, Description: st.Vulnerability.Description,
+				Updated: stamp.Format(time.RFC3339Nano),
 			}
 			if err := e.Validate(); err != nil {
 				rep.Warnings = append(rep.Warnings, fmt.Sprintf("statement %d (%s): %v", i+1, v.ID, err))
@@ -390,7 +418,8 @@ func ParseOpenVEX(data []byte, findings []Vulnerability) ([]VEXEntry, ImportRepo
 func unmatchedEntries(st vex.Statement, id string, subs []string, stamp time.Time) []VEXEntry {
 	base := VEXEntry{
 		Vulnerability: id, Status: string(st.Status), Justification: string(st.Justification),
-		Impact: st.ImpactStatement, Action: st.ActionStatement, Updated: stamp.Format(time.RFC3339),
+		Impact: st.ImpactStatement, Action: st.ActionStatement, Description: st.Vulnerability.Description,
+		Updated: stamp.Format(time.RFC3339Nano),
 	}
 	if len(subs) == 0 {
 		return []VEXEntry{base}
