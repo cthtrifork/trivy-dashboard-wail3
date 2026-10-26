@@ -46,6 +46,8 @@ jobs:
 
       # govulncheck type-checks the cgo GUI package, so it needs the same headers as the build.
       - uses: ./.github/actions/linux-build-deps
+        with:
+          packages: build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
         timeout-minutes: 10
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
