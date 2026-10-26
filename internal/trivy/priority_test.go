@@ -135,7 +135,7 @@ func TestVEX(t *testing.T) {
 	}
 
 	product := ProductPURL(img)
-	raw, err := ExportOpenVEX(got, product, "", "Jane", "Security")
+	raw, err := ExportOpenVEX(got, product, DocMeta{Author: "Jane", Role: "Security"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +173,7 @@ func TestVEX(t *testing.T) {
 	if !strings.Contains(string(raw), "pkg:generic/lodash@4") {
 		t.Error("fallback subcomponent id missing")
 	}
-	ph, err := ExportOpenVEX(got, product, "https://example.com/vex.json", " ", "")
+	ph, err := ExportOpenVEX(got, product, DocMeta{ID: "https://example.com/vex.json", Author: " "})
 	if err != nil || !strings.Contains(string(ph), `"author": "<author>"`) || !strings.Contains(string(ph), `"@id": "https://example.com/vex.json"`) {
 		t.Errorf("placeholder author / kept id: %v %s", err, ph)
 	}
@@ -346,5 +346,48 @@ func TestParseVectorVersions(t *testing.T) {
 		if v.Version != c.version || v.M["AV"] != c.av || v.M["UI"] != c.ui {
 			t.Errorf("%s: version %d AV %q UI %q", c.raw, v.Version, v.M["AV"], v.M["UI"])
 		}
+	}
+}
+
+// A re-export of an imported document is its next version: untouched
+// statements keep their timestamp and description, and no tooling is invented.
+func TestVEXReimportKeepsDocument(t *testing.T) {
+	src := `{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://example.com/oci.openvex.json",
+  "author": "Kube-kraken",
+  "version": 4,
+  "statements": [{
+    "vulnerability": {"name": "CVE-2023-2953", "description": "openldap: null pointer dereference"},
+    "products": [{"@id": "pkg:oci/fluent-bit", "subcomponents": [{"@id": "pkg:deb/debian/libldap-2.5-0"}]}],
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "impact_statement": "No LDAP.",
+    "timestamp": "2026-01-15T19:59:23.564560549Z"
+  }],
+  "timestamp": "2026-01-15T19:59:23Z",
+  "last_updated": "2026-09-09T00:00:00Z"
+}`
+	entries, rep, err := ParseOpenVEX([]byte(src), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := ExportOpenVEX(entries, "pkg:oci/fluent-bit", rep.Doc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := string(raw)
+	for _, want := range []string{
+		`"version": 5`,
+		`"description": "openldap: null pointer dereference"`,
+		`"timestamp": "2026-01-15T19:59:23.564560549Z"`,
+		`"timestamp": "2026-01-15T19:59:23Z"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %s in:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "tooling") {
+		t.Errorf("tooling must not be added:\n%s", out)
 	}
 }

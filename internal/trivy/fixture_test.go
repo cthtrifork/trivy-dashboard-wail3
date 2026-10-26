@@ -356,7 +356,7 @@ func TestOpenVEXRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	entries, _ := st.List(img)
-	raw, err := ExportOpenVEX(entries, ProductPURL(img), "", "Jane", "")
+	raw, err := ExportOpenVEX(entries, ProductPURL(img), DocMeta{Author: "Jane"})
 	if err != nil {
 		t.Fatal(err)
 	}

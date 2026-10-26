@@ -576,6 +576,30 @@ export class DocMeta {
              */
             this["role"] = "";
         }
+        if (!("version" in $$source)) {
+            /**
+             * Version, Timestamp (RFC 3339, when the document was first issued) and
+             * Tooling are carried over so a re-export is the next version of the same
+             * document rather than a new one.
+             * @member
+             * @type {number}
+             */
+            this["version"] = 0;
+        }
+        if (!("timestamp" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["timestamp"] = "";
+        }
+        if (!("tooling" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["tooling"] = "";
+        }
 
         Object.assign(this, $$source);
     }
@@ -1436,6 +1460,15 @@ export class VEXEntry {
              * @type {string}
              */
             this["vulnerability"] = "";
+        }
+        if (!("description" in $$source)) {
+            /**
+             * Description is the vulnerability description of an imported statement,
+             * kept so the next export writes it back.
+             * @member
+             * @type {string}
+             */
+            this["description"] = "";
         }
         if (!("package" in $$source)) {
             /**

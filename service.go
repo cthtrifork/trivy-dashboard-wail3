@@ -287,13 +287,13 @@ func (s *ScanService) VEXExport(image, author, role string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if strings.TrimSpace(author) == "" {
-		author = meta.Author
+	if strings.TrimSpace(author) != "" {
+		meta.Author = author
 	}
-	if strings.TrimSpace(role) == "" {
-		role = meta.Role
+	if strings.TrimSpace(role) != "" {
+		meta.Role = role
 	}
-	doc, err := trivy.ExportOpenVEX(entries, product, meta.ID, author, role)
+	doc, err := trivy.ExportOpenVEX(entries, product, meta)
 	return string(doc), err
 }
 
