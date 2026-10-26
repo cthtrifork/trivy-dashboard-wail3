@@ -209,6 +209,16 @@ func (s *VEXStore) Delete(image, key string) error {
 	return s.save(f)
 }
 
+// Clear deletes the whole store file, and with it every image's assessments.
+func (s *VEXStore) Clear() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := os.Remove(s.Path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
+}
+
 // ProductPURL builds the OCI package URL that identifies the scanned image,
 // using the registry digest when trivy reported one.
 func ProductPURL(image string, repoDigests []string) string {

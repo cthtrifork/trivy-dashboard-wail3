@@ -201,8 +201,16 @@ func dirSize(dir string) int64 {
 // PodmanVersion returns the podman version string or an error.
 func (s *ScanService) PodmanVersion() (string, error) { return s.scanner.Version() }
 
-// Scan scans the image with trivy running in podman.
+// Scan scans the image with trivy running in podman. It first discards the saved VEX file and
+// the findings cached from the previous scan, so a new scan starts from a clean slate.
 func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
+	if err := s.vex.Clear(); err != nil {
+		return nil, errors.New("could not clear the old VEX file: " + err.Error())
+	}
+	s.mu.Lock()
+	s.found = map[string][]trivy.Vulnerability{}
+	s.latest = nil
+	s.mu.Unlock()
 	res, err := s.scanner.Scan(s.appCtx(), req)
 	if err == nil {
 		s.mu.Lock()
