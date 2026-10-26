@@ -6,6 +6,8 @@ import {
   image,
   opts,
   saveTrivyImage,
+  saveIgnorePolicy,
+  loadIgnorePolicyFile,
   scanning,
   comparing,
   status,
@@ -141,6 +143,26 @@ onMounted(init);
             spellcheck="false"
             title="Empty uses the default version. Enter a version such as 0.77.0, or a full image reference."
             @change="saveTrivyImage"
+          />
+          <label class="policy"
+            >Ignore policy (Rego, <code>--ignore-policy</code>)
+            <textarea
+              id="ignore-policy"
+              v-model="opts.ignorePolicy"
+              rows="6"
+              placeholder="package trivy&#10;&#10;ignore if input.PkgName == &quot;linux-libc-dev&quot;"
+              autocomplete="off"
+              spellcheck="false"
+              title="Findings for which the policy defines ignore are left out of the scan. Empty means none."
+              @change="saveIgnorePolicy"
+            ></textarea>
+          </label>
+          <input
+            id="ignore-policy-file"
+            type="file"
+            accept=".rego,text/plain"
+            title="Load the policy from a .rego file"
+            @change="loadIgnorePolicyFile($event.target.files[0])"
           />
           <div class="opts-update">
             <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>

@@ -157,8 +157,17 @@ export const opts = reactive({
   password: "",
   // The Trivy version is a preference, not a secret: remember it between runs.
   trivyImage: lsGet("trivy-image"),
+  // Rego source for Trivy's --ignore-policy; also a preference, kept between runs.
+  ignorePolicy: lsGet("ignore-policy"),
 });
 export const saveTrivyImage = () => lsSet("trivy-image", opts.trivyImage.trim());
+export const saveIgnorePolicy = () => lsSet("ignore-policy", opts.ignorePolicy);
+// loadIgnorePolicyFile fills the policy from a .rego file the user picked.
+export async function loadIgnorePolicyFile(file) {
+  if (!file) return;
+  opts.ignorePolicy = await file.text();
+  saveIgnorePolicy();
+}
 
 export const image = ref("");
 export const cmpForm = reactive({ repo: lsGet("cmp-repo"), a: lsGet("cmp-a"), b: lsGet("cmp-b") });
@@ -198,6 +207,7 @@ export async function runScan() {
       password: opts.password,
       ignoreUnfixed: opts.ignoreUnfixed,
       trivyImage: opts.trivyImage.trim(),
+      ignorePolicy: opts.ignorePolicy,
       markUnderInvestigation: opts.markUnderInvestigation,
     });
     if (!cmpForm.repo) cmpForm.repo = r.image.replace(/@.*$/, "").replace(/:[^/:]*$/, "");

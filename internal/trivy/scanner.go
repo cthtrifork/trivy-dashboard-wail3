@@ -23,6 +23,9 @@ type ScanRequest struct {
 	IgnoreUnfixed bool   `json:"ignoreUnfixed"`
 	// TrivyImage selects the Trivy image or version to scan with. Empty means the default.
 	TrivyImage string `json:"trivyImage"`
+	// IgnorePolicy is the source of a Rego policy passed to Trivy's --ignore-policy: findings for
+	// which it defines `ignore` are left out of the report. Empty means none.
+	IgnorePolicy string `json:"ignorePolicy"`
 	// MarkUnderInvestigation records an under_investigation VEX assessment for every
 	// finding that has none after the scan (handled by the service, which owns the store).
 	MarkUnderInvestigation bool `json:"markUnderInvestigation"`
@@ -273,6 +276,10 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	if err != nil {
 		return nil, err
 	}
+	policy, err := checkIgnorePolicy(req.IgnorePolicy)
+	if err != nil {
+		return nil, err
+	}
 	trivyImage, err := ResolveTrivyImage(req.TrivyImage)
 	if err != nil {
 		return nil, err
@@ -289,13 +296,14 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	if req.IgnoreUnfixed {
 		job.Flags = append(job.Flags, "--ignore-unfixed")
 	}
+	job.IgnorePolicy = policy // only the vulnerability report is filtered, not the SBOM
 	vulnJSON, err := s.engine().RunTrivy(ctx, job, logLine)
 	if err != nil {
 		return nil, fmt.Errorf("vulnerability scan failed: %w", err)
 	}
 
 	s.logf("Generating SBOM…")
-	job.Flags = []string{"--skip-db-update", "--format", "cyclonedx"}
+	job.Flags, job.IgnorePolicy = []string{"--skip-db-update", "--format", "cyclonedx"}, ""
 	sbomJSON, err := s.engine().RunTrivy(ctx, job, logLine)
 	if err != nil {
 		return nil, fmt.Errorf("SBOM generation failed: %w", err)
@@ -318,6 +326,25 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	}
 	s.logf("Done: %d vulnerabilities, %d components.", len(res.Vulnerabilities), len(res.Components))
 	return res, nil
+}
+
+// maxIgnorePolicy bounds the policy size: it travels in an environment variable, and Windows
+// limits a whole environment block to 32 KiB.
+const maxIgnorePolicy = 24 * 1024
+
+// checkIgnorePolicy returns the policy to use, or "" when it is blank. Rego itself is checked by
+// Trivy, whose error reaches the user through the scan log.
+func checkIgnorePolicy(src string) (string, error) {
+	if strings.TrimSpace(src) == "" {
+		return "", nil
+	}
+	if len(src) > maxIgnorePolicy {
+		return "", fmt.Errorf("ignore policy is too large (%d bytes, at most %d)", len(src), maxIgnorePolicy)
+	}
+	if strings.ContainsRune(src, 0) {
+		return "", errors.New("ignore policy contains a NUL byte")
+	}
+	return src, nil
 }
 
 var severityRank = map[string]int{"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}

@@ -118,3 +118,28 @@ func TestCredentialsStayOffTheCommandLine(t *testing.T) {
 		t.Error("password leaked into args")
 	}
 }
+
+func TestIgnorePolicyIsWrittenInsideTheContainer(t *testing.T) {
+	t.Setenv(CacheEnv, "")
+	t.Setenv("CONTAINER_HOST", "unix:///run/podman/podman.sock")
+	args, err := (&PodmanEngine{}).runArgs(TrivyJob{Image: "x", Flags: []string{"--format", "json"}, IgnorePolicy: "package trivy"}, "n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if flagValue(args, "--entrypoint") != "sh" || flagValue(args, "--ignore-policy") != ignorePolicyPath {
+		t.Errorf("args = %v", args)
+	}
+	for _, a := range args {
+		if strings.Contains(a, "package trivy") {
+			t.Errorf("policy source must not be on the command line: %v", args)
+		}
+	}
+	// Wrapper first, then trivy's own arguments, and the scanned image last.
+	if i := slices.Index(args, "-c"); i < 0 || args[i+2] != "sh" || args[i+3] != "image" || args[len(args)-1] != "x" {
+		t.Errorf("unexpected order: %v", args)
+	}
+	args, _ = (&PodmanEngine{}).runArgs(TrivyJob{Image: "x"}, "n")
+	if slices.Contains(args, "--entrypoint") || slices.Contains(args, "--ignore-policy") {
+		t.Errorf("no policy, no wrapper: %v", args)
+	}
+}

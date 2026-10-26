@@ -54,6 +54,7 @@ async function run() {
     password: opts.password,
     ignoreUnfixed: opts.ignoreUnfixed,
     trivyImage: opts.trivyImage.trim(),
+    ignorePolicy: opts.ignorePolicy,
   };
   for (const k of ["repo", "a", "b"]) lsSet("cmp-" + k, cmpForm[k]);
   logText.value = "";

@@ -114,6 +114,14 @@ export class CompareRequest {
              */
             this["trivyImage"] = "";
         }
+        if (!("ignorePolicy" in $$source)) {
+            /**
+             * see ScanRequest.IgnorePolicy
+             * @member
+             * @type {string}
+             */
+            this["ignorePolicy"] = "";
+        }
 
         Object.assign(this, $$source);
     }
@@ -1109,6 +1117,15 @@ export class ScanRequest {
              * @type {string}
              */
             this["trivyImage"] = "";
+        }
+        if (!("ignorePolicy" in $$source)) {
+            /**
+             * IgnorePolicy is the source of a Rego policy passed to Trivy's --ignore-policy: findings for
+             * which it defines `ignore` are left out of the report. Empty means none.
+             * @member
+             * @type {string}
+             */
+            this["ignorePolicy"] = "";
         }
         if (!("markUnderInvestigation" in $$source)) {
             /**
