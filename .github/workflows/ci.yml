@@ -6,6 +6,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  # The Screenshots workflow pushes bot/update-screenshots with GITHUB_TOKEN, which does not
+  # trigger pull_request runs; it dispatches CI on that branch so the required checks report.
+  workflow_dispatch:
 
 permissions:
   contents: read
