@@ -105,8 +105,8 @@ Observed by running the headless server in demo mode (`TRIVY_SCANNER_FAKE_PODMAN
 
 | Tab | Top to bottom |
 |---|---|
-| Priorities | Severity and Priority segmented filters with counts, Scoring rules disclosure, toolbar (Show top 10/25/all, Hide resolved by VEX, Include low-risk, Only with a fix, effect summary), one-line ranking note, column header row (Severity, Score, Finding, Priority, Fix) and finding rows |
-| Vulnerabilities | severity stat cards (Critical → Unknown) that double as filters, text filter plus "n shown", sortable table: Priority (tier pill), Severity, ID, Package, Installed, Fixed in, CVSS, EPSS, Signals, Title; rows expand for details |
+| Priorities | Severity and Priority segmented filters with counts, Scoring rules disclosure, toolbar (Show top 10/25/all, Hide resolved by VEX, Include low-risk, Only with a fix, effect summary), one-line ranking note, column header row (Severity, CVSS, Finding, Priority, Fix; each with an explanatory tooltip) and finding rows |
+| Vulnerabilities | severity stat cards (Critical → Unknown) that double as filters, text filter plus "n shown", sortable table with explanatory header tooltips: Priority (tier pill), Severity, ID, Package, Installed, Fixed in, CVSS (number plus bar), EPSS, Signals, Title; rows expand for details |
 | Dependencies | search, All / OS / Application segmented control, Vulnerable paths only, Focus select, All labels, Fit, "n of N components"; canvas graph with legend and a right-hand inspector ("Click a node to inspect it."). Node color = kind, orange ring = vulnerable via dependency, size = vulnerability count. Scroll zooms, drag pans, double-click fits |
 | SBOM | one-sentence summary of the image, type stat cards (accent border, not severity colors), filter plus format ("CycloneDX"), sortable table: Name, Version, Type, License, Package URL |
 | Compare | image, Base tag, Target tag, Load tags, Compare; centered hint until a comparison runs |

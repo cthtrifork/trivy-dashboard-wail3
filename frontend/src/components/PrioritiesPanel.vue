@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import { result, vulns, vex } from "../store.js";
-import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, pct, detailUrl, openUrl } from "../lib/format.js";
+import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
@@ -138,7 +138,8 @@ defineExpose({ count: computed(() => pool.value.length) });
       <div class="kv">{{ signals }}</div>
       <div v-if="before > 0" class="pad" :style="{ height: before - GAP + 'px' }"></div>
       <div class="ptable-head" aria-hidden="true">
-        <span>Severity</span><span>Score</span><span>Finding</span><span>Priority</span><span>Fix</span>
+        <span :title="COLUMN_HELP.severity">Severity</span><span :title="COLUMN_HELP.score">CVSS</span><span title="Title, CVE id, and the affected package and installed version">Finding</span
+        ><span :title="COLUMN_HELP.priority">Priority</span><span :title="COLUMN_HELP.fixed">Fix</span>
       </div>
       <div v-for="{ item: v, index } in visible" :key="cardKey(v)" v-measure="cardKey(v)" class="prow" :class="{ open: expanded.has(cardKey(v)) }" :style="sevStyle(v)">
         <div class="prow-main">
@@ -158,8 +159,9 @@ defineExpose({ count: computed(() => pool.value.length) });
               <span class="mono">{{ v.package }} {{ v.installed }}</span>
             </span>
           </span>
-          <span class="ptier" :style="tierStyle(v.tier)" :title="v.tierWhy"
-            ><i></i>{{ v.tier }}<Chip v-if="v.kev" kind="hot" :title="`Added to CISA KEV on ${v.kevAdded}; due ${v.kevDue}. ${v.kevAction}`">KEV</Chip></span
+          <span class="ptier"
+            ><span class="sev sevpill tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }} {{ v.priority }}</span
+            ><Chip v-if="v.kev" kind="hot" :title="`Added to CISA KEV on ${v.kevAdded}; due ${v.kevDue}. ${v.kevAction}`">KEV</Chip></span
           >
           <span class="pfix">{{ v.fixed || "None" }}</span>
         </div>
