@@ -11,7 +11,7 @@ Open **Scoring rules** above the Priorities list. Changes re-rank immediately (t
 | KEV | +50, +10 if used in ransomware | on/off; "always Act now" |
 | EPSS | +10 from the cutoff, +22 from *high*, +35 from *very high* | on/off; the three thresholds (percent). *Very high* also forces Fix soon |
 | Severity | critical +30, high +25, medium +10, low +3, unknown +5 | on/off |
-| Attack vector | network +10, adjacent +4, physical −2; low complexity +3; no privileges +5; no user interaction +4 | on/off |
+| Attack vector (from the same source as the CVSS score: Red Hat, else NVD, else the highest) | network +10, adjacent +4, physical −2; low complexity +3; no privileges +5; no user interaction +4 | on/off |
 | Fix availability | fix +5, none −3, will not fix −5 | on/off; **fixed only** (no fix → score 0, Monitor) |
 | Tiers | | minimum score for Act now / Fix soon / Plan |
 

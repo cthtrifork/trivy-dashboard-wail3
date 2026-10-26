@@ -448,7 +448,7 @@ func parseVulns(data []byte, res *ScanResult) error {
 				sev = "UNKNOWN"
 			}
 			score, scoreSource := pickScore(v.CVSS)
-			vector := pickVector(v.CVSS)
+			vector := pickVector(v.CVSS, scoreSource)
 			res.SeverityCounts[sev]++
 			res.Vulnerabilities = append(res.Vulnerabilities, Vulnerability{
 				ID: v.VulnerabilityID, Package: v.PkgName, Installed: v.InstalledVersion,
@@ -575,13 +575,23 @@ func ratings(sev map[string]int, cvss map[string]struct {
 	return out
 }
 
-// pickVector prefers NVD's CVSS v3 vector, then any v3, then v2.
+// pickVector takes the vector of the source the score came from (v3, else v2), so the attack vector
+// and the CVSS shown describe the same assessment. Without one it prefers NVD's v3 vector, then any
+// v3, then v2.
 func pickVector(cvss map[string]struct {
 	V3Vector string
 	V2Vector string
 	V3Score  float64
 	V2Score  float64
-}) string {
+}, scoreSource string) string {
+	if c, ok := cvss[scoreSource]; ok {
+		if c.V3Vector != "" {
+			return c.V3Vector
+		}
+		if c.V2Vector != "" {
+			return c.V2Vector
+		}
+	}
 	keys := make([]string, 0, len(cvss))
 	for k := range cvss {
 		keys = append(keys, k)

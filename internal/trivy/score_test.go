@@ -53,3 +53,26 @@ func TestPickScoreSource(t *testing.T) {
 		}
 	}
 }
+
+func TestPickVectorFollowsScoreSource(t *testing.T) {
+	type entry = struct {
+		V3Vector string
+		V2Vector string
+		V3Score  float64
+		V2Score  float64
+	}
+	cvss := map[string]entry{
+		"nvd":    {V3Vector: "CVSS:3.1/AV:N/AC:L", V3Score: 9.1},
+		"redhat": {V3Vector: "CVSS:3.1/AV:L/AC:H", V3Score: 5.3},
+		"old":    {V2Vector: "AV:A/AC:L"},
+	}
+	if got := pickVector(cvss, "redhat"); got != "CVSS:3.1/AV:L/AC:H" {
+		t.Errorf("score source's vector: %q", got)
+	}
+	if got := pickVector(cvss, "ghsa"); got != "CVSS:3.1/AV:N/AC:L" {
+		t.Errorf("fallback to NVD: %q", got)
+	}
+	if got := pickVector(map[string]entry{"redhat": {V3Score: 5.3}, "nvd": {V3Vector: "CVSS:3.1/AV:N"}}, "redhat"); got != "CVSS:3.1/AV:N" {
+		t.Errorf("source without a vector falls back: %q", got)
+	}
+}
