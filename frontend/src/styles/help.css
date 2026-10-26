@@ -1,0 +1,104 @@
+/* Help button and dialog. */
+#help-btn {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font-weight: 600;
+  z-index: 5;
+}
+#help-dialog {
+  width: min(820px, 94vw);
+  height: min(86vh, 720px);
+  max-height: 86dvh;
+  padding: 0;
+  overflow: hidden;
+}
+#help-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.help-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px 0;
+}
+.help-head h3 {
+  margin: 0;
+}
+.help-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.help-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+  padding: 4px 18px 18px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mute) transparent;
+}
+.help-body::-webkit-scrollbar {
+  width: 10px;
+}
+.help-body::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 5px;
+}
+.help-body h4 {
+  margin: 16px 0 6px;
+  color: var(--mute);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.help-body dl {
+  display: grid;
+  grid-template-columns: minmax(120px, 200px) minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+}
+.help-body dd .kv {
+  margin-top: 2px;
+}
+.help-body dt {
+  font-weight: 600;
+  word-break: break-word;
+}
+.help-body dd {
+  margin: 0;
+}
+.help-body code {
+  font:
+    12px ui-monospace,
+    monospace;
+  word-break: break-all;
+}
+@media (max-width: 560px) {
+  .help-body dl {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .help-body dd {
+    margin-bottom: 10px;
+  }
+}
+.help-body .envstate {
+  margin-right: 6px;
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--mute);
+}
+.envstate.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}

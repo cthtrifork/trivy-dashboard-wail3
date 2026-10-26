@@ -1,0 +1,25 @@
+/* CVSS ratings table. */
+.ratings {
+  margin: 8px 0;
+}
+.ratings small {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--mute);
+}
+.ratings .kv {
+  margin: 2px 0 4px;
+}
+.ratings table {
+  width: auto;
+}
+.ratings td {
+  padding: 2px 14px 2px 0;
+  border: 0;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.ratings tr.used td:first-child {
+  font-weight: 600;
+}

@@ -1,0 +1,29 @@
+/* Shared controls: segmented switch, checkbox row, ghost button. */
+.seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.seg button {
+  background: var(--panel);
+  color: var(--mute);
+  border-radius: 0;
+  padding: 6px 12px;
+}
+.seg button.on {
+  background: var(--accent);
+  color: #fff;
+}
+.chk {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--mute);
+  white-space: nowrap;
+}
+.ghost {
+  background: none;
+  color: var(--accent);
+  padding: 6px 8px;
+}

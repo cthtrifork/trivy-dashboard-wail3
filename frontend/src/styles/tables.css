@@ -1,0 +1,175 @@
+/* Severity cards, toolbars, data tables, the severity pill, vulnerability detail and windowed tables. */
+#sev-cards,
+#type-cards {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.card {
+  flex: 1;
+  min-width: 110px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--c, var(--line));
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.card.off {
+  opacity: 0.4;
+}
+.card b {
+  display: block;
+  font-size: 22px;
+}
+.card span {
+  color: var(--mute);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.toolbar input {
+  flex: 1;
+  max-width: 480px;
+}
+.toolbar span {
+  color: var(--mute);
+  font-size: 12px;
+}
+.table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  position: relative;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--mute);
+  text-transform: uppercase;
+}
+th.asc::after {
+  content: " ▲";
+}
+th.desc::after {
+  content: " ▼";
+}
+td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  word-break: break-word;
+}
+tr.row {
+  cursor: pointer;
+}
+/* Short cells stay on one line (a pill or version list that wraps reads as broken); the title takes the slack. */
+#vuln-table td {
+  white-space: nowrap;
+  word-break: normal;
+}
+#vuln-table td:last-child {
+  white-space: normal;
+  min-width: 300px;
+  word-break: break-word;
+}
+tr.row:hover td {
+  background: #ffffff08;
+}
+.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+.sev {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--on, #fff);
+  background: var(--c);
+}
+tr.detail td {
+  background: var(--bg);
+}
+.vdetail {
+  max-width: 90ch;
+  padding: 12px 8px 16px 16px;
+  border-left: 2px solid var(--line);
+  line-height: 1.55;
+  white-space: normal;
+}
+.vdetail p {
+  margin: 0 0 12px;
+}
+.vmeta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0 0 12px;
+  color: var(--mute);
+}
+.vmeta dt {
+  font-weight: 600;
+}
+.vmeta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.vdesc {
+  margin: 0 0 12px;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+tr.detail a {
+  color: var(--accent);
+}
+.empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--mute);
+}
+/* Windowed tables (lib/virtual.js): fixed column widths so scrolling never reflows the columns,
+   and spacer rows that stand in for the rows that are not rendered. */
+.vt {
+  table-layout: fixed;
+}
+.vt td {
+  overflow-wrap: anywhere;
+}
+.vt tbody.pad td {
+  padding: 0;
+  border: 0;
+}
+.vt tbody.pad tr {
+  pointer-events: none;
+}
+.scroll > .pad {
+  flex: none;
+}
+.summary {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
