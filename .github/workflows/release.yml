@@ -231,11 +231,16 @@ jobs:
             dist/*_linux_amd64
             dist/*.sbom.cdx.json
 
+      # Unlike subject-path, sbom-path takes one literal path (no glob), so resolve it first.
+      - name: Locate SBOM
+        id: sbom
+        run: echo "path=$(ls dist/*.sbom.cdx.json)" >> "$GITHUB_OUTPUT"
+
       - name: Attest SBOM
-        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: dist/*_linux_amd64
-          sbom-path: dist/*.sbom.cdx.json
+          sbom-path: ${{ steps.sbom.outputs.path }}
 
       # Fail the release if what was just signed does not verify against this workflow.
       - name: Verify attestations
