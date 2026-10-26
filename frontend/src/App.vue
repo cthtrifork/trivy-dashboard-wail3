@@ -2,8 +2,10 @@
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import {
   ScanService,
+  sevStyle,
   result,
   image,
+  recent,
   opts,
   saveTrivyImage,
   scanning,
@@ -19,7 +21,7 @@ import {
   setStatus,
   errText,
 } from "./store.js";
-import { bytes } from "./lib/format.js";
+import { ago, bytes } from "./lib/format.js";
 import PrioritiesPanel from "./components/PrioritiesPanel.vue";
 import VulnsPanel from "./components/VulnsPanel.vue";
 import DepsPanel from "./components/DepsPanel.vue";
@@ -34,6 +36,43 @@ const prio = ref(null);
 const vexDialog = ref(null);
 const helpDialog = ref(null);
 const logEl = ref(null);
+
+// Recent images under the input: filtered by what is typed, driven from the keyboard like a combobox.
+const histOpen = ref(false);
+const histIdx = ref(-1);
+const history = computed(() => {
+  const q = image.value.trim().toLowerCase();
+  return recent.value.filter((e) => e.image.toLowerCase().includes(q) && e.image !== image.value.trim());
+});
+const showHistory = computed(() => histOpen.value && history.value.length > 0);
+function onImageInput() {
+  histOpen.value = true;
+  histIdx.value = -1;
+}
+const closeHistory = () => {
+  histOpen.value = false;
+  histIdx.value = -1;
+};
+function pickRecent(e, rescan) {
+  image.value = e.image;
+  closeHistory();
+  if (rescan && !scanning.value) runScan();
+}
+function imageKey(ev) {
+  const n = history.value.length;
+  if (ev.key === "Escape") return closeHistory();
+  if (!n || (ev.key !== "ArrowDown" && ev.key !== "ArrowUp" && ev.key !== "Enter" && ev.key !== "Tab")) return;
+  if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+    ev.preventDefault();
+    histOpen.value = true;
+    const step = ev.key === "ArrowDown" ? 1 : -1;
+    histIdx.value = ((histIdx.value + 1 + step + n + 1) % (n + 1)) - 1; // -1 is the typed text
+  } else if (histIdx.value >= 0 && showHistory.value) {
+    if (ev.key === "Enter") ev.preventDefault();
+    pickRecent(history.value[histIdx.value], ev.key === "Enter");
+  }
+}
+const sevTag = (n, sev) => ({ n, sev, style: sevStyle(sev) });
 
 const trivyPlaceholder = computed(() =>
   mode.value?.trivyImage
@@ -114,19 +153,12 @@ onMounted(init);
 <template>
   <header>
     <form id="scan-form" @submit.prevent="runScan">
-      <input
-        id="image"
-        v-model="image"
-        placeholder="Container image, e.g. docker.io/library/nginx:1.27"
-        autocomplete="off"
-        spellcheck="false"
-        required
-      />
-      <button id="scan-btn" type="submit" :disabled="scanning">Scan</button>
-      <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
-      <details id="opts">
-        <summary>Options</summary>
-        <div class="opts-body">
+      <div class="head-top">
+        <strong class="brand">Trivy Scanner</strong>
+        <div id="meta">{{ meta }}</div>
+        <details id="opts">
+          <summary>Options</summary>
+          <div class="opts-body">
           <label><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed" /> Ignore unfixed</label>
           <label title="Include findings suppressed by VEX or ignore files"
             ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Show suppressed</label
@@ -164,10 +196,53 @@ onMounted(init);
               {{ updateAction.label }}
             </button>
           </div>
+          </div>
+        </details>
+      </div>
+      <div class="scan-row">
+        <div class="image-wrap">
+          <input
+            id="image"
+            v-model="image"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="recent-list"
+            :aria-expanded="showHistory"
+            :aria-activedescendant="histIdx >= 0 ? 'recent-' + histIdx : undefined"
+            placeholder="Container image, e.g. docker.io/library/nginx:1.27"
+            autocomplete="off"
+            spellcheck="false"
+            required
+            @focus="histOpen = true"
+            @input="onImageInput"
+            @blur="closeHistory"
+            @keydown="imageKey"
+          />
+          <div id="recent-list" v-show="showHistory" role="listbox" aria-label="Recent images">
+            <div class="recent-head" aria-hidden="true">Recent images</div>
+            <div
+              v-for="(e, i) in history"
+              :id="'recent-' + i"
+              :key="e.image"
+              role="option"
+              tabindex="-1"
+              :aria-selected="i === histIdx"
+              :class="{ active: i === histIdx }"
+              @mousedown.prevent="pickRecent(e, true)"
+            >
+              <span class="recent-name">{{ e.image }}</span>
+              <span class="recent-when">{{ ago(e.at) }}</span>
+              <span v-for="t in [sevTag(e.crit, 'CRITICAL'), sevTag(e.high, 'HIGH')]" :key="t.sev" v-show="t.n" class="sev" :style="t.style"
+                >{{ t.n }} {{ t.sev[0] }}</span
+              >
+            </div>
+            <div class="recent-hint" aria-hidden="true">↑↓ to choose · Enter to rescan · Tab to fill the field</div>
+          </div>
         </div>
-      </details>
+        <button id="scan-btn" type="submit" :disabled="scanning">Scan</button>
+        <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
+      </div>
     </form>
-    <div id="meta">{{ meta }}</div>
     <button id="help-btn" type="button" class="ghost" title="Glossary and app configuration" aria-label="Help" @click="helpDialog.open()">
       ?
     </button>

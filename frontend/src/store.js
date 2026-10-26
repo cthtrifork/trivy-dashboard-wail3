@@ -165,6 +165,16 @@ export const opts = reactive({
 export const saveTrivyImage = () => lsSet("trivy-image", opts.trivyImage.trim());
 
 export const image = ref("");
+
+// Images scanned before, newest first, so a rescan is one pick instead of retyping the reference.
+const RECENT_KEY = "recent-images",
+  RECENT_MAX = 8;
+export const recent = ref(lsJSON(RECENT_KEY, []).filter((e) => e?.image));
+function remember(ref, r) {
+  const entry = { image: ref, at: Date.now(), crit: r.severityCounts?.CRITICAL || 0, high: r.severityCounts?.HIGH || 0 };
+  recent.value = [entry, ...recent.value.filter((e) => e.image !== ref)].slice(0, RECENT_MAX);
+  lsSet(RECENT_KEY, JSON.stringify(recent.value));
+}
 export const cmpForm = reactive({ repo: lsGet("cmp-repo"), a: lsGet("cmp-a"), b: lsGet("cmp-b") });
 
 // scanning is true while any scan runs (single scan or compare); comparing marks the latter.
@@ -209,6 +219,7 @@ export async function runScan() {
     });
     if (!cmpForm.repo) cmpForm.repo = r.image.replace(/@.*$/, "").replace(/:[^/:]*$/, "");
     result.value = r;
+    remember(image.value.trim(), r);
     rerank();
     await loadVEX();
     setStatus(`Scan complete: ${r.vulnerabilities.length} vulnerabilities, ${r.components.length} components.`);
