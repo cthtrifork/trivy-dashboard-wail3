@@ -258,6 +258,8 @@ export async function runScan() {
   scanning.value = true;
   logText.value = "";
   vex.value = new Map(); // the backend drops the saved VEX file when a scan starts
+  result.value = null; // don't show the previous image's findings while the new scan runs
+  rerank();
   setStatus("Starting scan…", { busy: true });
   try {
     const r = await ScanService.Scan({
