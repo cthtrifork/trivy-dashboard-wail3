@@ -1056,7 +1056,7 @@ export class Rules {
         }
         if (!("severityEnabled" in $$source)) {
             /**
-             * +3 (low) to +20 (critical)
+             * +3 (low) to +30 (critical)
              * @member
              * @type {boolean}
              */

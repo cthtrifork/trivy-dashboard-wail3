@@ -126,7 +126,7 @@ var rules = []rule{
 		if !c.r.SeverityEnabled {
 			return nil
 		}
-		pts := map[string]int{"CRITICAL": 20, "HIGH": 14, "MEDIUM": 8, "LOW": 3, "UNKNOWN": 5}[c.v.Severity]
+		pts := map[string]int{"CRITICAL": 30, "HIGH": 25, "MEDIUM": 10, "LOW": 3, "UNKNOWN": 5}[c.v.Severity]
 		txt := fmt.Sprintf("%s severity", strings.ToLower(c.v.Severity))
 		if c.v.Score > 0 {
 			txt += fmt.Sprintf(" (CVSS %.1f)", c.v.Score)
