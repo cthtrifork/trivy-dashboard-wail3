@@ -57,7 +57,7 @@ func enrichCacheDir() string {
 
 // vexFile is where VEX assessments are stored: $TRIVY_SCANNER_VEX_FILE or the user config dir.
 func vexFile() string {
-	if p := os.Getenv("TRIVY_SCANNER_VEX_FILE"); p != "" {
+	if p := loadSettings().VEXFile; p != "" {
 		return p
 	}
 	cfg, _ := os.UserConfigDir()
@@ -70,13 +70,14 @@ func NewScanService() *ScanService {
 	if mode.Fixtures {
 		log.Print("trivy-scanner: " + mode.Detail)
 	}
+	cfg := loadSettings()
 	svc := &ScanService{
 		mode: mode,
 		scanner: &trivy.Scanner{Engine: engine, Enricher: &trivy.Enricher{
 			CacheDir: enrichCacheDir(),
 			// Overridable for air-gapped mirrors and tests.
-			EPSSURL: os.Getenv("TRIVY_SCANNER_EPSS_URL"),
-			KEVURL:  os.Getenv("TRIVY_SCANNER_KEV_URL"),
+			EPSSURL: cfg.EPSSURL,
+			KEVURL:  cfg.KEVURL,
 		}},
 		vex:     &trivy.VEXStore{Path: vexFile()},
 		product: map[string]string{},

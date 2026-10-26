@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/CycloneDX/cyclonedx-go v0.12.0
 	github.com/aquasecurity/go-version v0.0.1
+	github.com/caarlos0/env/v11 v11.4.1
 	github.com/distribution/reference v0.6.0
 	github.com/knqyf263/go-apk-version v0.0.0-20200609155635-041fdbb8563f
 	github.com/knqyf263/go-deb-version v0.0.0-20241115132648-6f4aee6ccd23

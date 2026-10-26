@@ -18,7 +18,7 @@ const fakePodmanFlag = "TRIVY_SCANNER_FAKE_PODMAN"
 // and the screenshot script use. Fake mode also turns off the live EPSS/KEV
 // lookups so its output is deterministic and offline.
 func newEngine() (trivy.Engine, Mode) {
-	if !envFlag(fakePodmanFlag) {
+	if !loadSettings().FakePodman {
 		return nil, Mode{}
 	}
 	e := trivy.NewFixtureEngine()
