@@ -97,7 +97,9 @@ await shot("03-priorities-export-openvex");
 await page.click("#vex-close");
 
 // Import the document back: the dialog reports what matched.
-await page.click("#vex-import-btn");
+await page.click("#vex-menu-btn");
+await shot("03a0-export-menu");
+await page.click("#vex-menu-import");
 // A broken document first: the editor flags the syntax error inline.
 await setEditor("#vex-paste", exported.replace('"statements": [', '"statements" [').split("\n").slice(0, 14).join("\n"));
 await page.waitForSelector("#vex-paste .cm-lint-marker-error");

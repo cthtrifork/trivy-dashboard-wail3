@@ -43,6 +43,8 @@ const tab = ref("prio");
 const prio = ref(null);
 const vexDialog = ref(null);
 const vexImport = ref(null);
+const vexMenu = ref(false);
+const closeVexMenu = () => (vexMenu.value = false);
 const helpDialog = ref(null);
 const logEl = ref(null);
 
@@ -157,6 +159,10 @@ watch(logText, async () => {
 });
 
 onMounted(init);
+onMounted(() => {
+  document.addEventListener("click", closeVexMenu);
+  document.addEventListener("keydown", (e) => e.key === "Escape" && closeVexMenu());
+});
 </script>
 
 <template>
@@ -291,9 +297,36 @@ onMounted(init);
           </div>
         </div>
         <button id="scan-btn" type="submit" :disabled="scanning">Scan</button>
-        <button id="export-vex-btn" type="button" :disabled="!result" title="Edit and export VEX assessments" @click="vexDialog.open()">
-          Export VEX<template v-if="vex.size"> ({{ vex.size }})</template>
-        </button>
+        <div id="vex-split" :class="{ solo: !vex.size }">
+          <button
+            v-if="vex.size"
+            id="export-vex-btn"
+            type="button"
+            :disabled="!result"
+            title="Edit and export VEX assessments"
+            @click="vexDialog.open()"
+          >
+            Export VEX ({{ vex.size }})
+          </button>
+          <button v-else id="vex-import-btn" type="button" :disabled="!result" title="Import an OpenVEX file" @click="vexImport.open()">
+            Import VEX
+          </button>
+          <button
+            v-if="vex.size"
+            id="vex-menu-btn"
+            type="button"
+            :disabled="!result"
+            aria-haspopup="menu"
+            :aria-expanded="vexMenu"
+            title="More VEX actions"
+            @click.stop="vexMenu = !vexMenu"
+          >
+            ▾
+          </button>
+          <div v-if="vexMenu" id="vex-menu" role="menu">
+            <button id="vex-menu-import" type="button" role="menuitem" @click="vexImport.open(); vexMenu = false">Import / merge VEX…</button>
+          </div>
+        </div>
         <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
       </div>
     </form>
@@ -323,7 +356,7 @@ onMounted(init);
 
   <main>
     <section id="tab-prio" class="panel" :class="{ active: tab === 'prio' }">
-      <PrioritiesPanel ref="prio" @import="vexImport.open()" />
+      <PrioritiesPanel ref="prio" />
     </section>
     <section id="tab-vulns" class="panel" :class="{ active: tab === 'vulns' }"><VulnsPanel /></section>
     <section id="tab-deps" class="panel" :class="{ active: tab === 'deps' }"><DepsPanel /></section>
