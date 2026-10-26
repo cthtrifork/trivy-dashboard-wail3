@@ -79,7 +79,7 @@ header {
 .image-wrap {
   position: relative;
   flex: 1;
-  min-width: 260px;
+  min-width: 300px;
 }
 input {
   background: var(--bg);
@@ -390,7 +390,7 @@ tr.row {
 }
 #vuln-table td:last-child {
   white-space: normal;
-  min-width: 260px;
+  min-width: 300px;
   word-break: break-word;
 }
 tr.row:hover td {
@@ -1472,7 +1472,7 @@ details#rules summary {
 .rule-row > span:not(.nums) {
   color: var(--mute);
   flex: 1;
-  min-width: 260px;
+  min-width: 300px;
 }
 .rule-row .sub {
   color: var(--text);
