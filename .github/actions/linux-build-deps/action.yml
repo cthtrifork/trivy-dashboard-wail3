@@ -17,15 +17,19 @@ runs:
         path: ~/apt-debs
         key: apt-debs-${{ runner.os }}-${{ steps.image.outputs.version }}-${{ hashFiles('.github/actions/linux-build-deps/action.yml') }}
 
+    # A stalled mirror trickles data forever and apt's own timeout never fires, so bound each attempt.
     - name: Install
-      shell: bash
-      run: |
-        if [ '${{ steps.cache.outputs.cache-hit }}' = true ] && sudo dpkg -i ~/apt-debs/*.deb; then
-          exit 0
-        fi
-        sudo apt-get -o Acquire::Languages=none -o Acquire::Retries=3 update -qq
-        sudo apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
-          build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
-        # The debs apt just downloaded are exactly what this image lacks; keep them for the cache.
-        mkdir -p ~/apt-debs
-        cp /var/cache/apt/archives/*.deb ~/apt-debs/
+      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+      with:
+        timeout_minutes: 3
+        max_attempts: 3
+        command: |
+          if [ '${{ steps.cache.outputs.cache-hit }}' = true ] && sudo dpkg -i ~/apt-debs/*.deb; then
+            exit 0
+          fi
+          sudo apt-get -o Acquire::Languages=none update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
+          # The debs apt just downloaded are exactly what this image lacks; keep them for the cache.
+          mkdir -p ~/apt-debs
+          cp /var/cache/apt/archives/*.deb ~/apt-debs/
