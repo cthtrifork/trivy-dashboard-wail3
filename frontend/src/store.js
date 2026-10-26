@@ -163,14 +163,22 @@ export const opts = reactive({
   trivyImage: lsGet("trivy-image"),
   // Rego source for Trivy's --ignore-policy; also a preference, kept between runs.
   ignorePolicy: lsGet("ignore-policy"),
+  // YAML for Trivy's --ignorefile (.trivyignore.yaml); likewise remembered.
+  ignoreFile: lsGet("ignore-file"),
 });
 export const saveTrivyImage = () => lsSet("trivy-image", opts.trivyImage.trim());
 export const saveIgnorePolicy = () => lsSet("ignore-policy", opts.ignorePolicy);
-// loadIgnorePolicyFile fills the policy from a .rego file the user picked.
+export const saveIgnoreFile = () => lsSet("ignore-file", opts.ignoreFile);
+// loadIgnorePolicyFile and loadIgnoreFile fill the text from a file the user picked.
 export async function loadIgnorePolicyFile(file) {
   if (!file) return;
   opts.ignorePolicy = await file.text();
   saveIgnorePolicy();
+}
+export async function loadIgnoreFile(file) {
+  if (!file) return;
+  opts.ignoreFile = await file.text();
+  saveIgnoreFile();
 }
 
 export const image = ref("");
@@ -215,6 +223,7 @@ export async function runScan() {
       showNotAffected: !opts.ignoreNotAffected,
       trivyImage: opts.trivyImage.trim(),
       ignorePolicy: opts.ignorePolicy,
+      ignoreFile: opts.ignoreFile,
       markUnderInvestigation: opts.markUnderInvestigation,
     });
     if (!cmpForm.repo) cmpForm.repo = r.image.replace(/@.*$/, "").replace(/:[^/:]*$/, "");

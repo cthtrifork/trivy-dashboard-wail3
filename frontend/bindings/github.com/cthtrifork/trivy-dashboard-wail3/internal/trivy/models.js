@@ -122,6 +122,14 @@ export class CompareRequest {
              */
             this["ignorePolicy"] = "";
         }
+        if (!("ignoreFile" in $$source)) {
+            /**
+             * see ScanRequest.IgnoreFile
+             * @member
+             * @type {string}
+             */
+            this["ignoreFile"] = "";
+        }
         if (!("showSuppressed" in $$source)) {
             /**
              * See the same fields on ScanRequest.
@@ -1171,6 +1179,15 @@ export class ScanRequest {
              * @type {string}
              */
             this["ignorePolicy"] = "";
+        }
+        if (!("ignoreFile" in $$source)) {
+            /**
+             * IgnoreFile is the source of a .trivyignore.yaml passed to Trivy's --ignorefile: the listed
+             * vulnerabilities (with optional statements) are left out of the report. Empty means none.
+             * @member
+             * @type {string}
+             */
+            this["ignoreFile"] = "";
         }
         if (!("markUnderInvestigation" in $$source)) {
             /**

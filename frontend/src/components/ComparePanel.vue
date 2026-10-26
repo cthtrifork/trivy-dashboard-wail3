@@ -58,6 +58,7 @@ async function run() {
     showNotAffected: !opts.ignoreNotAffected,
     trivyImage: opts.trivyImage.trim(),
     ignorePolicy: opts.ignorePolicy,
+    ignoreFile: opts.ignoreFile,
   };
   for (const k of ["repo", "a", "b"]) lsSet("cmp-" + k, cmpForm[k]);
   logText.value = "";

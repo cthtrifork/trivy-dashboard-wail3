@@ -20,6 +20,7 @@ type CompareRequest struct {
 	IgnoreUnfixed bool   `json:"ignoreUnfixed"`
 	TrivyImage    string `json:"trivyImage"`   // see ScanRequest.TrivyImage
 	IgnorePolicy  string `json:"ignorePolicy"` // see ScanRequest.IgnorePolicy
+	IgnoreFile    string `json:"ignoreFile"`   // see ScanRequest.IgnoreFile
 	// See the same fields on ScanRequest.
 	ShowSuppressed  bool `json:"showSuppressed"`
 	ShowWillNotFix  bool `json:"showWillNotFix"`
@@ -91,7 +92,7 @@ func (s *Scanner) Compare(parent context.Context, req CompareRequest) (*CompareR
 
 	scan := func(label, ref string) (*ScanResult, error) {
 		s.logf("=== %s: %s ===", label, ref)
-		return s.scanImage(ctx, ScanRequest{Image: ref, Username: req.Username, Password: req.Password, IgnoreUnfixed: req.IgnoreUnfixed, TrivyImage: req.TrivyImage, IgnorePolicy: req.IgnorePolicy,
+		return s.scanImage(ctx, ScanRequest{Image: ref, Username: req.Username, Password: req.Password, IgnoreUnfixed: req.IgnoreUnfixed, TrivyImage: req.TrivyImage, IgnorePolicy: req.IgnorePolicy, IgnoreFile: req.IgnoreFile,
 			ShowSuppressed: req.ShowSuppressed, ShowWillNotFix: req.ShowWillNotFix, ShowNotAffected: req.ShowNotAffected})
 	}
 	a, err := scan("Base", refA)

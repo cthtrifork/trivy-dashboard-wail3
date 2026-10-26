@@ -31,6 +31,9 @@ type ScanRequest struct {
 	// IgnorePolicy is the source of a Rego policy passed to Trivy's --ignore-policy: findings for
 	// which it defines `ignore` are left out of the report. Empty means none.
 	IgnorePolicy string `json:"ignorePolicy"`
+	// IgnoreFile is the source of a .trivyignore.yaml passed to Trivy's --ignorefile: the listed
+	// vulnerabilities (with optional statements) are left out of the report. Empty means none.
+	IgnoreFile string `json:"ignoreFile"`
 	// MarkUnderInvestigation records an under_investigation VEX assessment for every
 	// finding that has none after the scan (handled by the service, which owns the store).
 	MarkUnderInvestigation bool `json:"markUnderInvestigation"`
@@ -293,7 +296,11 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	if err != nil {
 		return nil, err
 	}
-	policy, err := checkIgnorePolicy(req.IgnorePolicy)
+	policy, err := checkIgnoreText("ignore policy", req.IgnorePolicy)
+	if err != nil {
+		return nil, err
+	}
+	ignoreFile, err := checkIgnoreText("ignore file", req.IgnoreFile)
 	if err != nil {
 		return nil, err
 	}
@@ -319,14 +326,14 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	if ignore := req.ignoreStatus(); ignore != "" {
 		job.Flags = append(job.Flags, "--ignore-status", ignore)
 	}
-	job.IgnorePolicy = policy // only the vulnerability report is filtered, not the SBOM
+	job.IgnorePolicy, job.IgnoreFile = policy, ignoreFile // only the vulnerability report is filtered, not the SBOM
 	vulnJSON, err := s.engine().RunTrivy(ctx, job, logLine)
 	if err != nil {
 		return nil, fmt.Errorf("vulnerability scan failed: %w", err)
 	}
 
 	s.logf("Generating SBOM…")
-	job.Flags, job.IgnorePolicy = []string{"--skip-db-update", "--format", "cyclonedx"}, ""
+	job.Flags, job.IgnorePolicy, job.IgnoreFile = []string{"--skip-db-update", "--format", "cyclonedx"}, "", ""
 	sbomJSON, err := s.engine().RunTrivy(ctx, job, logLine)
 	if err != nil {
 		return nil, fmt.Errorf("SBOM generation failed: %w", err)
@@ -351,21 +358,21 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	return res, nil
 }
 
-// maxIgnorePolicy bounds the policy size: it travels in an environment variable, and Windows
-// limits a whole environment block to 32 KiB.
-const maxIgnorePolicy = 24 * 1024
+// maxIgnoreText bounds the ignore policy and the ignore file: each travels in an environment
+// variable, and Windows limits a whole environment block to 32 KiB.
+const maxIgnoreText = 24 * 1024
 
-// checkIgnorePolicy returns the policy to use, or "" when it is blank. Rego itself is checked by
-// Trivy, whose error reaches the user through the scan log.
-func checkIgnorePolicy(src string) (string, error) {
+// checkIgnoreText returns the policy or ignore file to use, or "" when it is blank. Rego and YAML
+// themselves are checked by Trivy, whose error reaches the user through the scan log.
+func checkIgnoreText(what, src string) (string, error) {
 	if strings.TrimSpace(src) == "" {
 		return "", nil
 	}
-	if len(src) > maxIgnorePolicy {
-		return "", fmt.Errorf("ignore policy is too large (%d bytes, at most %d)", len(src), maxIgnorePolicy)
+	if len(src) > maxIgnoreText {
+		return "", fmt.Errorf("%s is too large (%d bytes, at most %d)", what, len(src), maxIgnoreText)
 	}
 	if strings.ContainsRune(src, 0) {
-		return "", errors.New("ignore policy contains a NUL byte")
+		return "", fmt.Errorf("%s contains a NUL byte", what)
 	}
 	return src, nil
 }

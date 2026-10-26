@@ -179,21 +179,25 @@ func TestInvalidTrivyImageIsRejectedBeforeAnyJob(t *testing.T) {
 	}
 }
 
-func TestIgnorePolicyOnlyFiltersTheVulnerabilityScan(t *testing.T) {
+func TestIgnorePolicyAndFileOnlyFilterTheVulnerabilityScan(t *testing.T) {
 	r, s := newRec(t)
 	const policy = "package trivy\n\nignore if input.PkgName == \"x\"\n"
-	if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13", IgnorePolicy: policy}); err != nil {
+	const file = "vulnerabilities:\n  - id: CVE-1\n"
+	if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13", IgnorePolicy: policy, IgnoreFile: file}); err != nil {
 		t.Fatal(err)
 	}
 	for _, j := range r.jobs {
 		vuln := slices.Contains(j.Flags, "json")
-		if vuln != (j.IgnorePolicy == policy) || (!vuln && j.IgnorePolicy != "") {
-			t.Errorf("job %v has policy %q", j.Flags, j.IgnorePolicy)
+		if vuln != (j.IgnorePolicy == policy) || vuln != (j.IgnoreFile == file) || (!vuln && (j.IgnorePolicy != "" || j.IgnoreFile != "")) {
+			t.Errorf("job %v has policy %q and file %q", j.Flags, j.IgnorePolicy, j.IgnoreFile)
 		}
 	}
-	for _, bad := range []string{strings.Repeat("a", maxIgnorePolicy+1), "a\x00b"} {
+	for _, bad := range []string{strings.Repeat("a", maxIgnoreText+1), "a\x00b"} {
 		if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13", IgnorePolicy: bad}); err == nil {
 			t.Errorf("policy of %d bytes accepted", len(bad))
+		}
+		if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13", IgnoreFile: bad}); err == nil {
+			t.Errorf("ignore file of %d bytes accepted", len(bad))
 		}
 	}
 }

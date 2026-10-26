@@ -8,6 +8,8 @@ import {
   saveTrivyImage,
   saveIgnorePolicy,
   loadIgnorePolicyFile,
+  saveIgnoreFile,
+  loadIgnoreFile,
   scanning,
   comparing,
   status,
@@ -172,6 +174,26 @@ onMounted(init);
             accept=".rego,text/plain"
             title="Load the policy from a .rego file"
             @change="loadIgnorePolicyFile($event.target.files[0])"
+          />
+          <label class="policy"
+            >Ignore file (<code>.trivyignore.yaml</code>, <code>--ignorefile</code>)
+            <textarea
+              id="ignore-file"
+              v-model="opts.ignoreFile"
+              rows="6"
+              placeholder="vulnerabilities:&#10;  - id: CVE-2024-12345&#10;    statement: Not reachable in our setup"
+              autocomplete="off"
+              spellcheck="false"
+              title="Vulnerabilities listed here are left out of the scan. Empty means none."
+              @change="saveIgnoreFile"
+            ></textarea>
+          </label>
+          <input
+            id="ignore-file-file"
+            type="file"
+            accept=".yaml,.yml,text/yaml,text/plain"
+            title="Load the ignore file from a .trivyignore.yaml file"
+            @change="loadIgnoreFile($event.target.files[0])"
           />
           <div class="opts-update">
             <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>

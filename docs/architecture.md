@@ -62,11 +62,13 @@ The default image is pinned in [`internal/trivy/image/Dockerfile`](../internal/t
 
 Override it per run in the UI: **Options → Trivy version or image** (empty = the default; the field is remembered by the browser/webview). It takes a full reference (`registry.local/mirror/trivy:0.77.0`, `...@sha256:...`) or just a version (`0.77.0` / `v0.77.0`, meaning `docker.io/aquasec/trivy:0.77.0`), and is sent with every scan and comparison as `trivyImage`. Values that look like flags or contain whitespace are refused before anything runs. Changing it makes the next scan re-check the vulnerability DB for that version.
 
-### Ignore policy
+### Ignore policy and ignore file
 
 **Options → Ignore policy** takes a [Rego ignore policy](https://trivy.dev/docs/latest/guide/configuration/filtering/#by-rego) (the example in the Trivy docs is a `package trivy` module that defines `ignore`). It can be typed, pasted or loaded from a `.rego` file; the text is remembered by the browser/webview and sent with every scan and comparison as `ignorePolicy`. Empty means none.
 
 For the vulnerability scan only (not the SBOM, not the DB check) the engine starts the scanner container with `sh` as entrypoint, passes the policy in the `SCANNER_IGNORE_POLICY` environment variable, writes it to `/tmp/ignore.rego` inside the container and then `exec`s `trivy ... --ignore-policy /tmp/ignore.rego`. A bind mount would need the file on the podman host, which breaks with a remote podman; the variable works with both, and keeps the policy off the process command line. The policy is limited to 24 KiB. Rego syntax errors are reported by Trivy and appear in the scan log and status line. Findings the policy ignores are simply absent from the report, so they do not show up in the app at all. Demo mode (recorded scans) does not evaluate policies.
+
+**Options → Ignore file** is a separate option for Trivy's [`.trivyignore.yaml`](https://trivy.dev/docs/latest/configuration/filtering/#trivyignoreyaml) (`vulnerabilities:` with an `id` and optional `statement` per entry). It is typed, pasted or loaded the same way, sent as `ignoreFile`, and delivered like the policy: `SCANNER_IGNORE_FILE` is written to `/tmp/ignorefile.yaml` and passed as `--ignorefile`. The two can be used together or alone; each is limited to 24 KiB. Only the YAML format is supported (the file name Trivy sees ends in `.yaml`).
 
 ### Vulnerability DB
 
