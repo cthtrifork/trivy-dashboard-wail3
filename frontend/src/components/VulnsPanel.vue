@@ -88,7 +88,7 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
         <col style="width: 16%" />
         <col style="width: 100px" />
         <col style="width: 100px" />
-        <col style="width: 56px" />
+        <col style="width: 92px" />
         <col style="width: 60px" />
         <col style="width: 150px" />
         <col />
@@ -118,7 +118,12 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
           <td class="mono">{{ v.package }}</td>
           <td class="mono">{{ v.installed }}</td>
           <td class="mono">{{ v.fixed || "—" }}</td>
-          <td>{{ v.score ? v.score.toFixed(1) : "—" }}</td>
+          <td>
+            <span class="meter" :style="sevStyle(v.severity)">
+              <b>{{ v.score ? v.score.toFixed(1) : "–" }}</b>
+              <i :style="{ '--w': (v.score || 0) * 10 + '%' }"></i>
+            </span>
+          </td>
           <td>{{ v.hasEpss ? pct(v.epss) : "—" }}</td>
           <td>
             <Chip v-if="v.kev" kind="hot" title="Known exploited (CISA)">KEV</Chip>{{ " " }}
