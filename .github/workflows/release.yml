@@ -231,8 +231,7 @@ jobs:
             dist/*_linux_amd64
             dist/*.sbom.cdx.json
 
-      # actions/attest-sbom is deprecated; actions/attest does the same with sbom-path. Unlike
-      # subject-path, sbom-path takes one literal path (no glob), so resolve it first.
+      # Unlike subject-path, sbom-path takes one literal path (no glob), so resolve it first.
       - name: Locate SBOM
         id: sbom
         run: echo "path=$(ls dist/*.sbom.cdx.json)" >> "$GITHUB_OUTPUT"
