@@ -534,8 +534,11 @@ func (s *VEXStore) SetMany(image string, entries []VEXEntry) error {
 // MarkUnassessed gives every finding that has no assessment yet an
 // under_investigation one, so each CVE is covered and the open work is the
 // list of under_investigation entries. Existing assessments, expired ones
-// included, are left alone. It returns how many entries it added.
-func (s *VEXStore) MarkUnassessed(image string, findings []Vulnerability, author string) (int, error) {
+// included, are left alone. A non-empty minSeverity (CRITICAL, HIGH, MEDIUM,
+// LOW) restricts it to findings of that severity or worse. It returns how many
+// entries it added.
+func (s *VEXStore) MarkUnassessed(image string, findings []Vulnerability, author, minSeverity string) (int, error) {
+	limit, filtered := severityRank[strings.ToUpper(strings.TrimSpace(minSeverity))]
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	f, err := s.load()
@@ -549,6 +552,9 @@ func (s *VEXStore) MarkUnassessed(image string, findings []Vulnerability, author
 	now := time.Now().UTC().Format(time.RFC3339)
 	n := 0
 	for _, v := range findings {
+		if filtered && severityRank[v.Severity] > limit {
+			continue
+		}
 		if _, ok := f[repo][v.Key]; ok {
 			continue // a finding repeated across layers shares one key
 		}

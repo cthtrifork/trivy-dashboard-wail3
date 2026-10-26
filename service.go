@@ -219,7 +219,7 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 		s.latest = res.Vulnerabilities
 		s.mu.Unlock()
 		if req.MarkUnderInvestigation {
-			if _, merr := s.vex.MarkUnassessed(res.Image, res.Vulnerabilities, ""); merr != nil {
+			if _, merr := s.vex.MarkUnassessed(res.Image, res.Vulnerabilities, "", ""); merr != nil {
 				return res, errors.New("scan finished, but marking findings under investigation failed: " + merr.Error())
 			}
 		}
@@ -301,8 +301,9 @@ func (s *ScanService) VEXExport(image, author, role string) (string, error) {
 // scan of the image and saves the matching assessments. A statement replaces
 // the stored assessment of the finding it matches; other stored assessments are
 // kept. With markRest, findings still without an assessment afterwards are
-// marked under_investigation.
-func (s *ScanService) VEXImport(image, doc string, markRest bool) (trivy.ImportReport, error) {
+// marked under_investigation; a non-empty minSeverity limits that to findings
+// of that severity or worse.
+func (s *ScanService) VEXImport(image, doc string, markRest bool, minSeverity string) (trivy.ImportReport, error) {
 	s.mu.Lock()
 	findings := s.found[trivy.ImageRepo(image)]
 	s.mu.Unlock()
@@ -323,7 +324,7 @@ func (s *ScanService) VEXImport(image, doc string, markRest bool) (trivy.ImportR
 		return rep, err
 	}
 	if markRest {
-		rep.Marked, err = s.vex.MarkUnassessed(image, findings, "")
+		rep.Marked, err = s.vex.MarkUnassessed(image, findings, "", minSeverity)
 	}
 	return rep, err
 }
@@ -337,7 +338,7 @@ func (s *ScanService) VEXMarkUnassessed(image, author string) (int, error) {
 	if len(findings) == 0 {
 		return 0, errors.New("scan the image first")
 	}
-	return s.vex.MarkUnassessed(image, findings, author)
+	return s.vex.MarkUnassessed(image, findings, author, "")
 }
 
 // VEXSave exports the document through a native save dialog. It returns the
