@@ -1,4 +1,8 @@
 import { Browser } from "@wailsio/runtime";
+// Lowest CVSS v3 score of each severity band. Advisories such as GHSA ids often carry a severity but no
+// vector, and a blank score next to a HIGH pill reads as harmless; show the band floor, marked with "~".
+const CVSS_FLOOR = { CRITICAL: 9, HIGH: 7, MEDIUM: 4, LOW: 0.1 };
+export const cvssFloor = (severity) => CVSS_FLOOR[severity] ?? 0;
 export const pct = (x) => (x * 100 < 0.1 ? "<0.1%" : (x * 100).toFixed(x >= 0.1 ? 0 : 1) + "%");
 
 export const TIER_COLOR = { "Act now": "--CRITICAL", "Fix soon": "--HIGH", Plan: "--MEDIUM", Monitor: "--UNKNOWN" };
@@ -11,6 +15,7 @@ export const COLUMN_HELP = {
   score: "CVSS base score, 0 to 10. How bad the flaw is in the worst case, not how likely it is to be exploited.",
   epss: "EPSS: estimated probability that the flaw is exploited in the wild within the next 30 days.",
   signals: "KEV = listed by CISA as known exploited. VEX = a statement you recorded about this finding.",
+  estimated: "No CVSS score is published; this is the lowest score of the severity band.",
   fixed: "First package version that contains a fix.",
   installed: "Package version found in the image.",
 };

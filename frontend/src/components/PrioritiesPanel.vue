@@ -1,14 +1,14 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import { result, vulns, vex } from "../store.js";
-import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
+import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, cvssFloor, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
 import SuppressedRow from "./SuppressedRow.vue";
 import { useVirtualList } from "../lib/virtual.js";
 
-const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false, includeLow: false });
+const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false });
 const TIERS = Object.keys(TIER_COLOR);
 const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
 // Empty set = no filter. Both are view filters that run after ranking, like the toolbar ones.
@@ -38,9 +38,8 @@ const supPages = computed(() => Math.max(1, Math.ceil(supGroups.value.length / S
 // Clamp instead of resetting: removing the last row of a page must not jump back to page 1.
 const supCurrent = computed(() => Math.min(supPage.value, supPages.value - 1));
 const suppressedShown = computed(() => supGroups.value.slice(supCurrent.value * SUPPRESSED_PAGE, (supCurrent.value + 1) * SUPPRESSED_PAGE));
-const lowN = computed(() => open.value.filter((v) => v.tier === "Monitor").length);
-// Picking tiers by hand wins over "Include low-risk": asking for Monitor shows Monitor.
-const passTier = (v) => (tierFilter.size ? tierFilter.has(v.tier) : prio.includeLow || v.tier !== "Monitor");
+// Monitor findings are always listed (ranked last); the Priority filter narrows to a tier when asked.
+const passTier = (v) => !tierFilter.size || tierFilter.has(v.tier);
 const passSev = (v) => !sevFilter.size || sevFilter.has(v.severity);
 const pool = computed(() => open.value.filter((v) => passTier(v) && passSev(v)));
 const list = computed(() => (prio.top ? pool.value.slice(0, prio.top) : pool.value));
@@ -60,8 +59,7 @@ const note = computed(
   () =>
     `${all.value.length} findings → ${actN.value} worth acting on` +
     (kevN.value ? `, ${kevN.value} known exploited` : "") +
-    (hidden.value.length ? ` · ${hidden.value.length} hidden by VEX` : "") +
-    (!prio.includeLow && !tierFilter.size && lowN.value ? ` · ${lowN.value} low-risk not shown` : ""),
+    (hidden.value.length ? ` · ${hidden.value.length} hidden by VEX` : ""),
 );
 const signals = computed(() => {
   const en = result.value?.enrichment || {};
@@ -127,7 +125,6 @@ defineExpose({ count: computed(() => pool.value.length) });
       </select>
     </label>
     <label class="chk"><input type="checkbox" id="prio-hide" v-model="prio.hideResolved" /> Hide resolved by VEX</label>
-    <label class="chk"><input type="checkbox" id="prio-low" v-model="prio.includeLow" /> Include low-risk (Monitor)</label>
     <label class="chk"><input type="checkbox" id="prio-fixable" v-model="prio.fixableOnly" /> Only with a fix</label>
     <span id="prio-note">{{ note }}</span>
   </div>
@@ -145,8 +142,8 @@ defineExpose({ count: computed(() => pool.value.length) });
         <div class="prow-main">
           <span class="sev sevpill" :class="v.severity">{{ v.severity }}</span>
           <span class="meter">
-            <b>{{ v.score ? v.score.toFixed(1) : "–" }}</b>
-            <i :style="{ '--w': (v.score || 0) * 10 + '%' }"></i>
+            <b :title="v.score ? '' : COLUMN_HELP.estimated">{{ v.score ? v.score.toFixed(1) : cvssFloor(v.severity) ? "~" + cvssFloor(v.severity).toFixed(1) : "–" }}</b>
+            <i :style="{ '--w': (v.score || cvssFloor(v.severity)) * 10 + '%' }"></i>
           </span>
           <span class="pfind">
             <span class="ptitle"
