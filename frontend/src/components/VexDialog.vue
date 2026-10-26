@@ -1,4 +1,5 @@
 <script setup>
+import JsonBox from "./JsonBox.vue";
 import { computed, reactive, ref, watch } from "vue";
 import { ScanService, result, vex, loadVEX, errText, lsGet, lsSet } from "../store.js";
 
@@ -105,7 +106,7 @@ defineExpose({ open });
       <label>Author <input id="vex-author" v-model="form.author" placeholder="Your name or organisation" /></label>
       <label>Role <input id="vex-role" v-model="form.role" placeholder="e.g. Security Engineer (optional)" /></label>
     </div>
-    <textarea id="vex-preview" ref="preview" :value="text" readonly rows="14" spellcheck="false"></textarea>
+    <JsonBox ta-id="vex-preview" ref="preview" :model-value="text" readonly :rows="14" />
     <div id="vex-msg" class="kv">{{ msg }}</div>
     <div class="dlg-actions">
       <button type="button" class="ghost" id="vex-copy" @click="copy">Copy</button>

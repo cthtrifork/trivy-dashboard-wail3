@@ -87,15 +87,20 @@ await page.evaluate(() => {
   ta.value = ta.value
     .replace(/("timestamp":\s*")[^"]+"/g, '$1' + '2026-01-01T00:00:00Z"')
     .replace(/(openvex\.dev\/docs\/public\/vex-)[0-9a-f]+/g, "$1" + "0".repeat(64));
+  ta.dispatchEvent(new Event("input")); // the highlighted copy listens for it
 });
 await shot("03-priorities-export-openvex");
-const exported = await page.inputValue("#vex-preview");
+// Pin the stamps again for the import step so its screenshots are reproducible too.
+const exported = (await page.inputValue("#vex-preview"))
+  .replace(/("timestamp":\s*")[^"]+"/g, '$1' + '2026-01-01T00:00:00Z"')
+  .replace(/(openvex\.dev\/docs\/public\/vex-)[0-9a-f]+/g, "$1" + "0".repeat(64));
 await page.click("#vex-close");
 
 // Import the document back: the dialog reports what matched.
 await page.click("#vex-import-btn");
 await page.fill("#vex-paste", exported);
 await page.check("#vex-mark-rest");
+await shot("03a-priorities-import-paste");
 await page.click("#vex-apply");
 await page.waitForSelector("#vex-import-log");
 await shot("03b-priorities-import-openvex");

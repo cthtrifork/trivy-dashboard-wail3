@@ -1,4 +1,5 @@
 <script setup>
+import JsonBox from "./JsonBox.vue";
 import { computed, ref } from "vue";
 import { ScanService, result, loadVEX, errText } from "../store.js";
 
@@ -75,13 +76,12 @@ defineExpose({ open });
     <label class="chk"
       ><input id="vex-mark-rest" v-model="markRest" type="checkbox" /> Mark findings the file does not cover as under investigation</label
     >
-    <textarea
-      id="vex-paste"
+    <JsonBox
       v-model="paste"
-      rows="8"
-      spellcheck="false"
+      ta-id="vex-paste"
+      :rows="8"
       placeholder='{"@context": "https://openvex.dev/ns/v0.2.0", "statements": [...]}'
-    ></textarea>
+    />
     <div class="dlg-actions">
       <label class="ghost file-btn">Choose file…<input type="file" accept=".json,application/json" hidden @change="loadFile" /></label>
       <button type="button" id="vex-apply" :disabled="busy" @click="apply">{{ busy ? "Importing…" : "Import" }}</button>

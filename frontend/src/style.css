@@ -166,9 +166,13 @@ button:disabled {
   cursor: default;
 }
 #export-vex-btn {
-  background: var(--ok);
-  color: #04140c;
+  background: transparent;
+  color: var(--ok);
+  box-shadow: inset 0 0 0 1.5px var(--ok);
   white-space: nowrap;
+}
+#export-vex-btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
 }
 #cancel-btn {
   background: var(--CRITICAL);
@@ -948,10 +952,57 @@ dialog::backdrop {
   justify-content: flex-end;
   margin-top: 10px;
 }
-#vex-preview {
+.json-box {
+  position: relative;
+  height: calc(var(--rows) * 1.45em * 0.8125 + 14px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+}
+.json-box pre,
+.json-box textarea {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
   font:
-    12px / 1.4 ui-monospace,
+    13px / 1.45 ui-monospace,
     monospace;
+  white-space: pre;
+  tab-size: 2;
+  overflow: auto;
+  resize: none;
+}
+.json-box pre {
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--text);
+}
+.json-box textarea {
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text);
+}
+.json-box textarea::placeholder {
+  color: var(--mute);
+}
+.json-box textarea::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.j-key {
+  color: var(--accent);
+}
+.j-str {
+  color: var(--ok);
+}
+.j-num,
+.j-lit {
+  color: var(--HIGH);
+}
+.j-p {
+  color: var(--mute);
 }
 [hidden] {
   display: none !important;
