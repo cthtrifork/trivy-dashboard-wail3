@@ -35,18 +35,17 @@ runs:
       shell: bash
       run: |
         pkgs="build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev"
-        apt_opts=(-o Acquire::Languages=none -o Acquire::Retries=3 -o Acquire::http::Timeout=20 -o Dpkg::Use-Pty=0)
-        # The hosted Ubuntu mirror occasionally crawls. Download in bounded attempts (a killed
-        # download is safe, a killed dpkg is not), then install from the local archive.
-        for attempt in 1 2 3; do
-          if sudo timeout 120 apt-get "${apt_opts[@]}" update -qq &&
-             sudo timeout 120 apt-get "${apt_opts[@]}" install -y --no-install-recommends --download-only $pkgs; then
-            break
-          fi
-          [ "$attempt" = 3 ] && { echo "::error::apt download failed after 3 attempts"; exit 1; }
-          echo "::warning::apt download attempt $attempt stalled, retrying"
-        done
+        apt_opts=(-o Acquire::Languages=none -o Acquire::Retries=3 -o Dpkg::Use-Pty=0)
+        sudo timeout 180 apt-get "${apt_opts[@]}" update -qq
+        # The hosted Ubuntu mirror occasionally trickles data, which apt's own timeout never
+        # catches. Resolve the package URLs with apt, then fetch them in parallel with curl
+        # (abort a crawling transfer, retry per file). apt checks the hashes when it installs.
+        archives=/var/cache/apt/archives
+        sudo apt-get "${apt_opts[@]}" -qq install -y --no-install-recommends --print-uris $pkgs |
+          awk -F"'" '{ split($3, f, " "); print $2, f[1] }' |
+          sudo xargs -P 8 -L 1 sh -c 'curl -fsSL --retry 5 --retry-all-errors --connect-timeout 10 \
+            --speed-limit 50000 --speed-time 10 -o "'"$archives"'/$1" "$0"'
         sudo apt-get "${apt_opts[@]}" install -y --no-install-recommends $pkgs
         # Keep the downloaded debs (exactly the closure this image lacked) for the cache post step.
         mkdir -p ~/apt-debs
-        cp /var/cache/apt/archives/*.deb ~/apt-debs/
+        cp "$archives"/*.deb ~/apt-debs/
