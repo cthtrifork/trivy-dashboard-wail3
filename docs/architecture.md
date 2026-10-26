@@ -62,6 +62,10 @@ The default image is pinned in [`internal/trivy/image/Dockerfile`](../internal/t
 
 Override it per run in the UI: **Options → Trivy version or image** (empty = the default; the field is remembered by the browser/webview). It takes a full reference (`registry.local/mirror/trivy:0.77.0`, `...@sha256:...`) or just a version (`0.77.0` / `v0.77.0`, meaning `docker.io/aquasec/trivy:0.77.0`), and is sent with every scan and comparison as `trivyImage`. Values that look like flags or contain whitespace are refused before anything runs. Changing it makes the next scan re-check the vulnerability DB for that version.
 
+### Surviving a reload
+
+The last scan survives a browser reload or a container restart. After a scan the frontend stores the image and the result in `localStorage` (a result over the quota is dropped) and writes `#image=<ref>` to the URL. On load the image comes from the hash, else from `localStorage`; the stored result is shown when it belongs to that image, and a hash naming a different image reruns the scan. Credentials are never stored. The hash is read at load only, so editing it in place does nothing until a reload.
+
 ### Ignore policy and ignore file
 
 **Options → Ignore policy** takes a [Rego ignore policy](https://trivy.dev/docs/latest/guide/configuration/filtering/#by-rego) (the example in the Trivy docs is a `package trivy` module that defines `ignore`). It can be typed, pasted or loaded from a `.rego` file; the text is remembered by the browser/webview and sent with every scan and comparison as `ignorePolicy`. Empty means none.
