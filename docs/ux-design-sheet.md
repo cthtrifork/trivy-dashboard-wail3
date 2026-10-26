@@ -80,7 +80,7 @@ Rules: never use a new hex in a component, add a token. Color is never the only 
 
 ### Finding row (Priorities)
 
-Findings are table rows, not cards, so a long list stays scannable. Two segmented filters above the list (Severity, Priority; each segment shows a count that respects the other filter) narrow it; an empty selection means "all". Monitor findings are always listed, ranked last. A finding without a CVSS score shows its severity band floor (HIGH → ~7.0).
+Findings are table rows, not cards, so a long list stays scannable. Two segmented filters above the list (Severity, Priority; each segment shows a count that respects the other filter) narrow it; an empty selection means "all". Monitor findings are always listed, ranked last. A finding without a CVSS score shows its severity band floor (HIGH → ~7.0, shown italic and grey; the expanded row says it is an estimate).
 
 Collapsed row, left to right:
 

@@ -11,7 +11,6 @@ const est = computed(() => floor.value > 0);
 <template>
   <span class="meter" :class="{ est }">
     <b :title="score ? 'Reported CVSS score' : est ? COLUMN_HELP.estimated : ''">{{ score ? score.toFixed(1) : est ? "~" + floor.toFixed(1) : "–" }}</b>
-    <em v-if="est" :title="COLUMN_HELP.estimated">est.</em>
     <i :style="{ '--w': (score || floor) * 10 + '%' }"></i>
   </span>
 </template>

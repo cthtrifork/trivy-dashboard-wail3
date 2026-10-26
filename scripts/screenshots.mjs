@@ -124,6 +124,7 @@ await page.click("#vex-import-close");
 await tab("vulns");
 await shot("04-vulnerabilities");
 await page.fill("#vuln-filter", "CVE-2026-97031");
+await page.click("#vuln-table tbody:not(.pad) tr.row >> nth=0");
 await shot("04b-vulnerabilities-estimated-cvss");
 await page.fill("#vuln-filter", "");
 // Expand a finding that has no VEX assessment, so the trigger reads "Assess this finding".
