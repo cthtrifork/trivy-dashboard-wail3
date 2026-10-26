@@ -257,6 +257,7 @@ export async function loadVEX() {
 export async function runScan() {
   scanning.value = true;
   logText.value = "";
+  vex.value = new Map(); // the backend drops the saved VEX file when a scan starts
   setStatus("Starting scan…", { busy: true });
   try {
     const r = await ScanService.Scan({

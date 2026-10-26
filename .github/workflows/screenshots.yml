@@ -106,6 +106,26 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload 03a-priorities-import-error
+        id: shot-03a-priorities-import-error
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/03a-priorities-import-error.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 03b-priorities-import-openvex
+        id: shot-03b-priorities-import-openvex
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/03b-priorities-import-openvex.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload 04-vulnerabilities
         id: shot-04-vulnerabilities
         if: github.event_name == 'pull_request'
