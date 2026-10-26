@@ -1,8 +1,9 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import { result, vulns, vex } from "../store.js";
-import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, cvssFloor, pct, detailUrl, openUrl } from "../lib/format.js";
+import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
+import CvssMeter from "./CvssMeter.vue";
 import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
 import SuppressedRow from "./SuppressedRow.vue";
@@ -141,11 +142,7 @@ defineExpose({ count: computed(() => pool.value.length) });
       <div v-for="{ item: v, index } in visible" :key="cardKey(v)" v-measure="cardKey(v)" class="prow" :class="{ open: expanded.has(cardKey(v)) }" :style="sevStyle(v)">
         <div class="prow-main">
           <span class="sev sevpill" :class="v.severity">{{ v.severity }}</span>
-          <span class="meter" :class="{ est: !v.score && cvssFloor(v.severity) }">
-            <b :title="v.score ? 'Reported CVSS score' : COLUMN_HELP.estimated">{{ v.score ? v.score.toFixed(1) : cvssFloor(v.severity) ? "~" + cvssFloor(v.severity).toFixed(1) : "–" }}</b>
-            <em v-if="!v.score && cvssFloor(v.severity)" :title="COLUMN_HELP.estimated">est.</em>
-            <i :style="{ '--w': (v.score || cvssFloor(v.severity)) * 10 + '%' }"></i>
-          </span>
+          <CvssMeter :score="v.score" :severity="v.severity" />
           <span class="pfind">
             <span class="ptitle"
               ><button type="button" class="pexpand" :aria-expanded="expanded.has(cardKey(v))" @click.stop="toggleRow(v)">{{ v.title || v.id }}</button></span

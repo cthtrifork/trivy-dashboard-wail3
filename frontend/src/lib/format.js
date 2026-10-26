@@ -3,6 +3,8 @@ import { Browser } from "@wailsio/runtime";
 // vector, and a blank score next to a HIGH pill reads as harmless; show the band floor, marked with "~".
 const CVSS_FLOOR = { CRITICAL: 9, HIGH: 7, MEDIUM: 4, LOW: 0.1 };
 export const cvssFloor = (severity) => CVSS_FLOOR[severity] ?? 0;
+// Score used to order rows: reported CVSS, else the band floor, so an unscored HIGH sorts with the 7s.
+export const effectiveScore = (v) => v.score || cvssFloor(v.severity);
 export const pct = (x) => (x * 100 < 0.1 ? "<0.1%" : (x * 100).toFixed(x >= 0.1 ? 0 : 1) + "%");
 
 export const TIER_COLOR = { "Act now": "--CRITICAL", "Fix soon": "--HIGH", Plan: "--MEDIUM", Monitor: "--UNKNOWN" };
