@@ -1,71 +1,107 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { EditorState } from "@codemirror/state";
+import { EditorView, placeholder as cmPlaceholder } from "@codemirror/view";
+import { basicSetup } from "codemirror";
+import { json, jsonParseLinter } from "@codemirror/lang-json";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { linter, lintGutter } from "@codemirror/lint";
+import { tags as t } from "@lezer/highlight";
 
-// A textarea with JSON syntax highlighting: the text is drawn in a <pre> underneath and the
-// textarea on top is transparent, so editing, selection and copy stay native.
+// A JSON editor (CodeMirror 6) with syntax highlighting and inline syntax errors. With `vex` set it
+// also checks that the document looks like OpenVEX, so a wrong file is flagged before importing.
 const props = defineProps({
   modelValue: { type: String, default: "" },
   readonly: Boolean,
   rows: { type: Number, default: 8 },
   placeholder: { type: String, default: "" },
   taId: { type: String, default: "" },
+  vex: Boolean,
 });
 const emit = defineEmits(["update:modelValue"]);
 
-const code = ref(props.modelValue);
-watch(
-  () => props.modelValue,
-  (v) => (code.value = v),
-);
-const ta = ref(null);
-const pre = ref(null);
+const root = ref(null);
+let view = null;
 
-const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const TOKEN = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|([{}[\],:])/g;
+const highlight = HighlightStyle.define([
+  { tag: t.propertyName, color: "var(--accent)" },
+  { tag: t.string, color: "var(--ok)" },
+  { tag: [t.number, t.bool, t.null], color: "var(--HIGH)" },
+  { tag: [t.brace, t.squareBracket, t.separator], color: "var(--mute)" },
+]);
 
-const html = computed(() => {
-  let out = "";
-  let last = 0;
-  const s = code.value;
-  for (const m of s.matchAll(TOKEN)) {
-    out += esc(s.slice(last, m.index));
-    const [all, str, colon, lit, num, punct] = m;
-    if (str) out += `<span class="${colon ? 'j-key' : 'j-str'}">${esc(str)}</span>${colon ? `<span class="j-p">${colon}</span>` : ""}`;
-    else if (lit) out += `<span class="j-lit">${lit}</span>`;
-    else if (num) out += `<span class="j-num">${num}</span>`;
-    else if (punct) out += `<span class="j-p">${punct}</span>`;
-    last = m.index + all.length;
-  }
-  // A trailing newline would collapse in the <pre>, so the last line gets a space to keep heights equal.
-  return out + esc(s.slice(last)) + "\n ";
+const theme = EditorView.theme({
+  "&": { height: "100%", backgroundColor: "var(--bg)", color: "var(--text)", fontSize: "13px" },
+  "&.cm-focused": { outline: "2px solid var(--accent)" },
+  ".cm-scroller": { fontFamily: "ui-monospace, monospace", lineHeight: "1.45" },
+  ".cm-gutters": { backgroundColor: "var(--panel)", color: "var(--mute)", border: "0", borderRight: "1px solid var(--line)" },
+  ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "transparent" },
+  ".cm-cursor": { borderLeftColor: "var(--text)" },
+  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": { backgroundColor: "color-mix(in srgb, var(--accent) 35%, transparent)" },
+  ".cm-tooltip": { backgroundColor: "var(--panel)", color: "var(--text)", border: "1px solid var(--line)" },
+  ".cm-placeholder": { color: "var(--mute)" },
 });
 
-const sync = () => {
-  pre.value.scrollTop = ta.value.scrollTop;
-  pre.value.scrollLeft = ta.value.scrollLeft;
-};
-// Fires for user typing and for scripts that set .value and dispatch "input".
-function onInput(e) {
-  code.value = e.target.value;
-  emit("update:modelValue", code.value);
+// An empty box is not an error: the placeholder explains what to paste.
+const parseLint = jsonParseLinter();
+const syntaxLint = (v) => (v.state.doc.length ? parseLint(v) : []);
+
+// Structural OpenVEX checks, run only once the text parses as JSON (jsonParseLinter reports the rest).
+function vexLint(v) {
+  const text = v.state.doc.toString();
+  if (!text.trim()) return [];
+  let doc;
+  try {
+    doc = JSON.parse(text);
+  } catch {
+    return [];
+  }
+  const at = (message) => ({ from: 0, to: Math.min(1, text.length), severity: "error", message });
+  if (typeof doc !== "object" || doc === null || Array.isArray(doc)) return [at("An OpenVEX document is a JSON object.")];
+  const out = [];
+  if (!String(doc["@context"] ?? "").includes("openvex")) out.push(at('Missing "@context": expected https://openvex.dev/ns/v0.2.0.'));
+  if (!Array.isArray(doc.statements) || !doc.statements.length) {
+    out.push(at('"statements" must be a non-empty array.'));
+  } else {
+    doc.statements.forEach((s, i) => {
+      if (!s?.vulnerability?.name) out.push(at(`statements[${i}]: missing vulnerability.name.`));
+      if (!s?.status) out.push(at(`statements[${i}]: missing status.`));
+    });
+  }
+  return out;
 }
 
-defineExpose({ select: () => ta.value.select() });
+onMounted(() => {
+  const extensions = [
+    basicSetup,
+    json(),
+    syntaxHighlighting(highlight),
+    theme,
+    lintGutter(),
+    linter(syntaxLint, { delay: 200 }),
+    EditorView.contentAttributes.of({ "aria-label": props.taId || "JSON" }),
+    EditorState.readOnly.of(props.readonly),
+    EditorView.updateListener.of((u) => {
+      if (u.docChanged) emit("update:modelValue", u.state.doc.toString());
+    }),
+  ];
+  if (props.vex) extensions.push(linter(vexLint, { delay: 200 }));
+  if (props.placeholder) extensions.push(cmPlaceholder(props.placeholder));
+  view = new EditorView({ parent: root.value, state: EditorState.create({ doc: props.modelValue, extensions }) });
+  root.value.__cm = view; // lets scripts/screenshots.mjs read and pin the text
+});
+onBeforeUnmount(() => view?.destroy());
+
+watch(
+  () => props.modelValue,
+  (v) => {
+    if (view && v !== view.state.doc.toString()) view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: v } });
+  },
+);
+
+defineExpose({ select: () => view?.dispatch({ selection: { anchor: 0, head: view.state.doc.length } }) });
 </script>
 
 <template>
-  <div class="json-box" :style="{ '--rows': rows }">
-    <pre ref="pre" aria-hidden="true" v-html="html"></pre>
-    <textarea
-      :id="taId || undefined"
-      ref="ta"
-      :value="modelValue"
-      :readonly="readonly"
-      :placeholder="placeholder"
-      spellcheck="false"
-      wrap="off"
-      @input="onInput"
-      @scroll="sync"
-    ></textarea>
-  </div>
+  <div :id="taId || undefined" ref="root" class="json-box" :style="{ '--rows': rows }"></div>
 </template>

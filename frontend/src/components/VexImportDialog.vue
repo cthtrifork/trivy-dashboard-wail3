@@ -78,6 +78,7 @@ defineExpose({ open });
     >
     <JsonBox
       v-model="paste"
+      vex
       ta-id="vex-paste"
       :rows="8"
       placeholder='{"@context": "https://openvex.dev/ns/v0.2.0", "statements": [...]}'

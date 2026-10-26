@@ -81,28 +81,31 @@ await page.waitForTimeout(400);
 
 await page.click("#export-vex-btn");
 await page.fill("#vex-author", "Security Team");
-await page.waitForFunction(() => document.querySelector("#vex-preview").value.includes("@context"));
+// The editors are CodeMirror views; JsonBox keeps the view on the container as __cm.
+const editorText = (sel) => page.evaluate((s) => document.querySelector(s).__cm.state.doc.toString(), sel);
+const setEditor = (sel, text) =>
+  page.evaluate(([s, t]) => { const v = document.querySelector(s).__cm; v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: t } }); }, [sel, text]);
+await page.waitForFunction(() => document.querySelector("#vex-preview").__cm.state.doc.toString().includes("@context"));
 // The document and its statements are stamped with the current time, and the document id is a hash
 // over them; pin all of it so reruns produce identical pixels.
-await page.evaluate(() => {
-  const ta = document.querySelector("#vex-preview");
-  ta.value = ta.value
-    .replace(/("timestamp":\s*")[^"]+"/g, '$1' + '2026-01-01T00:00:00Z"')
-    .replace(/(openvex\.dev\/docs\/public\/vex-)[0-9a-f]+/g, "$1" + "0".repeat(64));
-  ta.dispatchEvent(new Event("input")); // the highlighted copy listens for it
-});
-await shot("03-priorities-export-openvex");
-// Pin the stamps again for the import step so its screenshots are reproducible too.
-const exported = (await page.inputValue("#vex-preview"))
+const pin = (t) => t
   .replace(/("timestamp":\s*")[^"]+"/g, '$1' + '2026-01-01T00:00:00Z"')
   .replace(/(openvex\.dev\/docs\/public\/vex-)[0-9a-f]+/g, "$1" + "0".repeat(64));
+const exported = pin(await editorText("#vex-preview"));
+await setEditor("#vex-preview", exported);
+await shot("03-priorities-export-openvex");
 await page.click("#vex-close");
 
 // Import the document back: the dialog reports what matched.
 await page.click("#vex-import-btn");
-await page.fill("#vex-paste", exported);
+// A broken document first: the editor flags the syntax error inline.
+await setEditor("#vex-paste", exported.replace('"statements": [', '"statements" [').split("\n").slice(0, 14).join("\n"));
+await page.waitForSelector("#vex-paste .cm-lint-marker-error");
+await page.hover("#vex-paste .cm-lint-marker-error"); // show the message tooltip
+await shot("03a-priorities-import-error");
+await setEditor("#vex-paste", exported);
 await page.check("#vex-mark-rest");
-await shot("03a-priorities-import-paste");
+await shot("03a2-priorities-import-paste");
 await page.click("#vex-apply");
 await page.waitForSelector("#vex-import-log");
 await shot("03b-priorities-import-openvex");
