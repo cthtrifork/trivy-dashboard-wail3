@@ -114,6 +114,28 @@ export class CompareRequest {
              */
             this["trivyImage"] = "";
         }
+        if (!("showSuppressed" in $$source)) {
+            /**
+             * See the same fields on ScanRequest.
+             * @member
+             * @type {boolean}
+             */
+            this["showSuppressed"] = false;
+        }
+        if (!("showWillNotFix" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["showWillNotFix"] = false;
+        }
+        if (!("showNotAffected" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["showNotAffected"] = false;
+        }
 
         Object.assign(this, $$source);
     }
@@ -1101,6 +1123,29 @@ export class ScanRequest {
              * @type {boolean}
              */
             this["ignoreUnfixed"] = false;
+        }
+        if (!("showSuppressed" in $$source)) {
+            /**
+             * Findings Trivy hides by default. These are "show" flags so the zero value is the default:
+             * suppressed (VEX/ignore-file) findings and the will_not_fix and not_affected statuses stay out.
+             * @member
+             * @type {boolean}
+             */
+            this["showSuppressed"] = false;
+        }
+        if (!("showWillNotFix" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["showWillNotFix"] = false;
+        }
+        if (!("showNotAffected" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["showNotAffected"] = false;
         }
         if (!("trivyImage" in $$source)) {
             /**

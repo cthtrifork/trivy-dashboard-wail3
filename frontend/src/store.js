@@ -152,6 +152,10 @@ Events.On("scan:log", (ev) => {
 // Options shared by Scan and Compare.
 export const opts = reactive({
   ignoreUnfixed: false,
+  // Trivy-side noise: ignored by default.
+  showSuppressed: false,
+  ignoreWillNotFix: true,
+  ignoreNotAffected: true,
   markUnderInvestigation: false,
   username: "",
   password: "",
@@ -197,6 +201,9 @@ export async function runScan() {
       username: opts.username,
       password: opts.password,
       ignoreUnfixed: opts.ignoreUnfixed,
+      showSuppressed: opts.showSuppressed,
+      showWillNotFix: !opts.ignoreWillNotFix,
+      showNotAffected: !opts.ignoreNotAffected,
       trivyImage: opts.trivyImage.trim(),
       markUnderInvestigation: opts.markUnderInvestigation,
     });
