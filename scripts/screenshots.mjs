@@ -65,7 +65,8 @@ const scrollTop = () => page.evaluate(() => {
 await scrollTop();
 await shot("01-priorities");
 
-const first = page.locator(".pcard").first();
+const first = page.locator(".prow").first();
+await first.locator(".prow-main").click();
 await first.locator(".vexbtn").click();
 const drawer = page.locator("dialog.drawer");
 await drawer.locator('.seg label:has-text("Not affected")').click();
