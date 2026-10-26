@@ -1,14 +1,12 @@
 name: Linux build dependencies
 description: >-
   Installs the GTK4 + WebKitGTK 6 build headers Wails v3 needs (package list from the Wails CI).
-  The downloaded .deb files are cached per runner image, so a warm run installs them with dpkg
-  and skips apt-get update and the mirror downloads.
+  The .deb files are cached per runner image, so a warm run installs them with dpkg and never
+  touches the Ubuntu mirror.
 
 runs:
   using: composite
   steps:
-    # ImageVersion changes whenever GitHub rebuilds the runner image, so the cached debs always
-    # match the preinstalled package set (the closure saved is exactly what that image was missing).
     - id: image
       shell: bash
       run: echo "version=${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
@@ -19,41 +17,15 @@ runs:
         path: ~/apt-debs
         key: apt-debs-${{ runner.os }}-${{ steps.image.outputs.version }}-${{ hashFiles('.github/actions/linux-build-deps/action.yml') }}
 
-    - name: Install from cache
-      id: warm
-      if: steps.cache.outputs.cache-hit == 'true'
+    - name: Install
       shell: bash
       run: |
-        if sudo dpkg -i ~/apt-debs/*.deb; then
-          echo "installed=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "::warning::cached packages failed to install, falling back to apt"
+        if [ '${{ steps.cache.outputs.cache-hit }}' = true ] && sudo dpkg -i ~/apt-debs/*.deb; then
+          exit 0
         fi
-
-    - name: Install with apt
-      if: steps.warm.outputs.installed != 'true'
-      shell: bash
-      run: |
-        pkgs="build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev"
-        apt_opts=(-o Acquire::Languages=none -o Acquire::Retries=3 -o Dpkg::Use-Pty=0)
-        sudo timeout 180 apt-get "${apt_opts[@]}" update -qq
-        # The hosted Ubuntu mirror occasionally trickles data, which apt's own timeout never
-        # catches. Resolve the package URLs with apt, then fetch them in parallel with curl
-        # (abort a crawling transfer, retry per file). apt checks the hashes when it installs.
-        archives=/var/cache/apt/archives
-        # Runner images list their mirror in apt-mirrors.txt and apt prints it as mirror+file:
-        # URLs, which curl cannot fetch; swap in the first real mirror.
-        # Lines look like "http://azure.archive.ubuntu.com/ubuntu/ priority:1"; keep the URL only.
-        mirror=$(awk 'NR == 1 { print $1 }' /etc/apt/apt-mirrors.txt 2>/dev/null || true)
-        mirror=${mirror:-http://archive.ubuntu.com/ubuntu/}
-        export mirror_base="${mirror%/}" archives
-        sudo apt-get "${apt_opts[@]}" -qq install -y --no-install-recommends --print-uris $pkgs |
-          awk -F"'" '{ split($3, f, " "); print $2, f[1] }' |
-          sed "s#^mirror+file:/etc/apt/apt-mirrors.txt#$mirror_base#" |
-          sudo --preserve-env=mirror_base,archives xargs -P 8 -L 1 sh -c '
-            fetch() { curl -fsSL --retry 3 --connect-timeout 10 --speed-limit 50000 --speed-time 10 -o "$archives/$2" "$1"; }
-            fetch "$0" "$1" || fetch "http://archive.ubuntu.com/ubuntu/${0#"$mirror_base"/}" "$1"'
-        sudo apt-get "${apt_opts[@]}" install -y --no-install-recommends $pkgs
-        # Keep the downloaded debs (exactly the closure this image lacked) for the cache post step.
+        sudo apt-get -o Acquire::Languages=none -o Acquire::Retries=3 update -qq
+        sudo apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
+          build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
+        # The debs apt just downloaded are exactly what this image lacks; keep them for the cache.
         mkdir -p ~/apt-debs
-        cp "$archives"/*.deb ~/apt-debs/
+        cp /var/cache/apt/archives/*.deb ~/apt-debs/
