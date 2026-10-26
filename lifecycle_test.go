@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -31,7 +33,9 @@ func (e *blockingEngine) RunTrivy(ctx context.Context, _ trivy.TrivyJob, _ func(
 }
 
 func newTestService(e trivy.Engine) *ScanService {
-	return &ScanService{scanner: &trivy.Scanner{Engine: e}, product: map[string]string{}}
+	dir, _ := os.MkdirTemp("", "trivy-scanner-test")
+	vexPath := filepath.Join(dir, "vex.json")
+	return &ScanService{scanner: &trivy.Scanner{Engine: e}, product: map[string]string{}, vex: &trivy.VEXStore{Path: vexPath}}
 }
 
 // Wails cancels the application context when shutdown begins, so a scan started from a

@@ -159,7 +159,8 @@ export function RulePresets() {
 }
 
 /**
- * Scan scans the image with trivy running in podman.
+ * Scan scans the image with trivy running in podman. It first discards the saved VEX file and
+ * the findings cached from the previous scan, so a new scan starts from a clean slate.
  * @param {trivy$0.ScanRequest} req
  * @returns {$CancellablePromise<trivy$0.ScanResult | null>}
  */
