@@ -1127,6 +1127,7 @@ export class ScanRequest {
         if (!("showSuppressed" in $$source)) {
             /**
              * Findings Trivy hides by default. These are "show" flags so the zero value is the default:
+             * suppressed (VEX/ignore-file) findings and the will_not_fix and not_affected statuses stay out.
              * @member
              * @type {boolean}
              */
