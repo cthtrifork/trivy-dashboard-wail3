@@ -25,6 +25,41 @@ Commit messages and PR bodies end with the attribution lines from the session's 
 - Running containers as root in the sandbox prints harmless `can't raise ambient capability` warnings.
 - Podman API for tests: `podman system service --time 0 unix:///run/podman/podman.sock &`.
 
+## Dev container
+
+The sandbox has the Docker CLI but no daemon, no `wails3` and no podman. The dev container (`.devcontainer/`, see `docs/devcontainer.md`) has all of them plus Go, Node and rootless podman, so use it for `make bindings`, real scans and anything else that needs those. Checked end to end: `wails3 version` works, `make bindings` leaves `frontend/bindings` unchanged, and real scans run.
+
+```sh
+dockerd >/tmp/dockerd.log 2>&1 &                    # no daemon by default; wait until `docker info` answers
+npm i -g @devcontainers/cli                         # once
+devcontainer up --workspace-folder .                # builds the image, runs post-create.sh (npm ci, air, wails3)
+devcontainer exec --workspace-folder . make bindings
+```
+
+The sandbox needs two adjustments (neither belongs in the committed config):
+
+- **File ownership.** You are root, so `updateRemoteUserUID` does not remap the `vscode` user and `npm ci` fails with `EACCES` on the workspace. `chown -R 1000:1000 .` before `devcontainer up`, and `chown -R root:root .` when you are done (git also reports "dubious ownership" for the host while it is owned by 1000, which is harmless).
+- **The egress proxy.** The proxy listens on 127.0.0.1 and re-signs TLS, so the container needs host networking, the proxy variable and the CA bundle. Pass a throwaway override config (outside the repo, `--override-config <dir>/devcontainer.json`) that copies `.devcontainer/devcontainer.json` and adds `"runArgs": ["--network", "host"]`, the mount `source=/root/.ccr/ca-bundle.crt,target=/etc/ssl/certs/ca-certificates.crt,type=bind,readonly`, and `HTTPS_PROXY`, `SSL_CERT_FILE`, `NODE_EXTRA_CA_CERTS` in `containerEnv`. The override file must be named `devcontainer.json`, and `build.dockerfile`/`build.context` become absolute paths.
+
+### Real scans in the container
+
+The app starts Trivy in nested podman, and neither the Trivy DB download nor the registry pull sees the proxy settings. For a sandbox test, wrap podman so every `run` gets them, and point `PODMAN` at the wrapper (it must live inside the workspace, e.g. `tmp/`, so the container can see it):
+
+```sh
+#!/bin/sh
+if [ "$1" = run ]; then shift; exec /usr/bin/podman run -e HTTPS_PROXY -v /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro --network host "$@"; fi
+exec /usr/bin/podman "$@"
+```
+
+Then seed the DB once, because a failed refresh is only a log line and the scan then dies with "--skip-db-update cannot be specified on the first run":
+
+```sh
+podman run --rm -e HTTPS_PROXY -v /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro \
+  -v ~/.cache/trivy-scanner/trivy:/c --network host docker.io/aquasec/trivy:0.76.1 image --download-db-only --cache-dir /c
+```
+
+`mirror.gcr.io/library/<image>` names scan fine (the DB comes from `mirror.gcr.io/aquasec/trivy-db:2`). Set `PODMAN_IGNORE_CGROUPSV1_WARNING=1` to silence podman's cgroup warning. Verified with `alpine:3.18` (0 findings), `nginx:1.25` (810) and `python:3.9-slim` (468).
+
 ## Exercising the app headlessly
 
 ```sh
