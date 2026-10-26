@@ -226,8 +226,8 @@ func TestVEXExpiry(t *testing.T) {
 }
 
 func TestRulesTuning(t *testing.T) {
-	// Fix-less KEV finding with a middling EPSS.
-	v := Vulnerability{ID: "CVE-9", Severity: "HIGH", KEV: true, HasEPSS: true, EPSS: 0.03, Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}
+	// Fix-less KEV finding with a middling EPSS; MEDIUM keeps the sum under the 100 cap so each rule moves it.
+	v := Vulnerability{ID: "CVE-9", Severity: "MEDIUM", KEV: true, HasEPSS: true, EPSS: 0.03, Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}
 
 	bal := v
 	AssessWith(&bal, DefaultRules())

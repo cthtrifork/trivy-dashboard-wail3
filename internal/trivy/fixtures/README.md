@@ -3,7 +3,7 @@
 Real output of Trivy, recorded once. It is used **only** by the Go tests and, when
 `TRIVY_SCANNER_FAKE_PODMAN=1` is set on a development build, by the screenshot script
 (`scripts/screenshots.sh`). Normal runs, `wails3 dev` included, use real podman. Nothing
-here is synthetic.
+here is synthetic, with one exception: the `CVSS` block of CVE-2026-97031 (stdlib) in `traefik_3.7.13.json` was removed by hand so the UI has a finding with no reported score (shown as an estimate). Re-recording drops that edit.
 
 | File | What it is | Used for |
 |---|---|---|

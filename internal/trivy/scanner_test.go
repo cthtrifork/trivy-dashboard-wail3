@@ -50,7 +50,7 @@ func TestScan(t *testing.T) {
 		t.Fatalf("meta: %+v", res)
 	}
 	v := res.Vulnerabilities
-	if len(v) != 3 || v[0].ID != "CVE-2" || v[0].Score != 9.8 || v[2].Severity != "UNKNOWN" && v[1].Severity != "UNKNOWN" {
+	if len(v) != 3 || v[0].ID != "CVE-2" || v[0].Score != 8.1 || v[0].ScoreSource != "redhat" || v[2].Severity != "UNKNOWN" && v[1].Severity != "UNKNOWN" {
 		t.Fatalf("vulns: %+v", v)
 	}
 	if res.SeverityCounts["CRITICAL"] != 1 || res.SeverityCounts["UNKNOWN"] != 1 {

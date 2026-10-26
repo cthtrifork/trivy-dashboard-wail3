@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from "vue";
 import { ScanService, assessing, result, vex, findingsById, errText, lsGet, lsSet } from "../store.js";
-import { JUSTIFICATION_PLAIN, STATUS_LABEL, detailUrl, openUrl, tierStyle } from "../lib/format.js";
+import { JUSTIFICATION_PLAIN, STATUS_LABEL, cvssFloor, detailUrl, openUrl, tierStyle } from "../lib/format.js";
 import { glance } from "../lib/glance.js";
 import Chip from "./Chip.vue";
 
@@ -156,7 +156,7 @@ async function clear() {
         <div class="drawer-id">
           <a v-if="link" class="id" :href="link" title="Open CVE details" @click.prevent="openUrl(link)">{{ v.id }} ↗</a>
           <span v-else class="id">{{ v.id }}</span>
-          <Chip title="CVSS severity">{{ v.severity }}{{ v.score ? ` ${v.score.toFixed(1)}` : "" }}</Chip>
+          <Chip title="CVSS severity">{{ v.severity }}{{ v.score ? ` ${v.score.toFixed(1)}` : cvssFloor(v.severity) ? ` ~${cvssFloor(v.severity).toFixed(1)} est.` : "" }}</Chip>
           <span class="sev tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }} · {{ v.priority }}</span>
           <a v-if="link" class="drawer-adv" :href="link" @click.prevent="openUrl(link)">Full advisory</a>
         </div>

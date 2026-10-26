@@ -1,10 +1,12 @@
 <script setup>
 import { computed, reactive } from "vue";
 import { result, vulns, vex, SEVERITIES, sevStyle } from "../store.js";
-import { tierStyle, pct, detailUrl, openUrl as open, COLUMN_HELP } from "../lib/format.js";
+import { tierStyle, pct, detailUrl, openUrl as open, COLUMN_HELP, effectiveScore } from "../lib/format.js";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
 import Chip from "./Chip.vue";
+import CvssMeter from "./CvssMeter.vue";
+import Ratings from "./Ratings.vue";
 import SummaryCard from "./SummaryCard.vue";
 import VexBox from "./VexBox.vue";
 
@@ -39,7 +41,7 @@ const rows = computed(() => {
     k === "severity"
       ? SEVERITIES.indexOf(v.severity)
       : k === "score"
-        ? -v.score
+        ? -effectiveScore(v)
         : k === "priority"
           ? -v.priority
           : k === "epss"
@@ -85,12 +87,12 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
         <col style="width: 110px" />
         <col style="width: 90px" />
         <col style="width: 140px" />
-        <col style="width: 16%" />
+        <col style="width: 11%" />
         <col style="width: 100px" />
-        <col style="width: 100px" />
-        <col style="width: 92px" />
+        <col style="width: 140px" />
+        <col style="width: 140px" />
         <col style="width: 60px" />
-        <col style="width: 150px" />
+        <col style="width: 180px" />
         <col />
       </colgroup>
       <thead>
@@ -119,10 +121,7 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
           <td class="mono">{{ v.installed }}</td>
           <td class="mono">{{ v.fixed || "—" }}</td>
           <td>
-            <span class="meter" :style="sevStyle(v.severity)">
-              <b>{{ v.score ? v.score.toFixed(1) : "–" }}</b>
-              <i :style="{ '--w': (v.score || 0) * 10 + '%' }"></i>
-            </span>
+            <CvssMeter :score="v.score" :severity="v.severity" :style="sevStyle(v.severity)" />
           </td>
           <td>{{ v.hasEpss ? pct(v.epss) : "—" }}</td>
           <td>
@@ -141,6 +140,7 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
                 <dt>Status</dt>
                 <dd>{{ v.status || "—" }}</dd>
               </dl>
+              <Ratings :v="v" />
               <div class="vdesc">{{ v.description || "No description." }}</div>
               <p v-if="detailUrl(v)">
                 <a class="mono" :href="detailUrl(v)" @click.prevent="open(detailUrl(v))">{{ detailUrl(v) }}</a>

@@ -123,7 +123,7 @@ function save() {
           ><input type="checkbox" :checked="rules.severityEnabled" @change="set({ severityEnabled: $event.target.checked })" />
           <b>Severity</b></label
         >
-        <span>CVSS severity: critical +20, high +14, medium +8, low +3, unknown +5.</span>
+        <span>CVSS severity: critical +30, high +25, medium +10, low +3, unknown +5.</span>
       </div>
 
       <div class="rule-row">

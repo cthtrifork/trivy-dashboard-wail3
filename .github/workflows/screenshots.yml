@@ -90,6 +90,16 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload 01b-priorities-estimated-cvss
+        id: shot-01b-priorities-estimated-cvss
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/01b-priorities-estimated-cvss.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload 02-priorities-vex-editor
         id: shot-02-priorities-vex-editor
         if: github.event_name == 'pull_request'
@@ -140,12 +150,32 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload 04b-vulnerabilities-estimated-cvss
+        id: shot-04b-vulnerabilities-estimated-cvss
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/04b-vulnerabilities-estimated-cvss.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload 05-vulnerability-details
         id: shot-05-vulnerability-details
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           path: docs/screenshots/05-vulnerability-details.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload 05b-vulnerability-ratings-by-source
+        id: shot-05b-vulnerability-ratings-by-source
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/05b-vulnerability-ratings-by-source.png
           archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
           if-no-files-found: error
           retention-days: 14

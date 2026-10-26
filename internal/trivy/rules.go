@@ -28,7 +28,7 @@ type Rules struct {
 	EPSSHigh     float64 `json:"epssHigh"`
 	EPSSVeryHigh float64 `json:"epssVeryHigh"`
 
-	SeverityEnabled bool `json:"severityEnabled"` // +3 (low) to +20 (critical)
+	SeverityEnabled bool `json:"severityEnabled"` // +3 (low) to +30 (critical)
 	VectorEnabled   bool `json:"vectorEnabled"`   // network/low complexity/no auth/no interaction add points
 	FixEnabled      bool `json:"fixEnabled"`      // +5 with a fix, -3 without, -5 when the vendor will not fix
 	// FixedOnly drops findings without a fix to score 0 and the Monitor tier.

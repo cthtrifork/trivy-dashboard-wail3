@@ -67,6 +67,15 @@ const scrollTop = () => page.evaluate(() => {
 // ---- Priorities ----
 await scrollTop();
 await shot("01-priorities");
+// One finding in the fixture has no reported CVSS: filter to High so its estimated score is on screen.
+await page.click('#prio-sev button:has-text("High")');
+await page.evaluate(() => {
+  const l = document.getElementById("prio-list");
+  l.scrollTop = l.scrollHeight;
+});
+await shot("01b-priorities-estimated-cvss");
+await page.click('#prio-sev button:has-text("High")');
+await scrollTop();
 
 const first = page.locator(".prow").first();
 await first.locator(".prow-main").click();
@@ -114,9 +123,19 @@ await page.click("#vex-import-close");
 // ---- Vulnerabilities ----
 await tab("vulns");
 await shot("04-vulnerabilities");
+await page.fill("#vuln-filter", "CVE-2026-97031");
+await page.click("#vuln-table tbody:not(.pad) tr.row >> nth=0");
+await shot("04b-vulnerabilities-estimated-cvss");
+await page.fill("#vuln-filter", "");
 // Expand a finding that has no VEX assessment, so the trigger reads "Assess this finding".
 await page.click("#vuln-table tbody:not(.pad) tr.row >> nth=1");
 await shot("05-vulnerability-details");
+// MEDIUM from Red Hat with a 9.1 from Bitnami: the expanded row lists every source's rating.
+await page.fill("#vuln-filter", "CVE-2026-78663");
+await page.click("#vuln-table tbody:not(.pad) tr.row >> nth=0");
+await page.locator(".ratings").first().scrollIntoViewIfNeeded();
+await shot("05b-vulnerability-ratings-by-source");
+await page.fill("#vuln-filter", "");
 
 // ---- Dependencies ----
 // A runaway layout shows up as a blank canvas, so fail loudly instead of saving it.
