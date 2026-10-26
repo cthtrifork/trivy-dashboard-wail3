@@ -10,6 +10,11 @@
   --MEDIUM: #f5b800;
   --LOW: #3e9bd6;
   --UNKNOWN: #7b8494;
+  --on-CRITICAL: #fff;
+  --on-HIGH: #1a0e04;
+  --on-MEDIUM: #1f1700;
+  --on-LOW: #fff;
+  --on-UNKNOWN: #0f1218;
   --ok: #3fb97a;
 }
 @media (prefers-color-scheme: light) {
@@ -352,7 +357,7 @@ tr.row:hover td {
   border-radius: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: #fff;
+  color: var(--on, #fff);
   background: var(--c);
 }
 tr.detail td {

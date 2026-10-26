@@ -8,7 +8,7 @@ export { ScanService };
 
 export const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
 export const SEV_COLOR = { CRITICAL: "--CRITICAL", HIGH: "--HIGH", MEDIUM: "--MEDIUM", LOW: "--LOW", UNKNOWN: "--UNKNOWN" };
-export const sevStyle = (sev) => ({ "--c": `var(${SEV_COLOR[sev]})` });
+export const sevStyle = (sev) => ({ "--c": `var(${SEV_COLOR[sev]})`, "--on": `var(--on${SEV_COLOR[sev]})` });
 export const errText = (e) => String(e?.message || e);
 
 export const lsGet = (k) => {
