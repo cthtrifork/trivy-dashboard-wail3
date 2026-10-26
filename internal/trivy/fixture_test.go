@@ -366,3 +366,19 @@ func TestOpenVEXRoundTrip(t *testing.T) {
 	}
 
 }
+
+func TestVEXStoreClear(t *testing.T) {
+	st := &VEXStore{Path: filepath.Join(t.TempDir(), "vex.json")}
+	if err := st.Clear(); err != nil { // no file yet is fine
+		t.Fatal(err)
+	}
+	if _, err := st.Set("docker.io/library/traefik:3", VEXEntry{Vulnerability: "CVE-2024-1", PURL: "pkg:golang/x@1", Status: "under_investigation"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Clear(); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := st.List("docker.io/library/traefik:3"); len(got) != 0 {
+		t.Fatalf("still %d entries after Clear", len(got))
+	}
+}

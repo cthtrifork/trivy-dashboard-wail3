@@ -165,6 +165,45 @@ button:disabled {
   opacity: 0.5;
   cursor: default;
 }
+#vex-split {
+  position: relative;
+  display: flex;
+}
+#vex-split button {
+  background: transparent;
+  color: var(--ok);
+  box-shadow: inset 0 0 0 1.5px var(--ok);
+  white-space: nowrap;
+}
+#vex-split button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+}
+#vex-split #export-vex-btn {
+  border-radius: 6px 0 0 6px;
+}
+#vex-split #vex-menu-btn {
+  border-radius: 0 6px 6px 0;
+  padding: 8px 10px;
+  margin-left: -1.5px;
+}
+#vex-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  min-width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px #0004;
+}
+#vex-split #vex-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  box-shadow: none;
+  color: var(--text);
+}
 #cancel-btn {
   background: var(--CRITICAL);
 }
@@ -930,6 +969,9 @@ dialog::backdrop {
   gap: 10px;
   margin: 10px 0;
 }
+.form-grid.one {
+  grid-template-columns: 1fr;
+}
 .form-grid label {
   display: flex;
   flex-direction: column;
@@ -943,15 +985,72 @@ dialog::backdrop {
   justify-content: flex-end;
   margin-top: 10px;
 }
-#vex-preview {
-  font:
-    12px / 1.4 ui-monospace,
-    monospace;
+.json-box {
+  height: calc(var(--rows) * 1.45 * 13px + 14px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
 }
 [hidden] {
   display: none !important;
 }
-#vex-export-btn {
+.file-btn {
+  cursor: pointer;
+}
+.vex-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+.vex-stats > div {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--mute);
+  font-size: 12px;
+}
+.vex-stats b {
+  display: block;
+  font-size: 18px;
+  color: var(--text);
+}
+.vex-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 200px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.vex-log-line {
+  display: flex;
+  gap: 8px;
+  padding: 5px 8px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.vex-log-line:last-child {
+  border-bottom: 0;
+}
+.vex-log-line .ico {
+  flex: none;
+  width: 14px;
+  text-align: center;
+  font-weight: 700;
+}
+.vex-log-line.ok .ico {
+  color: var(--ok);
+}
+.vex-log-line.warn .ico {
+  color: var(--HIGH);
+}
+.vex-log-line.skip .ico,
+.vex-log-line.info .ico {
+  color: var(--mute);
+}
+#vex-import-btn {
   white-space: nowrap;
 }
 
