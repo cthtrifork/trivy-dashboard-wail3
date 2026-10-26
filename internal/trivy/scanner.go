@@ -147,6 +147,7 @@ type Scanner struct {
 	dbMu    sync.Mutex
 	dbFresh time.Time // when the vulnerability DB was last confirmed up to date...
 	dbImage string    // ...by this Trivy image (another version may want another DB schema)
+	dbErr   error     // why the last refresh failed, so a scan that then fails can say so
 
 	mu     sync.Mutex
 	cancel context.CancelFunc
@@ -272,10 +273,18 @@ func (s *Scanner) ensureDB(ctx context.Context, trivyImage string, log func(stri
 			return errors.New("cancelled")
 		}
 		s.logf("Could not update the vulnerability database (%v); using the cached copy if there is one.", err)
+		s.dbErr = err
 		return nil
 	}
+	s.dbErr = nil
 	s.dbFresh, s.dbImage = time.Now(), trivyImage
 	return nil
+}
+
+func (s *Scanner) lastDBError() error {
+	s.dbMu.Lock()
+	defer s.dbMu.Unlock()
+	return s.dbErr
 }
 
 // Scan runs a vulnerability scan and an SBOM generation for the image.
@@ -329,6 +338,11 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	job.IgnorePolicy, job.IgnoreFile = policy, ignoreFile // only the vulnerability report is filtered, not the SBOM
 	vulnJSON, err := s.engine().RunTrivy(ctx, job, logLine)
 	if err != nil {
+		if dbErr := s.lastDBError(); dbErr != nil {
+			// With an empty cache Trivy only says --skip-db-update is not allowed on a first run;
+			// the download error is the actual cause.
+			return nil, fmt.Errorf("vulnerability scan failed: %w (the database update had failed: %v)", err, dbErr)
+		}
 		return nil, fmt.Errorf("vulnerability scan failed: %w", err)
 	}
 
