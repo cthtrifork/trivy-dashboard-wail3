@@ -82,6 +82,18 @@ const glossary = [
   },
 ];
 
+// What every scan passes to `trivy image` (see internal/trivy). The Options menu toggles the last three.
+const trivyFlags = [
+  ["--scanners vuln", "Vulnerabilities only; the SBOM is a separate CycloneDX run."],
+  ["--skip-version-check", "No lookup for a newer Trivy: the version is pinned by this app."],
+  ["--disable-telemetry", "Trivy sends no usage data."],
+  ["--offline-scan", "No API requests to identify dependencies; only the DB download uses the network."],
+  ["--severity-source redhat,auto", "Prefer Red Hat's severity, then the vendor default."],
+  ["--ignore-status will_not_fix,not_affected", "On by default. Untick Ignore will_not_fix / Ignore not_affected in Options to show them."],
+  ["--show-suppressed", "Off by default. Tick Show suppressed in Options to list findings hidden by VEX or ignore files."],
+  ["--ignore-unfixed", "Off by default. Tick Ignore unfixed in Options to hide findings without a fix."],
+];
+
 const behaviour = computed(() =>
   [
     ["Mode", mode.value?.fixtures ? "Demo (recorded data)" : "Real podman"],
@@ -141,6 +153,17 @@ defineExpose({ open });
               <template v-for="[k, v] in behaviour" :key="k"
                 ><dt>{{ k }}</dt>
                 <dd>{{ v }}</dd></template
+              >
+            </dl>
+          </section>
+          <section>
+            <h4>Trivy flags</h4>
+            <dl>
+              <template v-for="[flag, desc] in trivyFlags" :key="flag"
+                ><dt>
+                  <code>{{ flag }}</code>
+                </dt>
+                <dd>{{ desc }}</dd></template
               >
             </dl>
           </section>
