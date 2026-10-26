@@ -43,7 +43,8 @@ runs:
         archives=/var/cache/apt/archives
         # Runner images list their mirror in apt-mirrors.txt and apt prints it as mirror+file:
         # URLs, which curl cannot fetch; swap in the first real mirror.
-        mirror=$(head -n 1 /etc/apt/apt-mirrors.txt 2>/dev/null || true)
+        # Lines look like "http://azure.archive.ubuntu.com/ubuntu/ priority:1"; keep the URL only.
+        mirror=$(awk 'NR == 1 { print $1 }' /etc/apt/apt-mirrors.txt 2>/dev/null || true)
         mirror=${mirror:-http://archive.ubuntu.com/ubuntu/}
         export mirror_base="${mirror%/}" archives
         sudo apt-get "${apt_opts[@]}" -qq install -y --no-install-recommends --print-uris $pkgs |
