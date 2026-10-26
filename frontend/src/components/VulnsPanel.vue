@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive } from "vue";
 import { result, vulns, vex, SEVERITIES, sevStyle } from "../store.js";
-import { tierStyle, pct, detailUrl, openUrl as open } from "../lib/format.js";
+import { tierStyle, pct, detailUrl, openUrl as open, COLUMN_HELP } from "../lib/format.js";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
 import Chip from "./Chip.vue";
@@ -95,7 +95,7 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
       </colgroup>
       <thead>
         <tr>
-          <th v-for="[col, label] in COLUMNS" :key="col" :class="sortClass(state, col)" @click="sortBy(state, col)">{{ label }}</th>
+          <th v-for="[col, label] in COLUMNS" :key="col" :class="sortClass(state, col)" :title="COLUMN_HELP[col]" @click="sortBy(state, col)">{{ label }}</th>
         </tr>
       </thead>
       <tbody class="pad">
@@ -106,10 +106,10 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
       <tbody v-for="{ item: v } in visible" :key="rowKey(v)" v-measure="rowKey(v)">
         <tr class="row" @click="expanded.has(rowKey(v)) ? expanded.delete(rowKey(v)) : expanded.add(rowKey(v))">
           <td>
-            <span class="sev tier" :style="tierStyle(v.tier)">{{ v.tier }} {{ v.priority }}</span>
+            <span class="sev sevpill tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }} {{ v.priority }}</span>
           </td>
           <td>
-            <span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span>
+            <span class="sev sevpill" :style="sevStyle(v.severity)">{{ v.severity }}</span>
           </td>
           <td class="mono" style="white-space: nowrap">
             <a v-if="detailUrl(v)" :href="detailUrl(v)" title="Open CVE details" @click.stop.prevent="open(detailUrl(v))">{{ v.id }}</a>

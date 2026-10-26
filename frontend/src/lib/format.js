@@ -4,6 +4,17 @@ export const pct = (x) => (x * 100 < 0.1 ? "<0.1%" : (x * 100).toFixed(x >= 0.1 
 export const TIER_COLOR = { "Act now": "--CRITICAL", "Fix soon": "--HIGH", Plan: "--MEDIUM", Monitor: "--UNKNOWN" };
 export const tierStyle = (tier) => ({ "--c": `var(${TIER_COLOR[tier]})`, "--on": `var(--on${TIER_COLOR[tier]})` });
 
+// Column explanations, shown as header tooltips in both finding tables.
+export const COLUMN_HELP = {
+  priority: "Our own ranking: exploitation evidence (CISA KEV, EPSS) first, then reachability and severity. Higher number = fix sooner.",
+  severity: "Severity rating from the vulnerability database (Critical, High, Medium, Low).",
+  score: "CVSS base score, 0 to 10. How bad the flaw is in the worst case, not how likely it is to be exploited.",
+  epss: "EPSS: estimated probability that the flaw is exploited in the wild within the next 30 days.",
+  signals: "KEV = listed by CISA as known exploited. VEX = a statement you recorded about this finding.",
+  fixed: "First package version that contains a fix.",
+  installed: "Package version found in the image.",
+};
+
 export const STATUS_LABEL = {
   affected: "Affected",
   not_affected: "Not affected",
