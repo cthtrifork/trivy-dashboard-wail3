@@ -205,7 +205,19 @@ export async function loadIgnoreFile(file) {
   saveIgnoreFile();
 }
 
-export const image = ref("");
+// The scanned image survives a reload: the last scan's input and result are kept in localStorage,
+// and the URL hash (#image=...) names the image so a reload or shared link shows or reruns it.
+const IMAGE_KEY = "image",
+  RESULT_KEY = "last-result";
+const hashImage = () => new URLSearchParams(location.hash.slice(1)).get("image") || "";
+const setHashImage = (img) => {
+  try {
+    history.replaceState(null, "", img ? "#image=" + encodeURIComponent(img) : location.pathname + location.search);
+  } catch {
+    /* ignore */
+  }
+};
+export const image = ref(hashImage() || lsGet(IMAGE_KEY));
 export const cmpForm = reactive({ repo: lsGet("cmp-repo"), a: lsGet("cmp-a"), b: lsGet("cmp-b") });
 
 // scanning is true while any scan runs (single scan or compare); comparing marks the latter.
@@ -252,6 +264,7 @@ export async function runScan() {
     });
     if (!cmpForm.repo) cmpForm.repo = r.image.replace(/@.*$/, "").replace(/:[^/:]*$/, "");
     result.value = r;
+    rememberScan(r);
     rerank();
     await loadVEX();
     setStatus(`Scan complete: ${r.vulnerabilities.length} vulnerabilities, ${r.components.length} components.`);
@@ -260,6 +273,38 @@ export async function runScan() {
   } finally {
     scanning.value = false;
     refreshFootprint(); // a scan may have downloaded the DB
+  }
+}
+
+// rememberScan keeps the scan for the next reload. A result too big for the quota is dropped, not left stale.
+function rememberScan(r) {
+  const img = image.value.trim();
+  lsSet(IMAGE_KEY, img);
+  setHashImage(img);
+  try {
+    localStorage.setItem(RESULT_KEY, JSON.stringify({ forImage: img, result: r }));
+  } catch {
+    try {
+      localStorage.removeItem(RESULT_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+// restoreScan shows the remembered result when it belongs to the image being asked for, and
+// otherwise reruns the scan when the URL hash names an image.
+async function restoreScan() {
+  const want = image.value.trim();
+  if (!want) return;
+  const saved = lsJSON(RESULT_KEY, null);
+  if (saved?.result && saved.forImage === want) {
+    result.value = saved.result;
+    rerank();
+    await loadVEX();
+    setStatus(`Restored the last scan of ${want}.`);
+  } else if (hashImage()) {
+    runScan();
   }
 }
 
@@ -285,8 +330,9 @@ export function init() {
   );
   refreshFootprint();
   initRules();
+  restoreScan();
   ScanService.PodmanVersion().then(
-    (v) => setStatus(v),
+    (v) => !result.value && !scanning.value && setStatus(v),
     (err) => setStatus(errText(err), { err: true }),
   );
 }
