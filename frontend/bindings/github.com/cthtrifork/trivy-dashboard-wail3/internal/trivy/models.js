@@ -546,6 +546,52 @@ export class DepNode {
 }
 
 /**
+ * DocMeta is the document-level data of an imported OpenVEX file that is kept
+ * so the next export reuses it.
+ */
+export class DocMeta {
+    /**
+     * Creates a new DocMeta instance.
+     * @param {Partial<DocMeta>} [$$source = {}] - The source object to create the DocMeta.
+     */
+    constructor($$source = {}) {
+        if (!("id" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["id"] = "";
+        }
+        if (!("author" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["author"] = "";
+        }
+        if (!("role" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["role"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DocMeta instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {DocMeta}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new DocMeta(/** @type {Partial<DocMeta>} */($$parsedSource));
+    }
+}
+
+/**
  * EnrichInfo reports what enrichment data was applied.
  */
 export class EnrichInfo {
@@ -641,6 +687,14 @@ export class ImportReport {
              */
             this["warnings"] = [];
         }
+        if (!("doc" in $$source)) {
+            /**
+             * @id, author and role of the document
+             * @member
+             * @type {DocMeta}
+             */
+            this["doc"] = (new DocMeta());
+        }
 
         Object.assign(this, $$source);
     }
@@ -652,9 +706,13 @@ export class ImportReport {
      */
     static createFrom($$source = {}) {
         const $$createField3_0 = $$createType6;
+        const $$createField4_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("warnings" in $$parsedSource) {
             $$parsedSource["warnings"] = $$createField3_0($$parsedSource["warnings"]);
+        }
+        if ("doc" in $$parsedSource) {
+            $$parsedSource["doc"] = $$createField4_0($$parsedSource["doc"]);
         }
         return new ImportReport(/** @type {Partial<ImportReport>} */($$parsedSource));
     }
@@ -788,7 +846,7 @@ export class Preset {
      * @returns {Preset}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType8;
+        const $$createField2_0 = $$createType9;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("rules" in $$parsedSource) {
             $$parsedSource["rules"] = $$createField2_0($$parsedSource["rules"]);
@@ -906,7 +964,7 @@ export class Rescored {
      * @returns {Rescored}
      */
     static createFrom($$source = {}) {
-        const $$createField4_0 = $$createType10;
+        const $$createField4_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("reasons" in $$parsedSource) {
             $$parsedSource["reasons"] = $$createField4_0($$parsedSource["reasons"]);
@@ -1090,7 +1148,7 @@ export class SBOMSummary {
      * @returns {SBOMSummary}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType12;
+        const $$createField2_0 = $$createType13;
         const $$createField3_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("binaries" in $$parsedSource) {
@@ -1319,14 +1377,14 @@ export class ScanResult {
      * @returns {ScanResult}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType14;
+        const $$createField2_0 = $$createType15;
         const $$createField3_0 = $$createType5;
-        const $$createField4_0 = $$createType16;
+        const $$createField4_0 = $$createType17;
         const $$createField5_0 = $$createType5;
-        const $$createField7_0 = $$createType18;
-        const $$createField8_0 = $$createType21;
+        const $$createField7_0 = $$createType19;
+        const $$createField8_0 = $$createType22;
         const $$createField9_0 = $$createType6;
-        const $$createField11_0 = $$createType22;
+        const $$createField11_0 = $$createType23;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("vulnerabilities" in $$parsedSource) {
             $$parsedSource["vulnerabilities"] = $$createField2_0($$parsedSource["vulnerabilities"]);
@@ -1523,7 +1581,7 @@ export class VulnChange {
      * @returns {VulnChange}
      */
     static createFrom($$source = {}) {
-        const $$createField1_0 = $$createType13;
+        const $$createField1_0 = $$createType14;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("vuln" in $$parsedSource) {
             $$parsedSource["vuln"] = $$createField1_0($$parsedSource["vuln"]);
@@ -1743,7 +1801,7 @@ export class Vulnerability {
      * @returns {Vulnerability}
      */
     static createFrom($$source = {}) {
-        const $$createField24_0 = $$createType10;
+        const $$createField24_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("reasons" in $$parsedSource) {
             $$parsedSource["reasons"] = $$createField24_0($$parsedSource["reasons"]);
@@ -1761,18 +1819,19 @@ const $$createType4 = $Create.Array($$createType3);
 const $$createType5 = $Create.Map($Create.Any, $Create.Any);
 const $$createType6 = $Create.Array($Create.Any);
 const $$createType7 = $Create.Array($Create.Any);
-const $$createType8 = Rules.createFrom;
-const $$createType9 = Reason.createFrom;
-const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = BinaryInfo.createFrom;
-const $$createType12 = $Create.Array($$createType11);
-const $$createType13 = Vulnerability.createFrom;
-const $$createType14 = $Create.Array($$createType13);
-const $$createType15 = Component.createFrom;
-const $$createType16 = $Create.Array($$createType15);
-const $$createType17 = SBOMSummary.createFrom;
-const $$createType18 = $Create.Nullable($$createType17);
-const $$createType19 = DepNode.createFrom;
-const $$createType20 = $Create.Nullable($$createType19);
-const $$createType21 = $Create.Map($Create.Any, $$createType20);
-const $$createType22 = EnrichInfo.createFrom;
+const $$createType8 = DocMeta.createFrom;
+const $$createType9 = Rules.createFrom;
+const $$createType10 = Reason.createFrom;
+const $$createType11 = $Create.Array($$createType10);
+const $$createType12 = BinaryInfo.createFrom;
+const $$createType13 = $Create.Array($$createType12);
+const $$createType14 = Vulnerability.createFrom;
+const $$createType15 = $Create.Array($$createType14);
+const $$createType16 = Component.createFrom;
+const $$createType17 = $Create.Array($$createType16);
+const $$createType18 = SBOMSummary.createFrom;
+const $$createType19 = $Create.Nullable($$createType18);
+const $$createType20 = DepNode.createFrom;
+const $$createType21 = $Create.Nullable($$createType20);
+const $$createType22 = $Create.Map($Create.Any, $$createType21);
+const $$createType23 = EnrichInfo.createFrom;
