@@ -6,6 +6,12 @@ import { glance } from "../lib/glance.js";
 import Chip from "./Chip.vue";
 
 const STATUSES = ["not_affected", "affected", "fixed", "under_investigation"];
+const IMPACT_PLACEHOLDER = {
+  not_affected: "Explain why, e.g. the service is not exposed or the code path is never loaded",
+  affected: "Describe the impact, e.g. the service is internet-facing and processes untrusted input",
+  fixed: "Describe the fix, e.g. upgraded to 3.1 and redeployed on 2026-10-20",
+  under_investigation: "Say what you know so far and what is still being checked",
+};
 const PRESETS = [
   { label: "30 days", days: 30 },
   { label: "90 days", days: 90 },
@@ -216,7 +222,7 @@ async function clear() {
               id="vex-impact"
               v-model="form.impact"
               rows="4"
-              placeholder="Explain why, e.g. the service is not exposed or the code path is never loaded"
+              :placeholder="IMPACT_PLACEHOLDER[form.status]"
             ></textarea>
           </div>
         </div>
