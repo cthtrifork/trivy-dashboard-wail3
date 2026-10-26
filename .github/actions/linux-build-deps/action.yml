@@ -17,14 +17,11 @@ runs:
         path: ~/apt-debs
         key: apt-debs-${{ runner.os }}-${{ steps.image.outputs.version }}-${{ hashFiles('.github/actions/linux-build-deps/action.yml') }}
 
-    # A stalled mirror trickles data forever and apt's own timeout never fires, so bound each attempt.
     - name: Install
-      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
-      with:
-        timeout_minutes: 3
-        max_attempts: 3
-        command: |
-          if [ '${{ steps.cache.outputs.cache-hit }}' = true ] && sudo dpkg -i ~/apt-debs/*.deb; then
+      shell: bash
+      run: |
+        install='
+          if [ "${{ steps.cache.outputs.cache-hit }}" = true ] && sudo dpkg -i ~/apt-debs/*.deb; then
             exit 0
           fi
           sudo apt-get -o Acquire::Languages=none update -qq
@@ -33,3 +30,10 @@ runs:
           # The debs apt just downloaded are exactly what this image lacks; keep them for the cache.
           mkdir -p ~/apt-debs
           cp /var/cache/apt/archives/*.deb ~/apt-debs/
+        '
+        # A stalled mirror trickles data forever and apt'"'"'s own timeout never fires, so bound each attempt.
+        for attempt in 1 2 3; do
+          timeout 180 bash -ec "$install" && exit 0
+          echo "::warning::attempt $attempt failed or timed out"
+        done
+        exit 1
