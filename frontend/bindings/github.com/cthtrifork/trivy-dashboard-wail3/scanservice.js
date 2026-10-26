@@ -40,6 +40,25 @@ export function CheckForUpdates() {
 }
 
 /**
+ * CheckIgnoreFile reports why the text is not a usable .trivyignore.yaml, or "" when it is (or is
+ * blank). The UI shows it under the field while the user types.
+ * @param {string} text
+ * @returns {$CancellablePromise<string>}
+ */
+export function CheckIgnoreFile(text) {
+    return $Call.ByID(1697553360, text);
+}
+
+/**
+ * CheckIgnorePolicy is CheckIgnoreFile for the Rego ignore policy.
+ * @param {string} text
+ * @returns {$CancellablePromise<string>}
+ */
+export function CheckIgnorePolicy(text) {
+    return $Call.ByID(1387660600, text);
+}
+
+/**
  * Compare scans two tags of an image and returns what changed between them.
  * @param {trivy$0.CompareRequest} req
  * @returns {$CancellablePromise<trivy$0.CompareResult | null>}

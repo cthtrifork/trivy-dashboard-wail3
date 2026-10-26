@@ -28,6 +28,12 @@ type ScanRequest struct {
 	ShowNotAffected bool `json:"showNotAffected"`
 	// TrivyImage selects the Trivy image or version to scan with. Empty means the default.
 	TrivyImage string `json:"trivyImage"`
+	// IgnorePolicy is the source of a Rego policy passed to Trivy's --ignore-policy: findings for
+	// which it defines `ignore` are left out of the report. Empty means none.
+	IgnorePolicy string `json:"ignorePolicy"`
+	// IgnoreFile is the source of a .trivyignore.yaml passed to Trivy's --ignorefile: the listed
+	// vulnerabilities (with optional statements) are left out of the report. Empty means none.
+	IgnoreFile string `json:"ignoreFile"`
 	// MarkUnderInvestigation records an under_investigation VEX assessment for every
 	// finding that has none after the scan (handled by the service, which owns the store).
 	MarkUnderInvestigation bool `json:"markUnderInvestigation"`
@@ -299,6 +305,14 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	if err != nil {
 		return nil, err
 	}
+	policy, err := checkIgnoreText("ignore policy", req.IgnorePolicy, CheckIgnorePolicy)
+	if err != nil {
+		return nil, err
+	}
+	ignoreFile, err := checkIgnoreText("ignore file", req.IgnoreFile, CheckIgnoreFile)
+	if err != nil {
+		return nil, err
+	}
 	trivyImage, err := ResolveTrivyImage(req.TrivyImage)
 	if err != nil {
 		return nil, err
@@ -321,6 +335,7 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	if ignore := req.ignoreStatus(); ignore != "" {
 		job.Flags = append(job.Flags, "--ignore-status", ignore)
 	}
+	job.IgnorePolicy, job.IgnoreFile = policy, ignoreFile // only the vulnerability report is filtered, not the SBOM
 	vulnJSON, err := s.engine().RunTrivy(ctx, job, logLine)
 	if err != nil {
 		if dbErr := s.lastDBError(); dbErr != nil {
@@ -332,7 +347,7 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	}
 
 	s.logf("Generating SBOM…")
-	job.Flags = []string{"--skip-db-update", "--format", "cyclonedx"}
+	job.Flags, job.IgnorePolicy, job.IgnoreFile = []string{"--skip-db-update", "--format", "cyclonedx"}, "", ""
 	sbomJSON, err := s.engine().RunTrivy(ctx, job, logLine)
 	if err != nil {
 		return nil, fmt.Errorf("SBOM generation failed: %w", err)
@@ -355,6 +370,29 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 	}
 	s.logf("Done: %d vulnerabilities, %d components.", len(res.Vulnerabilities), len(res.Components))
 	return res, nil
+}
+
+// maxIgnoreText bounds the ignore policy and the ignore file: each travels in an environment
+// variable, and Windows limits a whole environment block to 32 KiB.
+const maxIgnoreText = 24 * 1024
+
+// checkIgnoreText returns the policy or ignore file to use, or "" when it is blank. validate is the
+// quick sanity check from ignore.go; Rego and YAML themselves are checked by Trivy, whose error
+// reaches the user through the scan log.
+func checkIgnoreText(what, src string, validate func(string) error) (string, error) {
+	if strings.TrimSpace(src) == "" {
+		return "", nil
+	}
+	if len(src) > maxIgnoreText {
+		return "", fmt.Errorf("%s is too large (%d bytes, at most %d)", what, len(src), maxIgnoreText)
+	}
+	if strings.ContainsRune(src, 0) {
+		return "", fmt.Errorf("%s contains a NUL byte", what)
+	}
+	if err := validate(src); err != nil {
+		return "", fmt.Errorf("%s: %w", what, err)
+	}
+	return src, nil
 }
 
 var severityRank = map[string]int{"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}

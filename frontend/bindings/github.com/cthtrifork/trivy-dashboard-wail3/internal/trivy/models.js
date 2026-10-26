@@ -114,6 +114,22 @@ export class CompareRequest {
              */
             this["trivyImage"] = "";
         }
+        if (!("ignorePolicy" in $$source)) {
+            /**
+             * see ScanRequest.IgnorePolicy
+             * @member
+             * @type {string}
+             */
+            this["ignorePolicy"] = "";
+        }
+        if (!("ignoreFile" in $$source)) {
+            /**
+             * see ScanRequest.IgnoreFile
+             * @member
+             * @type {string}
+             */
+            this["ignoreFile"] = "";
+        }
         if (!("showSuppressed" in $$source)) {
             /**
              * See the same fields on ScanRequest.
@@ -1154,6 +1170,24 @@ export class ScanRequest {
              * @type {string}
              */
             this["trivyImage"] = "";
+        }
+        if (!("ignorePolicy" in $$source)) {
+            /**
+             * IgnorePolicy is the source of a Rego policy passed to Trivy's --ignore-policy: findings for
+             * which it defines `ignore` are left out of the report. Empty means none.
+             * @member
+             * @type {string}
+             */
+            this["ignorePolicy"] = "";
+        }
+        if (!("ignoreFile" in $$source)) {
+            /**
+             * IgnoreFile is the source of a .trivyignore.yaml passed to Trivy's --ignorefile: the listed
+             * vulnerabilities (with optional statements) are left out of the report. Empty means none.
+             * @member
+             * @type {string}
+             */
+            this["ignoreFile"] = "";
         }
         if (!("markUnderInvestigation" in $$source)) {
             /**
