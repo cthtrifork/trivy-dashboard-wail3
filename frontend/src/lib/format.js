@@ -31,6 +31,15 @@ export const isExpired = (e) => !!e?.expires && new Date().toISOString().slice(0
 // A resolved assessment hides its finding until it expires; after that it only annotates it.
 export const suppresses = (e) => !!e && RESOLVED.has(e.status) && !isExpired(e);
 
+export function ago(ms) {
+  const s = Math.max(0, (Date.now() - ms) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  const d = Math.floor(s / 86400);
+  return d === 1 ? "yesterday" : `${d} days ago`;
+}
+
 export function bytes(n) {
   if (n < 1024) return n + " B";
   const u = ["KB", "MB", "GB"];

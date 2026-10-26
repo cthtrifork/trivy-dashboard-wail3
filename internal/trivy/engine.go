@@ -9,11 +9,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -84,6 +86,10 @@ type Env struct {
 	Cache            string `env:"TRIVY_SCANNER_CACHE" desc:"Trivy cache source: a podman volume name or an absolute directory on the podman host." def:"user cache dir, or volume trivy-cache with a remote podman or on Windows"`
 	DBRepository     string `env:"TRIVY_DB_REPOSITORY" desc:"Trivy vulnerability DB mirror, forwarded into the scanner container when set." def:"Trivy default"`
 	JavaDBRepository string `env:"TRIVY_JAVA_DB_REPOSITORY" desc:"Trivy Java DB mirror, forwarded into the scanner container when set." def:"Trivy default"`
+	HTTPSProxy       string `env:"HTTPS_PROXY" desc:"HTTPS proxy, forwarded into the scanner container when set. A loopback proxy also puts the container on the host network." def:"none"`
+	HTTPProxy        string `env:"HTTP_PROXY" desc:"HTTP proxy, forwarded into the scanner container when set." def:"none"`
+	NoProxy          string `env:"NO_PROXY" desc:"Hosts that bypass the proxy, forwarded into the scanner container when set." def:"none"`
+	CABundle         string `env:"TRIVY_SCANNER_CA_BUNDLE" desc:"PEM file with extra CA certificates (a TLS-inspecting proxy), mounted into the scanner container. An absolute path on the podman host." def:"none"`
 	Podman           string `env:"PODMAN" desc:"Path of the podman binary." def:"podman"`
 	ContainerHost    string `env:"CONTAINER_HOST" desc:"Remote podman socket. Switches the cache default to a named volume." def:"local podman"`
 	DockerHost       string `env:"DOCKER_HOST" desc:"Same effect as CONTAINER_HOST." def:"local podman"`
@@ -173,6 +179,35 @@ func defaultCache() string {
 	return filepath.Join(dir, "trivy-scanner", "trivy")
 }
 
+// proxyArgs forwards the proxy settings and an extra CA bundle into the scanner container, so the
+// DB download and registry pulls work behind a (TLS-inspecting) proxy. The container's own
+// loopback is not the host's, so a proxy on localhost needs the host network.
+func proxyArgs(e Env) []string {
+	var args []string
+	for name, val := range map[string]string{"HTTPS_PROXY": e.HTTPSProxy, "HTTP_PROXY": e.HTTPProxy, "NO_PROXY": e.NoProxy} {
+		if val != "" {
+			args = append(args, "-e", name)
+		}
+	}
+	slices.Sort(args) // map order is random; keep the command line stable
+	if loopbackProxy(e.HTTPSProxy) || loopbackProxy(e.HTTPProxy) {
+		args = append(args, "--network", "host")
+	}
+	if e.CABundle != "" {
+		args = append(args, "-v", e.CABundle+":/etc/ssl/certs/ca-certificates.crt:ro")
+	}
+	return args
+}
+
+func loopbackProxy(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	h := u.Hostname()
+	return h == "localhost" || h == "::1" || strings.HasPrefix(h, "127.")
+}
+
 // PodmanBin is the podman binary a default engine runs: $PODMAN or "podman".
 func PodmanBin() string { return (&PodmanEngine{}).bin() }
 
@@ -223,6 +258,7 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 	if e.JavaDBRepository != "" {
 		args = append(args, "-e", "TRIVY_JAVA_DB_REPOSITORY")
 	}
+	args = append(args, proxyArgs(e)...)
 	// --skip-version-check: no "newer Trivy available" lookup; the version is pinned by us.
 	// --vuln-severity-source redhat,auto prefers Red Hat severities, then the vendor default.
 	// --disable-telemetry and --offline-scan keep Trivy from phoning home beyond the DB download.
