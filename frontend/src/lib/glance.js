@@ -40,6 +40,12 @@ function headline(vector) {
   return `${WHO[av]} can ${effect}${level === "L" ? ", to a limited degree" : ""}.`;
 }
 
+// "CVSS 7.5 (High)"; an unscored advisory shows its severity band instead.
+export function cvssText(v) {
+  const sev = v.severity ? v.severity[0] + v.severity.slice(1).toLowerCase() : "Unknown";
+  return v.score ? `${v.score.toFixed(1)} (${sev})` : `${sev} (no score published)`;
+}
+
 export function glance(v) {
   const vector = v.vector || "";
   const av = metric(vector, "AV");
@@ -47,6 +53,7 @@ export function glance(v) {
   return {
     headline: headline(vector),
     facts: [
+      { label: "CVSS", value: cvssText(v) },
       { label: "Attack from", value: av ? AV[av] : "Unknown" },
       { label: "Needs", value: vector ? needs(vector) : "Unknown" },
       { label: "Impact", value: keys.length ? keys.map((k) => IMPACT[k]).join(", ") + (level === "L" ? " (low)" : "") : "None rated" },

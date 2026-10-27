@@ -369,3 +369,34 @@
   font-weight: 600;
   margin: 2px 0 6px;
 }
+
+.rawvector {
+  display: block;
+  margin-top: 6px;
+  color: var(--mute);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.cvss-break dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 2px 16px;
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+.cvss-break dl > div {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.cvss-break dt {
+  min-width: 42px;
+}
+.cvss-break dt code {
+  color: var(--mute);
+  font-size: 11px;
+}
+.cvss-break dd {
+  margin: 0;
+}
