@@ -191,14 +191,17 @@ export function VEXDelete(image, key) {
 }
 
 /**
- * VEXExport renders the image's assessments as an OpenVEX document.
+ * VEXExport renders the image's assessments as an OpenVEX document. With
+ * onlyCurrent, statements that match no finding of the latest scan are left out
+ * of the document; they stay in the store.
  * @param {string} image
  * @param {string} author
  * @param {string} role
+ * @param {boolean} onlyCurrent
  * @returns {$CancellablePromise<string>}
  */
-export function VEXExport(image, author, role) {
-    return $Call.ByID(1101982769, image, author, role);
+export function VEXExport(image, author, role, onlyCurrent) {
+    return $Call.ByID(1101982769, image, author, role, onlyCurrent);
 }
 
 /**
@@ -249,10 +252,11 @@ export function VEXMarkUnassessed(image, author) {
  * @param {string} image
  * @param {string} author
  * @param {string} role
+ * @param {boolean} onlyCurrent
  * @returns {$CancellablePromise<string>}
  */
-export function VEXSave(image, author, role) {
-    return $Call.ByID(3343518742, image, author, role);
+export function VEXSave(image, author, role, onlyCurrent) {
+    return $Call.ByID(3343518742, image, author, role, onlyCurrent);
 }
 
 /**
