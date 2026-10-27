@@ -116,10 +116,10 @@ defineExpose({ open });
     </div>
     <div class="form-grid one">
       <label>Author <input id="vex-author" v-model="form.author" placeholder="&lt;author&gt;" /></label>
-      <label class="chk"
-        ><input id="vex-only-current" v-model="form.onlyCurrent" type="checkbox" /> Leave out statements that no longer match a finding</label
-      >
     </div>
+    <label class="chk"
+      ><input id="vex-only-current" v-model="form.onlyCurrent" type="checkbox" /> Leave out statements that no longer match a finding</label
+    >
     <JsonBox ta-id="vex-preview" ref="preview" :model-value="text" readonly :rows="14" />
     <div id="vex-msg" class="kv">{{ msg }}</div>
     <div class="dlg-actions">
