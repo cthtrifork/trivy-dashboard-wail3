@@ -204,7 +204,7 @@ export class Footprint {
         if (!("cacheBytes" in $$source)) {
             /**
              * CacheBytes is the Trivy cache (vulnerability DB); -1 when it is a podman volume the app
-             * cannot measure. CacheLocation names the directory or volume.
+             * cannot measure, or a directory on a remote podman host. CacheLocation names the directory or volume.
              * @member
              * @type {number}
              */
