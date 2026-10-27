@@ -149,24 +149,24 @@ var rules = []rule{
 		}
 		switch av {
 		case "N":
-			add("AV:N", 10)
+			add("network", 10)
 		case "A":
-			add("AV:A", 4)
+			add("adjacent network", 4)
 		case "P":
-			add("AV:P", -2)
+			add("physical access", -2)
 		}
 		if c.vec.M["AC"] == "L" {
-			add("AC:L", 3)
+			add("low complexity", 3)
 		}
 		if c.vec.M["PR"] == "N" {
-			add("PR:N", 5)
+			add("no privileges needed", 5)
 		} else if c.vec.M["Au"] == "N" {
-			add("Au:N", 5)
+			add("no authentication", 5)
 		}
 		if c.vec.M["UI"] == "N" {
-			add("UI:N", 4)
+			add("no user interaction", 4)
 		}
-		rule := fmt.Sprintf("CVSS vector → %+d", pts)
+		rule := fmt.Sprintf("attack vector → %+d", pts)
 		if len(parts) > 0 {
 			rule += " (" + strings.Join(parts, ", ") + ")"
 		}

@@ -4,6 +4,7 @@ import { ScanService, assessing, result, vex, findingsById, errText, lsGet, lsSe
 import { JUSTIFICATION_PLAIN, STATUS_LABEL, cvssFloor, detailUrl, openUrl, tierStyle } from "../lib/format.js";
 import { glance } from "../lib/glance.js";
 import Chip from "./Chip.vue";
+import CvssBreakdown from "./CvssBreakdown.vue";
 
 const STATUSES = ["not_affected", "affected", "fixed", "under_investigation"];
 const IMPACT_PLACEHOLDER = {
@@ -171,6 +172,7 @@ async function clear() {
               <b :class="{ mono: f.mono }">{{ f.value }}</b>
             </div>
           </div>
+          <CvssBreakdown :vector="v.vector" />
           <details v-if="v.attack" class="glance-more">
             <summary>Full explanation</summary>
             <p class="attack">{{ v.attack }}</p>

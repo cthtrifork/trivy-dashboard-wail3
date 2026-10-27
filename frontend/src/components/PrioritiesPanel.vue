@@ -3,11 +3,13 @@ import { computed, reactive, ref } from "vue";
 import { result, vulns, vex } from "../store.js";
 import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
+import CvssBreakdown from "./CvssBreakdown.vue";
 import CvssMeter from "./CvssMeter.vue";
 import Ratings from "./Ratings.vue";
 import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
 import SuppressedRow from "./SuppressedRow.vue";
+import { cvssText } from "../lib/glance.js";
 import { useVirtualList } from "../lib/virtual.js";
 
 const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false });
@@ -182,7 +184,10 @@ defineExpose({ count: computed(() => pool.value.length) });
           <Ratings :v="v" />
           <div class="pmeans">
             <small>What it means</small>
-            <p class="attack">{{ v.attack }}</p>
+            <p class="attack">
+              <b>CVSS {{ cvssText(v) }}.</b> {{ v.attack }}
+            </p>
+            <CvssBreakdown :vector="v.vector" />
           </div>
           <div class="pfoot">
             <details class="scorebox">
