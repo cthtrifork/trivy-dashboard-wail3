@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -161,12 +162,21 @@ type Footprint struct {
 	// cannot measure. CacheLocation names the directory or volume.
 	CacheBytes    int64  `json:"cacheBytes"`
 	CacheLocation string `json:"cacheLocation"`
+	// Parts breaks the footprint down: the Trivy cache by subdirectory (db, java-db, fanal, ...),
+	// then the EPSS/KEV data and the VEX file. Empty when the cache is a podman volume.
+	Parts []FootprintPart `json:"parts"`
 	// MemoryBytes estimates the app's memory: the Go runtime's resident share, excluding the
 	// webview (see WebviewBytes) and the podman containers.
 	MemoryBytes int64 `json:"memoryBytes"`
 	// WebviewBytes is the resident memory of the webview processes; -1 when unknown (not Linux,
 	// or no webview in server mode).
 	WebviewBytes int64 `json:"webviewBytes"`
+}
+
+// FootprintPart is one named share of the on-disk footprint.
+type FootprintPart struct {
+	Name  string `json:"name"`
+	Bytes int64  `json:"bytes"`
 }
 
 // Footprint measures the cache directories and the Go runtime's memory.
@@ -180,7 +190,12 @@ func (s *ScanService) Footprint() Footprint {
 		f.CacheLocation = src
 		if filepath.IsAbs(src) {
 			f.CacheBytes = dirSize(src)
+			f.Parts = append(f.Parts, cacheParts(src)...)
 		}
+	}
+	f.Parts = append(f.Parts, FootprintPart{"EPSS and KEV data", filesSize(enrichCacheDir())})
+	if fi, err := os.Stat(vexFile()); err == nil {
+		f.Parts = append(f.Parts, FootprintPart{"VEX assessments", fi.Size()})
 	}
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
@@ -189,6 +204,41 @@ func (s *ScanService) Footprint() Footprint {
 		f.WebviewBytes = childrenRSS()
 	}
 	return f
+}
+
+// filesSize sums the regular files directly in dir, not its subdirectories (the Trivy cache can
+// live in one of them).
+func filesSize(dir string) int64 {
+	entries, _ := os.ReadDir(dir)
+	var n int64
+	for _, e := range entries {
+		if e.Type().IsRegular() {
+			if info, err := e.Info(); err == nil {
+				n += info.Size()
+			}
+		}
+	}
+	return n
+}
+
+// cacheParts sizes each top-level entry of the Trivy cache (db, java-db, fanal, ...), largest first.
+func cacheParts(dir string) []FootprintPart {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var parts []FootprintPart
+	for _, e := range entries {
+		n := int64(0)
+		if e.IsDir() {
+			n = dirSize(filepath.Join(dir, e.Name()))
+		} else if info, ierr := e.Info(); ierr == nil {
+			n = info.Size()
+		}
+		parts = append(parts, FootprintPart{"Trivy " + e.Name(), n})
+	}
+	sort.Slice(parts, func(i, j int) bool { return parts[i].Bytes > parts[j].Bytes })
+	return parts
 }
 
 // dirSize sums the regular files under dir; a missing directory is 0.

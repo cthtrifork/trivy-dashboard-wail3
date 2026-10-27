@@ -108,6 +108,13 @@ const footprintNote = computed(() => {
   return `Footprint: ${cache} · ${mem}`;
 });
 
+const footprintTitle = computed(() => {
+  const f = footprint.value;
+  if (!f) return "";
+  const parts = (f.parts || []).map((p) => `${p.name}: ${bytes(p.bytes)}`);
+  return [f.cacheLocation, ...parts].join("\n");
+});
+
 // Updating is three clicks, never automatic: check, then download, then restart.
 const update = ref({ step: "idle", version: "" }); // idle | available | ready
 const updateBusy = ref(false);
@@ -378,5 +385,5 @@ onMounted(() => {
   <VexDrawer />
   <HelpDialog ref="helpDialog" />
   <div id="status" :class="[status.err ? 'err' : '', status.busy ? 'spin' : '']">{{ status.msg }}</div>
-  <footer id="footprint" v-if="footprintNote" :title="footprint.cacheLocation">{{ footprintNote }}</footer>
+  <footer id="footprint" v-if="footprintNote" :title="footprintTitle">{{ footprintNote }}</footer>
 </template>
