@@ -44,6 +44,7 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+          persist-credentials: false
 
       # `paths` above matches the whole PR against its base, so on a later push check that this
       # push itself touched the graph code. Keep this list in step with `paths`.
@@ -84,7 +85,7 @@ jobs:
       # scripts/screenshots.mjs pins Inter for the UI; DejaVu Sans Mono is the monospace default.
       - name: Install fonts
         if: steps.changed.outputs.render
-        uses: ./.github/actions/linux-build-deps
+        uses: $/.github/actions/linux-build-deps
         with:
           packages: fonts-inter fonts-dejavu-core
 

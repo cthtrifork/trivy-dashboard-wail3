@@ -10,6 +10,8 @@ updates:
     groups:
       go-minor-and-patch:
         update-types: [minor, patch]
+    cooldown:
+      default-days: 7
   - package-ecosystem: github-actions
     directory: /
     schedule:
@@ -17,6 +19,8 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    cooldown:
+      default-days: 7
   # The Vue + Vite frontend; the wails runtime package is kept in step with the Go module by hand.
   - package-ecosystem: npm
     directory: /frontend
@@ -27,19 +31,27 @@ updates:
         update-types: [minor, patch]
     ignore:
       - dependency-name: "@wailsio/runtime"
+    cooldown:
+      default-days: 7
   # internal/trivy/image/Dockerfile holds the Trivy version scans run with (embedded in the binary).
   - package-ecosystem: docker
     directory: /internal/trivy/image
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
   # The headless server image. Dependabot only recognises files with "dockerfile" in the name,
   # which is why this is not called Containerfile.
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
   # The dev container's base images.
   - package-ecosystem: docker
     directory: /.devcontainer
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7

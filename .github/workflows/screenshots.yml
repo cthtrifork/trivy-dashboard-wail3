@@ -74,7 +74,7 @@ jobs:
 
       # scripts/screenshots.mjs pins Inter for the UI; DejaVu Sans Mono is the monospace default.
       - name: Install fonts
-        uses: ./.github/actions/linux-build-deps
+        uses: $/.github/actions/linux-build-deps
         with:
           packages: fonts-inter fonts-dejavu-core
 
