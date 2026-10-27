@@ -1,6 +1,6 @@
 # Trivy Scanner in server mode, for hosts that have podman but no Go toolchain.
 # See docs/headless.md.
-FROM docker.io/library/node:22-alpine AS frontend
+FROM docker.io/library/node:26-alpine AS frontend
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
