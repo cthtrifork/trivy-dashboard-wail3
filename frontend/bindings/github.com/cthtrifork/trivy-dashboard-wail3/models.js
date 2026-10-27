@@ -245,10 +245,10 @@ export class Footprint {
      * @returns {Footprint}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType5;
+        const $$createField3_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("parts" in $$parsedSource) {
-            $$parsedSource["parts"] = $$createField2_0($$parsedSource["parts"]);
+            $$parsedSource["parts"] = $$createField3_0($$parsedSource["parts"]);
         }
         return new Footprint(/** @type {Partial<Footprint>} */($$parsedSource));
     }
