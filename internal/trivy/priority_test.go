@@ -391,3 +391,11 @@ func TestVEXReimportKeepsDocument(t *testing.T) {
 		t.Errorf("tooling must not be added:\n%s", out)
 	}
 }
+
+func TestMatchingEntries(t *testing.T) {
+	entries := []VEXEntry{{Key: "CVE-1|a"}, {Key: "CVE-2|b"}}
+	got := MatchingEntries(entries, []Vulnerability{{Key: "CVE-2|b"}})
+	if len(got) != 1 || got[0].Key != "CVE-2|b" {
+		t.Fatalf("got %+v", got)
+	}
+}

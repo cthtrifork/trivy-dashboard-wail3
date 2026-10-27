@@ -5,7 +5,7 @@ import { ScanService, result, vex, loadVEX, errText, lsGet, lsSet } from "../sto
 
 const dlg = ref(null);
 const preview = ref(null);
-const form = reactive({ author: lsGet("vex-author") });
+const form = reactive({ author: lsGet("vex-author"), onlyCurrent: false });
 const text = ref("");
 const msg = ref("");
 
@@ -26,7 +26,7 @@ const coverage = computed(() => {
 async function refresh() {
   msg.value = "";
   try {
-    text.value = await ScanService.VEXExport(result.value.image, form.author, "");
+    text.value = await ScanService.VEXExport(result.value.image, form.author, "", form.onlyCurrent);
   } catch (e) {
     text.value = "";
     msg.value = errText(e);
@@ -38,7 +38,7 @@ watch(form, refresh);
 // empty makes the Go side use the imported ones, and the placeholder when there are none.
 async function loadMeta() {
   try {
-    const doc = JSON.parse(await ScanService.VEXExport(result.value.image, "", ""));
+    const doc = JSON.parse(await ScanService.VEXExport(result.value.image, "", "", false));
     const imported = doc.author && doc.author !== "<author>";
     form.author = imported ? doc.author : lsGet("vex-author");
   } catch {
@@ -79,7 +79,7 @@ async function copy() {
 async function save() {
   lsSet("vex-author", form.author);
   try {
-    const path = await ScanService.VEXSave(result.value.image, form.author, "");
+    const path = await ScanService.VEXSave(result.value.image, form.author, "", form.onlyCurrent);
     msg.value = path ? "Saved to " + path : "";
     return;
   } catch (e) {
@@ -116,6 +116,9 @@ defineExpose({ open });
     </div>
     <div class="form-grid one">
       <label>Author <input id="vex-author" v-model="form.author" placeholder="&lt;author&gt;" /></label>
+      <label class="chk"
+        ><input id="vex-only-current" v-model="form.onlyCurrent" type="checkbox" /> Leave out statements that no longer match a finding</label
+      >
     </div>
     <JsonBox ta-id="vex-preview" ref="preview" :model-value="text" readonly :rows="14" />
     <div id="vex-msg" class="kv">{{ msg }}</div>

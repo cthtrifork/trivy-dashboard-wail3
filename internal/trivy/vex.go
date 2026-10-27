@@ -451,6 +451,21 @@ func kept(entries []VEXEntry, findings []Vulnerability) int {
 	return n
 }
 
+// MatchingEntries returns the entries that belong to a finding in findings.
+func MatchingEntries(entries []VEXEntry, findings []Vulnerability) []VEXEntry {
+	known := make(map[string]bool, len(findings))
+	for _, v := range findings {
+		known[v.Key] = true
+	}
+	out := make([]VEXEntry, 0, len(entries))
+	for _, e := range entries {
+		if known[e.Key] {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
 // openVEXDoc decodes an OpenVEX v0.2.0 document with go-vex.
 func openVEXDoc(data []byte) (*vex.VEX, error) {
 	doc, err := vex.Parse(data)

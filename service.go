@@ -343,11 +343,22 @@ func (s *ScanService) VEXSet(image string, e trivy.VEXEntry) (trivy.VEXEntry, er
 // VEXDelete removes an assessment.
 func (s *ScanService) VEXDelete(image, key string) error { return s.vex.Delete(image, key) }
 
-// VEXExport renders the image's assessments as an OpenVEX document.
-func (s *ScanService) VEXExport(image, author, role string) (string, error) {
+// VEXExport renders the image's assessments as an OpenVEX document. With
+// onlyCurrent, statements that match no finding of the latest scan are left out
+// of the document; they stay in the store.
+func (s *ScanService) VEXExport(image, author, role string, onlyCurrent bool) (string, error) {
 	entries, err := s.vex.List(image)
 	if err != nil {
 		return "", err
+	}
+	if onlyCurrent {
+		s.mu.Lock()
+		findings := s.found[trivy.ImageRepo(image)]
+		s.mu.Unlock()
+		if len(findings) == 0 {
+			return "", errors.New("scan the image first: statements are matched against its findings")
+		}
+		entries = trivy.MatchingEntries(entries, findings)
 	}
 	s.mu.Lock()
 	product := s.product[trivy.ImageRepo(image)]
@@ -416,8 +427,8 @@ func (s *ScanService) VEXMarkUnassessed(image, author string) (int, error) {
 // VEXSave exports the document through a native save dialog. It returns the
 // chosen path, or "" if the user cancelled. Errors (including headless server
 // mode, which has no dialogs) let the UI fall back to a browser download.
-func (s *ScanService) VEXSave(image, author, role string) (string, error) {
-	doc, err := s.VEXExport(image, author, role)
+func (s *ScanService) VEXSave(image, author, role string, onlyCurrent bool) (string, error) {
+	doc, err := s.VEXExport(image, author, role, onlyCurrent)
 	if err != nil {
 		return "", err
 	}
