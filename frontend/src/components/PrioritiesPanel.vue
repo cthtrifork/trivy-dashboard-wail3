@@ -3,6 +3,7 @@ import { computed, reactive, ref } from "vue";
 import { result, vulns, vex } from "../store.js";
 import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
+import CvssBreakdown from "./CvssBreakdown.vue";
 import CvssMeter from "./CvssMeter.vue";
 import Ratings from "./Ratings.vue";
 import RulesEditor from "./RulesEditor.vue";
@@ -186,7 +187,7 @@ defineExpose({ count: computed(() => pool.value.length) });
             <p class="attack">
               <b>CVSS {{ cvssText(v) }}.</b> {{ v.attack }}
             </p>
-            <code v-if="v.vector" class="rawvector">{{ v.vector }}</code>
+            <CvssBreakdown :vector="v.vector" />
           </div>
           <div class="pfoot">
             <details class="scorebox">
