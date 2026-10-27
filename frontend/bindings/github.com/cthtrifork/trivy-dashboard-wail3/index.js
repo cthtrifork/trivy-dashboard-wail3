@@ -12,6 +12,7 @@ export {
     ConfigEnv,
     ConfigPath,
     Footprint,
+    FootprintPart,
     Mode,
     UpdateInfo,
     UpdateStatus

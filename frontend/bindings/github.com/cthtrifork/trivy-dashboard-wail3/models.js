@@ -217,6 +217,15 @@ export class Footprint {
              */
             this["cacheLocation"] = "";
         }
+        if (!("parts" in $$source)) {
+            /**
+             * Parts breaks the footprint down: the Trivy cache by subdirectory (db, java-db, fanal, ...),
+             * then the EPSS/KEV data and the VEX file. Empty when the cache is a podman volume.
+             * @member
+             * @type {FootprintPart[]}
+             */
+            this["parts"] = [];
+        }
         if (!("memoryBytes" in $$source)) {
             /**
              * MemoryBytes estimates the app's memory: the Go runtime's resident share, excluding the
@@ -245,8 +254,50 @@ export class Footprint {
      * @returns {Footprint}
      */
     static createFrom($$source = {}) {
+        const $$createField2_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("parts" in $$parsedSource) {
+            $$parsedSource["parts"] = $$createField2_0($$parsedSource["parts"]);
+        }
         return new Footprint(/** @type {Partial<Footprint>} */($$parsedSource));
+    }
+}
+
+/**
+ * FootprintPart is one named share of the on-disk footprint.
+ */
+export class FootprintPart {
+    /**
+     * Creates a new FootprintPart instance.
+     * @param {Partial<FootprintPart>} [$$source = {}] - The source object to create the FootprintPart.
+     */
+    constructor($$source = {}) {
+        if (!("name" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["name"] = "";
+        }
+        if (!("bytes" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["bytes"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FootprintPart instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {FootprintPart}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new FootprintPart(/** @type {Partial<FootprintPart>} */($$parsedSource));
     }
 }
 
@@ -440,3 +491,5 @@ const $$createType0 = ConfigPath.createFrom;
 const $$createType1 = $Create.Array($$createType0);
 const $$createType2 = ConfigEnv.createFrom;
 const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = FootprintPart.createFrom;
+const $$createType5 = $Create.Array($$createType4);
