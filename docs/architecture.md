@@ -92,4 +92,4 @@ Wails rejects requests with a non-loopback `Host` header when bound to loopback 
 
 ## Deployment without Go
 
-[`Containerfile`](../Containerfile) builds the server binary inside podman; at runtime the container uses `podman-remote` against the host socket. See [headless.md](headless.md).
+[`headless.Dockerfile`](../headless.Dockerfile) builds the server binary inside podman; at runtime the container uses `podman-remote` against the host socket. See [headless.md](headless.md).
