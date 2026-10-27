@@ -171,6 +171,7 @@ async function clear() {
               <b :class="{ mono: f.mono }">{{ f.value }}</b>
             </div>
           </div>
+          <code v-if="v.vector" class="rawvector">{{ v.vector }}</code>
           <details v-if="v.attack" class="glance-more">
             <summary>Full explanation</summary>
             <p class="attack">{{ v.attack }}</p>

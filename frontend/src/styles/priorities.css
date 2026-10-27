@@ -369,3 +369,12 @@
   font-weight: 600;
   margin: 2px 0 6px;
 }
+
+.rawvector {
+  display: block;
+  margin-top: 6px;
+  color: var(--mute);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}

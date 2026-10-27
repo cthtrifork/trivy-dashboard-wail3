@@ -186,6 +186,7 @@ defineExpose({ count: computed(() => pool.value.length) });
             <p class="attack">
               <b>CVSS {{ cvssText(v) }}.</b> {{ v.attack }}
             </p>
+            <code v-if="v.vector" class="rawvector">{{ v.vector }}</code>
           </div>
           <div class="pfoot">
             <details class="scorebox">
