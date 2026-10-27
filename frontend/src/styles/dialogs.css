@@ -86,3 +86,6 @@
 #vex-import-btn {
   white-space: nowrap;
 }
+#vex-dialog .chk {
+  margin: 10px 0;
+}
