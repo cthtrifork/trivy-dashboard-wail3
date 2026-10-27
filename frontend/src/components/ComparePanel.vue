@@ -13,6 +13,7 @@ import {
   errText,
   lsSet,
   cancel,
+  refreshFootprint,
 } from "../store.js";
 import { pct } from "../lib/format.js";
 import Chip from "./Chip.vue";
@@ -63,6 +64,7 @@ async function run() {
   for (const k of ["repo", "a", "b"]) lsSet("cmp-" + k, cmpForm[k]);
   logText.value = "";
   comparing.value = scanning.value = true;
+  refreshFootprint();
   setStatus("Scanning both images…", { busy: true });
   try {
     data.value = await ScanService.Compare(req);
@@ -71,6 +73,7 @@ async function run() {
     setStatus(errText(err), { err: true });
   } finally {
     comparing.value = scanning.value = false;
+    refreshFootprint();
   }
 }
 

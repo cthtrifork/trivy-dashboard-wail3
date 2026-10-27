@@ -34,3 +34,19 @@ func TestFootprintCannotMeasureAPodmanVolume(t *testing.T) {
 		t.Errorf("volume cache = %d, want -1 (unmeasurable)", got)
 	}
 }
+
+func TestFootprintBreaksTheCacheDownBySubdirectory(t *testing.T) {
+	dir := t.TempDir()
+	for name, n := range map[string]int{"db": 60, "fanal": 40} {
+		if err := os.MkdirAll(filepath.Join(dir, name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, name, "f"), make([]byte, n), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	parts := cacheParts(dir)
+	if len(parts) != 2 || parts[0] != (FootprintPart{"Vulnerability database", 60}) || parts[1] != (FootprintPart{"Scanned image layers", 40}) {
+		t.Errorf("parts = %+v, want db 60 then fanal 40", parts)
+	}
+}
