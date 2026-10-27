@@ -8,6 +8,7 @@ import Ratings from "./Ratings.vue";
 import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
 import SuppressedRow from "./SuppressedRow.vue";
+import { cvssText } from "../lib/glance.js";
 import { useVirtualList } from "../lib/virtual.js";
 
 const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false });
@@ -182,7 +183,9 @@ defineExpose({ count: computed(() => pool.value.length) });
           <Ratings :v="v" />
           <div class="pmeans">
             <small>What it means</small>
-            <p class="attack">{{ v.attack }}</p>
+            <p class="attack">
+              <b>CVSS {{ cvssText(v) }}.</b> {{ v.attack }}
+            </p>
           </div>
           <div class="pfoot">
             <details class="scorebox">
