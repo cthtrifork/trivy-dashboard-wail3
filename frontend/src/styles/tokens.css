@@ -1,5 +1,7 @@
 /* Design tokens: palette, severity colours, light-mode overrides. */
 :root {
+  /* Lets native controls (select popups, scrollbars) follow the theme instead of the GTK one. */
+  color-scheme: dark;
   --bg: #0f1218;
   --panel: #161b24;
   --line: #262d3a;
@@ -20,6 +22,7 @@
 }
 @media (prefers-color-scheme: light) {
   :root {
+    color-scheme: light;
     --bg: #f6f7f9;
     --panel: #fff;
     --line: #dde1e8;

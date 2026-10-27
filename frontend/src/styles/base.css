@@ -67,6 +67,11 @@ textarea {
   padding: 6px 8px;
   font: inherit;
 }
+select option,
+select optgroup {
+  background: var(--panel);
+  color: var(--text);
+}
 textarea {
   width: 100%;
   resize: vertical;
