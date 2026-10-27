@@ -67,6 +67,22 @@ textarea {
   padding: 6px 8px;
   font: inherit;
 }
+/* WebKitGTK paints the native select with the GTK theme and ignores our colours, so draw it ourselves. */
+select {
+  appearance: none;
+  padding-right: 28px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--mute) 50%), linear-gradient(135deg, var(--mute) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) 55%,
+    calc(100% - 10px) 55%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+}
+select option,
+select optgroup {
+  background: var(--panel);
+  color: var(--text);
+}
 textarea {
   width: 100%;
   resize: vertical;
