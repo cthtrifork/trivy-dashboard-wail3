@@ -49,5 +49,5 @@ Anyone who can reach the port can read the DOM, run JavaScript in the app and ca
 
 - Binds to `127.0.0.1`; browser origins must be loopback. Without a token every local process is trusted, so on a shared machine set `WAILS_MCP_TOKEN` (and put the same token in the client's `Authorization` header).
 - Do not set `WAILS_MCP_HOST=0.0.0.0` (principle 10). If you ever must, use a token and an encrypted tunnel.
-- **Never in releases.** `mcp_guard.go` makes `-tags mcp,production` fail to compile, and CI greps the production binary for the server's start-up message (`Production build contains no MCP server`).
-- Not in the container image: `headless.Dockerfile` builds with `server,production`.
+- **Never in releases.** `internal/app/mcp_guard.go` makes `-tags mcp,production` fail to compile, and CI greps the production binary for the server's start-up message (`Production build contains no MCP server`).
+- Not in the container image: `build/docker/headless.Dockerfile` builds with `server,production`.

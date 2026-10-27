@@ -15,7 +15,7 @@ RUN go mod download
 COPY . .
 COPY --from=frontend /src/frontend/dist ./frontend/dist
 ARG VERSION=dev
-RUN go build -tags server,production -trimpath -ldflags "-w -s -X main.version=${VERSION}" -o /out/trivy-scanner .
+RUN go build -tags server,production -trimpath -ldflags "-w -s -X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=${VERSION}" -o /out/trivy-scanner .
 
 FROM docker.io/library/alpine:3.24
 # The app only needs the podman *client*: scans run on the host's podman through its API socket.

@@ -49,7 +49,7 @@ ignores that for 3 s. Removing by name matters because killing a `podman run` cl
 - `internal/trivy/lifecycle_test.go` drives the real engine code with a stub `podman`: cancelling removes the named
   container and then signals the client with SIGTERM (not SIGKILL), every container gets its own name, and
   `CancelAndWait` waits for cleanup but gives up after its grace period instead of hanging shutdown.
-- `lifecycle_test.go` (root) checks the service: a scan stops when the application context is cancelled,
+- `internal/app/lifecycle_test.go` checks the service: a scan stops when the application context is cancelled,
   `ServiceShutdown` stops a running scan within budget, is instant when idle, and reports a scan that will not stop.
 
 Not verified: real podman. This sandbox has none, so the behaviour of `podman rm --force --ignore --time 0` and of

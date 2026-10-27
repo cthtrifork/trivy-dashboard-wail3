@@ -73,17 +73,17 @@ wails3-install: ## Install the wails3 CLI at the go.mod version into GOBIN (defa
 bindings: ## Regenerate frontend/bindings from the Go services (needs the wails3 CLI)
 	CGO_ENABLED=0 wails3 generate bindings -silent
 
-dev: ## Hot reload: Vite HMR + rebuild-on-save Go server (http://localhost:8080)
+dev: ## Hot reload via `wails3 dev` in server mode: Vite HMR + rebuild-on-save Go (http://localhost:8080)
 	scripts/dev.sh
 
 dev-frontend: ## Vite dev server with hot reload; then run: FRONTEND_DEVSERVER_URL=http://127.0.0.1:9245 go run .
 	cd frontend && npm run dev
 
 build: frontend ## Desktop release build (needs GTK4 + WebKitGTK 6)
-	go build -tags production -trimpath -buildvcs=false -ldflags "-w -s -X main.version=$(VERSION)" -o $(OUT) .
+	go build -tags production -trimpath -buildvcs=false -ldflags "-w -s -X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=$(VERSION)" -o $(OUT) .
 
 build-server: frontend ## Headless server build, no GTK needed
-	CGO_ENABLED=0 go build -tags server,production -trimpath -buildvcs=false -ldflags "-w -s -X main.version=$(VERSION)" -o $(OUT) .
+	CGO_ENABLED=0 go build -tags server,production -trimpath -buildvcs=false -ldflags "-w -s -X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=$(VERSION)" -o $(OUT) .
 
 run: frontend ## Run the desktop app with real podman
 	go run .
@@ -108,7 +108,7 @@ headless-socket: ## Enable the rootless podman API socket the app drives
 	systemctl --user enable --now podman.socket
 
 headless-image: ## Build the image
-	$(PODMAN) build -t $(IMAGE) --build-arg VERSION=$(VERSION) -f headless.Dockerfile .
+	$(PODMAN) build -t $(IMAGE) --build-arg VERSION=$(VERSION) -f build/docker/headless.Dockerfile .
 
 headless-up: headless-image ## (Re)create and start the container, listening on 127.0.0.1:$(PORT)
 	-$(PODMAN) rm -f $(NAME)

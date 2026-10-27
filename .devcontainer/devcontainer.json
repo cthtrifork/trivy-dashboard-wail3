@@ -28,7 +28,7 @@
     // Alternative to nested podman: use the host's podman. Mount its socket via "mounts" and set
     // "CONTAINER_HOST": "unix:///run/podman/podman.sock". See docs/devcontainer.md.
   },
-  // Installs the frontend deps, the Go reloader and the wails3 CLI (for `make bindings`).
+  // Installs the frontend deps, the wails3 CLI (`make dev`, `make bindings`).
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "forwardPorts": [8080],
   "portsAttributes": {

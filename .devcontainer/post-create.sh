@@ -10,7 +10,6 @@ git config --global --add safe.directory "$PWD"
 
 (cd frontend && npm ci --ignore-scripts --no-audit --no-fund)
 go mod download
-go install github.com/air-verse/air@v1.61.7
 make wails3-install
 # Tools the Go extension runs from .vscode/settings.json (format on save, lint on save).
 go install golang.org/x/tools/cmd/goimports@v0.38.0
