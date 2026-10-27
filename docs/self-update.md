@@ -49,7 +49,7 @@ entry**. The tarball has three, so it would be rejected, and the default asset m
 lists it first. `internal/selfupdate` therefore skips archives when matching.
 
 Release tags must be semantic versions (`v1.2.3`, `v1.2.3-rc.1`); the leading `v` is handled on both sides.
-The version is stamped into the binary with `-ldflags "-X main.version=<tag>"` (the tutorial's `currentVersion`).
+The version is stamped into the binary with `-ldflags "-X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=<tag>"` (the tutorial's `currentVersion`).
 
 ## Security
 
@@ -69,7 +69,7 @@ The version is stamped into the binary with `-ldflags "-X main.version=<tag>"` (
 
 | Tutorial | Here | Why |
 |---|---|---|
-| `wails3 init` scaffold, `currentVersion` constant | existing app, `main.version` via `-ldflags` | already how releases are stamped |
+| `wails3 init` scaffold, `currentVersion` constant | existing app, `internal/app.version` via `-ldflags` | already how releases are stamped |
 | "Check for Updates…" **menu item** | button in **Options** | the app has no native menu and is Linux-only; a menu would add window chrome I have not evaluated on GTK4. Easy to add if wanted |
 | `ChecksumAsset: "SHA256SUMS"` | same, plus fail-closed wrapper and a custom asset matcher | see above |
 | optional Ed25519 `PublicKey` | not used | needs a custom provider, see above |
@@ -80,7 +80,7 @@ The version is stamped into the binary with `-ldflags "-X main.version=<tag>"` (
 - `internal/selfupdate` runs the **real** `package-release.sh`, serves its output from a fake GitHub API, and checks the
   updater's provider picks the raw binary, gets the right digest and downloads identical bytes. It also covers version
   comparison, refusing releases without a digest, and the writable-directory check.
-- `update_test.go` checks that non-release builds cannot update.
+- `internal/app/update_test.go` checks that non-release builds cannot update.
 - The swap itself was verified by hand in the native window against a local fake GitHub: the installed binary became
   byte-identical to the release asset, the relaunched app reported the new version, a release without checksums was
   refused with nothing downloaded, and an up-to-date check downloaded nothing.

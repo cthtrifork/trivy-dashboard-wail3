@@ -6,7 +6,7 @@ name: Containers
 on:
   pull_request:
     paths:
-      - headless.Dockerfile
+      - build/docker/headless.Dockerfile
       - .devcontainer/**
       - go.mod
       - go.sum
@@ -16,7 +16,7 @@ on:
   push:
     branches: [main]
     paths:
-      - headless.Dockerfile
+      - build/docker/headless.Dockerfile
       - .devcontainer/**
       - go.mod
       - go.sum
@@ -45,7 +45,7 @@ jobs:
           persist-credentials: false
 
       - name: Build
-        run: docker build -t trivy-scanner --build-arg VERSION=ci -f headless.Dockerfile .
+        run: docker build -t trivy-scanner --build-arg VERSION=ci -f build/docker/headless.Dockerfile .
 
       # The server must come up and serve the UI. It needs no podman socket just to start.
       - name: Smoke test

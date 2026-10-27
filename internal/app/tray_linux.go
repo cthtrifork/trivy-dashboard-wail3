@@ -1,6 +1,6 @@
 //go:build linux && !server
 
-package main
+package app
 
 import (
 	_ "embed"
@@ -11,10 +11,10 @@ import (
 //go:embed tray_icon.png
 var trayIcon []byte
 
-// addTray puts an icon in the StatusNotifier tray (GNOME needs an AppIndicator extension to
+// AddTray puts an icon in the StatusNotifier tray (GNOME needs an AppIndicator extension to
 // show it). Closing the window still quits, so a scan is never left running unseen; the tray
 // only brings the window back to the front and offers Quit.
-func addTray(app *application.App, window application.Window) {
+func AddTray(app *application.App, window application.Window) {
 	show := func() {
 		if window.IsMinimised() {
 			window.UnMinimise()

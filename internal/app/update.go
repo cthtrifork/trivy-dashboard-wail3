@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -19,10 +19,10 @@ type UpdateInfo struct {
 	Reason string `json:"reason"`
 }
 
-// initUpdater enables in-app updates for release builds. Development builds, CI builds
+// InitUpdater enables in-app updates for release builds. Development builds, CI builds
 // and headless server mode stay disabled: see selfupdate.Enabled for why a development
 // build must never be allowed to "update" itself.
-func (s *ScanService) initUpdater(app *application.App) {
+func InitUpdater(s *ScanService, app *application.App) {
 	s.update = UpdateInfo{Version: version}
 	switch {
 	case !selfupdate.Enabled(version):
@@ -97,3 +97,9 @@ func (s *ScanService) RestartToUpdate() error {
 	}
 	return s.app.Updater.Restart(context.Background())
 }
+
+// version is stamped at release time: -ldflags "-X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=v1.2.3".
+var version = "dev"
+
+// Version is the stamped release version, or "dev" for an unstamped build.
+func Version() string { return version }

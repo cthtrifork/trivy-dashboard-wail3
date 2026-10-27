@@ -2,7 +2,7 @@
 // library: the app has one scan result and a handful of settings.
 import { computed, reactive, ref, shallowRef, watch } from "vue";
 import { Events } from "@wailsio/runtime";
-import { ScanService } from "../bindings/github.com/cthtrifork/trivy-dashboard-wail3";
+import { ScanService } from "../bindings/github.com/cthtrifork/trivy-dashboard-wail3/internal/app";
 
 export { ScanService };
 
