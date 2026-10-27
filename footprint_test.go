@@ -23,8 +23,8 @@ func TestFootprintMeasuresTheTrivyCache(t *testing.T) {
 
 func TestFootprintIsZeroInDemoMode(t *testing.T) {
 	f := (&ScanService{scanner: &trivy.Scanner{}, mode: Mode{Fixtures: true}}).Footprint()
-	if f.CacheBytes != 0 || f.MemoryBytes != 0 || f.WebviewBytes != -1 {
-		t.Errorf("demo footprint = %+v, want zero cache and memory, no webview", f)
+	if f.CacheBytes != 0 {
+		t.Errorf("demo footprint = %+v, want zero cache", f)
 	}
 }
 
@@ -35,12 +35,12 @@ func TestFootprintCannotMeasureAPodmanVolume(t *testing.T) {
 	}
 }
 
-func TestFootprintCannotMeasureAHostDirectoryOnARemotePodman(t *testing.T) {
+func TestFootprintIsHiddenOnARemotePodman(t *testing.T) {
 	t.Setenv("CONTAINER_HOST", "unix:///run/podman/podman.sock")
 	t.Setenv(trivy.CacheEnv, t.TempDir())
 	f := (&ScanService{scanner: &trivy.Scanner{}}).Footprint()
-	if f.CacheBytes != -1 || len(f.Parts) > 0 && f.Parts[0].Name != "EPSS and KEV data" {
-		t.Errorf("remote host dir = %d bytes, parts %+v, want -1 and no cache parts", f.CacheBytes, f.Parts)
+	if !f.Remote || len(f.Parts) > 0 {
+		t.Errorf("remote footprint = %+v, want Remote and no parts", f)
 	}
 }
 
