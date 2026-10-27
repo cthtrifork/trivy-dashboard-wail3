@@ -159,7 +159,7 @@ func (s *ScanService) Mode() Mode { return s.mode }
 // Footprint is what the app keeps on disk and in memory, for the footer note.
 type Footprint struct {
 	// CacheBytes is the Trivy cache (vulnerability DB); -1 when it is a podman volume the app
-	// cannot measure. CacheLocation names the directory or volume.
+	// cannot measure, or a directory on a remote podman host. CacheLocation names the directory or volume.
 	CacheBytes    int64  `json:"cacheBytes"`
 	CacheLocation string `json:"cacheLocation"`
 	// Parts breaks the footprint down: the Trivy cache by subdirectory (db, java-db, fanal, ...),
@@ -188,7 +188,9 @@ func (s *ScanService) Footprint() Footprint {
 	f := Footprint{CacheBytes: -1, WebviewBytes: -1}
 	if src, err := trivy.CacheSource(); err == nil {
 		f.CacheLocation = src
-		if filepath.IsAbs(src) {
+		// With a remote podman the directory is on the podman host, not visible from here:
+		// measuring it would report an empty cache.
+		if filepath.IsAbs(src) && !trivy.Remote() {
 			f.CacheBytes = dirSize(src)
 			f.Parts = append(f.Parts, cacheParts(src)...)
 		}

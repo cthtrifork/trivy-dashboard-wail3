@@ -35,6 +35,15 @@ func TestFootprintCannotMeasureAPodmanVolume(t *testing.T) {
 	}
 }
 
+func TestFootprintCannotMeasureAHostDirectoryOnARemotePodman(t *testing.T) {
+	t.Setenv("CONTAINER_HOST", "unix:///run/podman/podman.sock")
+	t.Setenv(trivy.CacheEnv, t.TempDir())
+	f := (&ScanService{scanner: &trivy.Scanner{}}).Footprint()
+	if f.CacheBytes != -1 || len(f.Parts) > 0 && f.Parts[0].Name != "EPSS and KEV data" {
+		t.Errorf("remote host dir = %d bytes, parts %+v, want -1 and no cache parts", f.CacheBytes, f.Parts)
+	}
+}
+
 func TestFootprintBreaksTheCacheDownBySubdirectory(t *testing.T) {
 	dir := t.TempDir()
 	for name, n := range map[string]int{"db": 60, "fanal": 40} {
