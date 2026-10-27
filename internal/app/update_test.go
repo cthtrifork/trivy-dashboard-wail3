@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"strings"
@@ -14,7 +14,7 @@ func TestNonReleaseBuildsCannotUpdate(t *testing.T) {
 	for _, v := range []string{"dev", "", "ci-0123456", "v1.2", "latest"} {
 		version = v
 		s := &ScanService{}
-		s.initUpdater(nil) // never reaches the updater, so no app is needed
+		InitUpdater(s, nil) // never reaches the updater, so no app is needed
 
 		info := s.UpdateInfo()
 		if info.Enabled || info.Reason == "" || info.Version != v {

@@ -1,6 +1,6 @@
 //go:build mcp && production
 
-package main
+package app
 
 // Wails' built-in MCP server lets any local process click through the UI, read the DOM and call
 // ScanService (docs/mcp.md). It is for development only, so a build with both tags must not

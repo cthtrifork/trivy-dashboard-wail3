@@ -14,7 +14,7 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as trivy$0 from "./internal/trivy/models.js";
+import * as trivy$0 from "../trivy/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -25,7 +25,7 @@ import * as $models from "./models.js";
  * @returns {$CancellablePromise<void>}
  */
 export function Cancel() {
-    return $Call.ByID(701961086);
+    return $Call.ByID(3191116219);
 }
 
 /**
@@ -34,7 +34,7 @@ export function Cancel() {
  * @returns {$CancellablePromise<$models.UpdateStatus>}
  */
 export function CheckForUpdates() {
-    return $Call.ByID(129223899).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1912269192).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType0($result);
     }));
 }
@@ -46,7 +46,7 @@ export function CheckForUpdates() {
  * @returns {$CancellablePromise<string>}
  */
 export function CheckIgnoreFile(text) {
-    return $Call.ByID(1697553360, text);
+    return $Call.ByID(1401448923, text);
 }
 
 /**
@@ -55,7 +55,7 @@ export function CheckIgnoreFile(text) {
  * @returns {$CancellablePromise<string>}
  */
 export function CheckIgnorePolicy(text) {
-    return $Call.ByID(1387660600, text);
+    return $Call.ByID(1552653431, text);
 }
 
 /**
@@ -64,7 +64,7 @@ export function CheckIgnorePolicy(text) {
  * @returns {$CancellablePromise<trivy$0.CompareResult | null>}
  */
 export function Compare(req) {
-    return $Call.ByID(772315051, req).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1048582356, req).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType2($result);
     }));
 }
@@ -74,7 +74,7 @@ export function Compare(req) {
  * @returns {$CancellablePromise<$models.AppConfig>}
  */
 export function Config() {
-    return $Call.ByID(2989893290).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(4070025319).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType3($result);
     }));
 }
@@ -84,7 +84,7 @@ export function Config() {
  * @returns {$CancellablePromise<$models.Footprint>}
  */
 export function Footprint() {
-    return $Call.ByID(2797434951).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1307495092).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType4($result);
     }));
 }
@@ -96,7 +96,7 @@ export function Footprint() {
  * @returns {$CancellablePromise<void>}
  */
 export function InstallUpdate() {
-    return $Call.ByID(686526134);
+    return $Call.ByID(3236230593);
 }
 
 /**
@@ -105,7 +105,7 @@ export function InstallUpdate() {
  * @returns {$CancellablePromise<string[]>}
  */
 export function ListTags(repo) {
-    return $Call.ByID(3032348749, repo).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2748210604, repo).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType5($result);
     }));
 }
@@ -115,7 +115,7 @@ export function ListTags(repo) {
  * @returns {$CancellablePromise<$models.Mode>}
  */
 export function Mode() {
-    return $Call.ByID(1124674175).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(401150642).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType6($result);
     }));
 }
@@ -125,7 +125,7 @@ export function Mode() {
  * @returns {$CancellablePromise<string>}
  */
 export function PodmanVersion() {
-    return $Call.ByID(3071351963);
+    return $Call.ByID(3078784692);
 }
 
 /**
@@ -135,7 +135,7 @@ export function PodmanVersion() {
  * @returns {$CancellablePromise<trivy$0.Rescored[]>}
  */
 export function Rescore(rules) {
-    return $Call.ByID(774845613, rules).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(117990306, rules).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType8($result);
     }));
 }
@@ -145,7 +145,7 @@ export function Rescore(rules) {
  * @returns {$CancellablePromise<void>}
  */
 export function RestartToUpdate() {
-    return $Call.ByID(3590870539);
+    return $Call.ByID(1624260660);
 }
 
 /**
@@ -153,7 +153,7 @@ export function RestartToUpdate() {
  * @returns {$CancellablePromise<trivy$0.Preset[]>}
  */
 export function RulePresets() {
-    return $Call.ByID(2708099262).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2795329317).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType10($result);
     }));
 }
@@ -165,7 +165,7 @@ export function RulePresets() {
  * @returns {$CancellablePromise<trivy$0.ScanResult | null>}
  */
 export function Scan(req) {
-    return $Call.ByID(3856738749, req).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(833560712, req).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType12($result);
     }));
 }
@@ -175,7 +175,7 @@ export function Scan(req) {
  * @returns {$CancellablePromise<$models.UpdateInfo>}
  */
 export function UpdateInfo() {
-    return $Call.ByID(239256173).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(2877341576).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType13($result);
     }));
 }
@@ -187,7 +187,7 @@ export function UpdateInfo() {
  * @returns {$CancellablePromise<void>}
  */
 export function VEXDelete(image, key) {
-    return $Call.ByID(3994492296, image, key);
+    return $Call.ByID(1333639295, image, key);
 }
 
 /**
@@ -201,7 +201,7 @@ export function VEXDelete(image, key) {
  * @returns {$CancellablePromise<string>}
  */
 export function VEXExport(image, author, role, onlyCurrent) {
-    return $Call.ByID(1101982769, image, author, role, onlyCurrent);
+    return $Call.ByID(3816167810, image, author, role, onlyCurrent);
 }
 
 /**
@@ -218,7 +218,7 @@ export function VEXExport(image, author, role, onlyCurrent) {
  * @returns {$CancellablePromise<trivy$0.ImportReport>}
  */
 export function VEXImport(image, doc, markRest, minSeverity) {
-    return $Call.ByID(494835202, image, doc, markRest, minSeverity).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1138230009, image, doc, markRest, minSeverity).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType14($result);
     }));
 }
@@ -229,7 +229,7 @@ export function VEXImport(image, doc, markRest, minSeverity) {
  * @returns {$CancellablePromise<trivy$0.VEXEntry[]>}
  */
 export function VEXList(image) {
-    return $Call.ByID(4047392387, image).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(1476021980, image).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType16($result);
     }));
 }
@@ -242,7 +242,7 @@ export function VEXList(image) {
  * @returns {$CancellablePromise<number>}
  */
 export function VEXMarkUnassessed(image, author) {
-    return $Call.ByID(2169371234, image, author);
+    return $Call.ByID(2268542789, image, author);
 }
 
 /**
@@ -256,7 +256,7 @@ export function VEXMarkUnassessed(image, author) {
  * @returns {$CancellablePromise<string>}
  */
 export function VEXSave(image, author, role, onlyCurrent) {
-    return $Call.ByID(3343518742, image, author, role, onlyCurrent);
+    return $Call.ByID(443200785, image, author, role, onlyCurrent);
 }
 
 /**
@@ -266,7 +266,7 @@ export function VEXSave(image, author, role, onlyCurrent) {
  * @returns {$CancellablePromise<trivy$0.VEXEntry>}
  */
 export function VEXSet(image, e) {
-    return $Call.ByID(847093897, image, e).then(/** @type {($result: any) => any} */(($result) => {
+    return $Call.ByID(537230204, image, e).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType15($result);
     }));
 }
