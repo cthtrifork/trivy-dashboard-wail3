@@ -80,7 +80,7 @@ export function Config() {
 }
 
 /**
- * Footprint measures the cache directories and the Go runtime's memory.
+ * Footprint measures the cache directories.
  * @returns {$CancellablePromise<$models.Footprint>}
  */
 export function Footprint() {

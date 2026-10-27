@@ -193,7 +193,7 @@ export class ConfigPath {
 }
 
 /**
- * Footprint is what the app keeps on disk and in memory, for the footer note.
+ * Footprint is what the app keeps on disk, for the footer note.
  */
 export class Footprint {
     /**
@@ -201,10 +201,19 @@ export class Footprint {
      * @param {Partial<Footprint>} [$$source = {}] - The source object to create the Footprint.
      */
     constructor($$source = {}) {
+        if (!("remote" in $$source)) {
+            /**
+             * Remote is true when podman runs on another host: the cache cannot be measured from here, so
+             * the UI shows no footprint at all.
+             * @member
+             * @type {boolean}
+             */
+            this["remote"] = false;
+        }
         if (!("cacheBytes" in $$source)) {
             /**
              * CacheBytes is the Trivy cache (vulnerability DB); -1 when it is a podman volume the app
-             * cannot measure, or a directory on a remote podman host. CacheLocation names the directory or volume.
+             * cannot measure. CacheLocation names the directory or volume.
              * @member
              * @type {number}
              */
@@ -226,24 +235,6 @@ export class Footprint {
              */
             this["parts"] = [];
         }
-        if (!("memoryBytes" in $$source)) {
-            /**
-             * MemoryBytes estimates the app's memory: the Go runtime's resident share, excluding the
-             * webview (see WebviewBytes) and the podman containers.
-             * @member
-             * @type {number}
-             */
-            this["memoryBytes"] = 0;
-        }
-        if (!("webviewBytes" in $$source)) {
-            /**
-             * WebviewBytes is the resident memory of the webview processes; -1 when unknown (not Linux,
-             * or no webview in server mode).
-             * @member
-             * @type {number}
-             */
-            this["webviewBytes"] = 0;
-        }
 
         Object.assign(this, $$source);
     }
@@ -254,10 +245,10 @@ export class Footprint {
      * @returns {Footprint}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType5;
+        const $$createField3_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("parts" in $$parsedSource) {
-            $$parsedSource["parts"] = $$createField2_0($$parsedSource["parts"]);
+            $$parsedSource["parts"] = $$createField3_0($$parsedSource["parts"]);
         }
         return new Footprint(/** @type {Partial<Footprint>} */($$parsedSource));
     }

@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -156,21 +155,18 @@ func (s *ScanService) logInfo(msg string, args ...any) {
 // Mode reports whether scans are real or replayed demo data.
 func (s *ScanService) Mode() Mode { return s.mode }
 
-// Footprint is what the app keeps on disk and in memory, for the footer note.
+// Footprint is what the app keeps on disk, for the footer note.
 type Footprint struct {
+	// Remote is true when podman runs on another host: the cache cannot be measured from here, so
+	// the UI shows no footprint at all.
+	Remote bool `json:"remote"`
 	// CacheBytes is the Trivy cache (vulnerability DB); -1 when it is a podman volume the app
-	// cannot measure, or a directory on a remote podman host. CacheLocation names the directory or volume.
+	// cannot measure. CacheLocation names the directory or volume.
 	CacheBytes    int64  `json:"cacheBytes"`
 	CacheLocation string `json:"cacheLocation"`
 	// Parts breaks the footprint down: the Trivy cache by subdirectory (db, java-db, fanal, ...),
 	// then the EPSS/KEV data and the VEX file. Empty when the cache is a podman volume.
 	Parts []FootprintPart `json:"parts"`
-	// MemoryBytes estimates the app's memory: the Go runtime's resident share, excluding the
-	// webview (see WebviewBytes) and the podman containers.
-	MemoryBytes int64 `json:"memoryBytes"`
-	// WebviewBytes is the resident memory of the webview processes; -1 when unknown (not Linux,
-	// or no webview in server mode).
-	WebviewBytes int64 `json:"webviewBytes"`
 }
 
 // FootprintPart is one named share of the on-disk footprint.
@@ -179,18 +175,19 @@ type FootprintPart struct {
 	Bytes int64  `json:"bytes"`
 }
 
-// Footprint measures the cache directories and the Go runtime's memory.
+// Footprint measures the cache directories.
 func (s *ScanService) Footprint() Footprint {
 	// Demo mode reports zero so the screenshots do not change with the machine or the run.
 	if s.mode.Fixtures {
-		return Footprint{CacheLocation: "demo", WebviewBytes: -1}
+		return Footprint{CacheLocation: "demo"}
 	}
-	f := Footprint{CacheBytes: -1, WebviewBytes: -1}
+	if trivy.Remote() {
+		return Footprint{Remote: true, CacheBytes: -1}
+	}
+	f := Footprint{CacheBytes: -1}
 	if src, err := trivy.CacheSource(); err == nil {
 		f.CacheLocation = src
-		// With a remote podman the directory is on the podman host, not visible from here:
-		// measuring it would report an empty cache.
-		if filepath.IsAbs(src) && !trivy.Remote() {
+		if filepath.IsAbs(src) {
 			f.CacheBytes = dirSize(src)
 			f.Parts = append(f.Parts, cacheParts(src)...)
 		}
@@ -198,12 +195,6 @@ func (s *ScanService) Footprint() Footprint {
 	f.Parts = append(f.Parts, FootprintPart{"EPSS and KEV data", filesSize(enrichCacheDir())})
 	if fi, err := os.Stat(vexFile()); err == nil {
 		f.Parts = append(f.Parts, FootprintPart{"VEX assessments", fi.Size()})
-	}
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	f.MemoryBytes = int64(m.Sys - m.HeapReleased)
-	if !headless {
-		f.WebviewBytes = childrenRSS()
 	}
 	return f
 }
