@@ -37,10 +37,16 @@ await page.addInitScript(() => {
     document.head.append(style);
   });
 });
+// SCREENSHOT_VIEWS=core skips the dependency graph (06-09) and =deps renders only it; the default
+// renders everything. The graph is a canvas whose anti-aliasing varies between runs, so CI keeps it
+// out of the main-branch render and refreshes it only on PRs that touch the graph code.
+const views = process.env.SCREENSHOT_VIEWS || "all";
+const depsShot = (name) => /^0[6-9]-dependencies-/.test(name);
 const problems = [];
 page.on("pageerror", (e) => problems.push("page error: " + e.message));
 
 const shot = async (name) => {
+  if ((views === "core" && depsShot(name)) || (views === "deps" && !depsShot(name))) return;
   await page.waitForTimeout(700); // transitions (dialog open, tab switch) must be finished: pixels are committed
   await page.evaluate(() => Promise.all(document.getAnimations()
     .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime))
@@ -138,61 +144,63 @@ await shot("05b-vulnerability-ratings-by-source");
 await page.fill("#vuln-filter", "");
 
 // ---- Dependencies ----
-// A runaway layout shows up as a blank canvas, so fail loudly instead of saving it.
-const graphSane = async (what) => {
-  const g = await page.evaluate(() => {
-    const gr = window.__depGraph, n = gr.nodes;
-    const xs = n.map((a) => a.x), ys = n.map((a) => a.y);
-    return { count: n.length, finite: n.every((a) => Number.isFinite(a.x) && Number.isFinite(a.y)),
-      w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), k: gr.k };
-  });
-  expect(g.count > 0 && g.finite, `${what}: graph has ${g.count} nodes, finite=${g.finite}`);
-  expect(g.w < 8000 && g.h < 8000, `${what}: layout exploded (${Math.round(g.w)}x${Math.round(g.h)}px)`);
-  console.log(`    ${what}: ${g.count} nodes, ${Math.round(g.w)}x${Math.round(g.h)}px, zoom ${g.k.toFixed(2)}`);
-};
-// Screenshots are committed, so they must be reproducible: wait for the force layout to come to
-// rest (not a fixed time, which captures a different frame on a slower machine), and park the
-// mouse so no hover tooltip is drawn.
-const settled = async () => {
-  await page.mouse.move(0, 0);
-  await page.waitForTimeout(300); // let a just-triggered rebuild start before asking whether it is done
-  // At rest on three polls in a row, so one quiet moment between a rebuild and its first frame
-  // is not mistaken for the end of the layout.
-  let calm = 0;
-  for (let i = 0; i < 600 && calm < 3; i++) {
-    const rest = await page.evaluate(() => window.__depGraph.alpha <= 0.015 && !window.__depGraph.raf);
-    calm = rest ? calm + 1 : 0;
-    await page.waitForTimeout(200);
-  }
-  expect(calm >= 3, "dependency graph layout did not settle");
-};
-await tab("deps");
-await settled();
-await graphSane("overview");
-await shot("06-dependencies-graph");
-
-const pick = async (label) => {
-  const pos = await page.evaluate((l) => {
-    const g = window.__depGraph;
-    const n = g.nodes.find((x) => x.label === l);
-    return n ? g.screenPos(n.id) : null;
-  }, label);
-  expect(!!pos, "graph node " + label + " should exist");
-  if (pos) await page.mouse.click(pos.x, pos.y);
+if (views !== "core") {
+  // A runaway layout shows up as a blank canvas, so fail loudly instead of saving it.
+  const graphSane = async (what) => {
+    const g = await page.evaluate(() => {
+      const gr = window.__depGraph, n = gr.nodes;
+      const xs = n.map((a) => a.x), ys = n.map((a) => a.y);
+      return { count: n.length, finite: n.every((a) => Number.isFinite(a.x) && Number.isFinite(a.y)),
+        w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys), k: gr.k };
+    });
+    expect(g.count > 0 && g.finite, `${what}: graph has ${g.count} nodes, finite=${g.finite}`);
+    expect(g.w < 8000 && g.h < 8000, `${what}: layout exploded (${Math.round(g.w)}x${Math.round(g.h)}px)`);
+    console.log(`    ${what}: ${g.count} nodes, ${Math.round(g.w)}x${Math.round(g.h)}px, zoom ${g.k.toFixed(2)}`);
+  };
+  // Screenshots are committed, so they must be reproducible: wait for the force layout to come to
+  // rest (not a fixed time, which captures a different frame on a slower machine), and park the
+  // mouse so no hover tooltip is drawn.
+  const settled = async () => {
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(300); // let a just-triggered rebuild start before asking whether it is done
+    // At rest on three polls in a row, so one quiet moment between a rebuild and its first frame
+    // is not mistaken for the end of the layout.
+    let calm = 0;
+    for (let i = 0; i < 600 && calm < 3; i++) {
+      const rest = await page.evaluate(() => window.__depGraph.alpha <= 0.015 && !window.__depGraph.raf);
+      calm = rest ? calm + 1 : 0;
+      await page.waitForTimeout(200);
+    }
+    expect(calm >= 3, "dependency graph layout did not settle");
+  };
+  await tab("deps");
   await settled();
-};
-await pick("golang.org/x/net");
-await shot("07-dependencies-node-selected");
-await page.selectOption("#dep-focus", "2");
-await settled();
-await graphSane("focus ±2");
-await shot("08-dependencies-focus");
-await page.selectOption("#dep-focus", "0");
-await settled(); // each change rebuilds from the previous layout, so let every step finish
-await page.uncheck("#dep-vuln-only");
-await settled();
-await graphSane("all components");
-await shot("09-dependencies-all-components");
+  await graphSane("overview");
+  await shot("06-dependencies-graph");
+
+  const pick = async (label) => {
+    const pos = await page.evaluate((l) => {
+      const g = window.__depGraph;
+      const n = g.nodes.find((x) => x.label === l);
+      return n ? g.screenPos(n.id) : null;
+    }, label);
+    expect(!!pos, "graph node " + label + " should exist");
+    if (pos) await page.mouse.click(pos.x, pos.y);
+    await settled();
+  };
+  await pick("golang.org/x/net");
+  await shot("07-dependencies-node-selected");
+  await page.selectOption("#dep-focus", "2");
+  await settled();
+  await graphSane("focus ±2");
+  await shot("08-dependencies-focus");
+  await page.selectOption("#dep-focus", "0");
+  await settled(); // each change rebuilds from the previous layout, so let every step finish
+  await page.uncheck("#dep-vuln-only");
+  await settled();
+  await graphSane("all components");
+  await shot("09-dependencies-all-components");
+}
 
 // ---- SBOM ----
 await tab("sbom");

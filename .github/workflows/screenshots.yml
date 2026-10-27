@@ -11,6 +11,9 @@ name: Screenshots
 #                 PR (branch bot/update-screenshots) with the new images and enable auto-merge
 #                 on it, so it lands once the required checks pass.
 #
+# The dependency graph (06-09) is not rendered here: its canvas anti-aliasing varies between runs,
+# so it opened PRs with no real change. screenshots-deps.yml renders it on PRs that change it.
+#
 # The bot PR only touches docs/screenshots, which is not in `paths`, so merging it does not
 # trigger another run.
 on:
@@ -78,6 +81,7 @@ jobs:
       - name: Generate screenshots
         env:
           SCREENSHOT_BROWSER_CHANNEL: chrome
+          SCREENSHOT_VIEWS: core # everything but the dependency graph, see the header
         run: make screenshots
 
       - name: Upload 01-priorities
@@ -180,46 +184,6 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload 06-dependencies-graph
-        id: shot-06-dependencies-graph
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          path: docs/screenshots/06-dependencies-graph.png
-          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload 07-dependencies-node-selected
-        id: shot-07-dependencies-node-selected
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          path: docs/screenshots/07-dependencies-node-selected.png
-          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload 08-dependencies-focus
-        id: shot-08-dependencies-focus
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          path: docs/screenshots/08-dependencies-focus.png
-          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Upload 09-dependencies-all-components
-        id: shot-09-dependencies-all-components
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          path: docs/screenshots/09-dependencies-all-components.png
-          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
-          if-no-files-found: error
-          retention-days: 14
-
       - name: Upload 10-sbom
         id: shot-10-sbom
         if: github.event_name == 'pull_request'
@@ -269,8 +233,8 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           STEPS: ${{ toJSON(steps) }}
         run: |
-          # Every PNG needs an `Upload` step above; fail loudly when a screenshot was added.
-          want="$(ls docs/screenshots/*.png | wc -l)"
+          # Every PNG rendered here needs an `Upload` step above; fail loudly when a screenshot was added.
+          want="$(ls docs/screenshots/*.png | grep -vc -- -dependencies-)" # the graph is rendered by screenshots-deps.yml
           have="$(jq '[to_entries[] | select(.key | startswith("shot-"))] | length' <<<"$STEPS")"
           if [ "$want" != "$have" ]; then
             echo "::error::docs/screenshots has $want images but screenshots.yml uploads $have: add or remove an 'Upload <name>' step."
@@ -315,18 +279,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH: bot/update-screenshots
         run: |
-          # Chrome's anti-aliasing can move a handful of pixels between runs (e.g. an edge in the
-          # dependency graph). Treat an image that is identical within a 5% colour fuzz as unchanged,
-          # so noise alone does not open a PR. Skipped when ImageMagick is missing.
-          if command -v compare >/dev/null; then
-            git diff --name-only -- docs/screenshots | while read -r f; do
-              git show "HEAD:$f" > "$RUNNER_TEMP/old.png" 2>/dev/null || continue
-              if [ "$(compare -metric AE -fuzz 5% "$RUNNER_TEMP/old.png" "$f" null: 2>&1)" = "0" ]; then
-                echo "Ignoring render noise in $f"
-                git checkout -- "$f"
-              fi
-            done
-          fi
           if [ -z "$(git status --porcelain -- docs/screenshots)" ]; then
             echo "Screenshots are up to date." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
