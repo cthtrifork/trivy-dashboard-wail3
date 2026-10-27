@@ -46,7 +46,7 @@ func TestFootprintBreaksTheCacheDownBySubdirectory(t *testing.T) {
 		}
 	}
 	parts := cacheParts(dir)
-	if len(parts) != 2 || parts[0] != (FootprintPart{"Trivy db", 60}) || parts[1] != (FootprintPart{"Trivy fanal", 40}) {
+	if len(parts) != 2 || parts[0] != (FootprintPart{"Vulnerability database", 60}) || parts[1] != (FootprintPart{"Scanned image layers", 40}) {
 		t.Errorf("parts = %+v, want db 60 then fanal 40", parts)
 	}
 }

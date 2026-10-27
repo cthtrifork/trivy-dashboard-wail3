@@ -221,6 +221,19 @@ func filesSize(dir string) int64 {
 	return n
 }
 
+// cachePartName gives the Trivy cache subdirectories names people can read.
+func cachePartName(dir string) string {
+	switch dir {
+	case "db":
+		return "Vulnerability database"
+	case "java-db":
+		return "Java vulnerability database"
+	case "fanal":
+		return "Scanned image layers"
+	}
+	return "Trivy " + dir
+}
+
 // cacheParts sizes each top-level entry of the Trivy cache (db, java-db, fanal, ...), largest first.
 func cacheParts(dir string) []FootprintPart {
 	entries, err := os.ReadDir(dir)
@@ -235,7 +248,7 @@ func cacheParts(dir string) []FootprintPart {
 		} else if info, ierr := e.Info(); ierr == nil {
 			n = info.Size()
 		}
-		parts = append(parts, FootprintPart{"Trivy " + e.Name(), n})
+		parts = append(parts, FootprintPart{cachePartName(e.Name()), n})
 	}
 	sort.Slice(parts, func(i, j int) bool { return parts[i].Bytes > parts[j].Bytes })
 	return parts
