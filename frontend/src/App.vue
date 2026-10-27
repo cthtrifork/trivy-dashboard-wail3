@@ -100,7 +100,8 @@ const counts = computed(() => ({
 const footprintNote = computed(() => {
   const f = footprint.value;
   if (!f) return "";
-  const cache = f.cacheBytes < 0 ? `Trivy cache in podman volume ${f.cacheLocation}` : `Trivy cache ${bytes(f.cacheBytes)}`;
+  const where = f.cacheLocation.startsWith("/") ? `at ${f.cacheLocation} on the podman host` : `in podman volume ${f.cacheLocation}`;
+  const cache = f.cacheBytes < 0 ? `Trivy cache ${where}` : `Trivy cache ${bytes(f.cacheBytes)}`;
   const mem =
     f.webviewBytes < 0
       ? `~${bytes(f.memoryBytes)} app memory (excl. webview and podman)`
