@@ -1,0 +1,74 @@
+name: Containers
+
+# Builds the two container images Dependabot bumps base images for, so a bad bump fails here
+# instead of the next time someone runs `make headless` or opens the dev container.
+# They use a paths filter (and a weekly run), so do not mark them as required checks.
+on:
+  pull_request:
+    paths:
+      - headless.Dockerfile
+      - .devcontainer/**
+      - go.mod
+      - go.sum
+      - frontend/package.json
+      - frontend/package-lock.json
+      - .github/workflows/containers.yml
+  push:
+    branches: [main]
+    paths:
+      - headless.Dockerfile
+      - .devcontainer/**
+      - go.mod
+      - go.sum
+      - frontend/package.json
+      - frontend/package-lock.json
+      - .github/workflows/containers.yml
+  schedule:
+    - cron: '47 5 * * 1' # Mondays 05:47 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: containers-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  headless:
+    name: headless image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: docker build -t trivy-scanner --build-arg VERSION=ci -f headless.Dockerfile .
+
+      # The server must come up and serve the UI. It needs no podman socket just to start.
+      - name: Smoke test
+        run: |
+          docker run -d --name smoke -p 8080:8080 -e WAILS_SERVER_HOST=0.0.0.0 trivy-scanner
+          for i in $(seq 1 30); do
+            curl -fsS -o /dev/null http://127.0.0.1:8080/ && exit 0
+            sleep 1
+          done
+          docker logs smoke
+          exit 1
+
+  devcontainer:
+    name: dev container image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: docker build -t trivy-scanner-dev .devcontainer
+
+      - name: Check the toolchain
+        run: docker run --rm trivy-scanner-dev bash -c 'go version && node --version && npm --version && podman --version && make --version | head -1'
