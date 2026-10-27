@@ -17,7 +17,7 @@ Sources:
 | Detect the distribution and **fail the run if it is unsupported** rather than build anyway | action's *Linux Discovery* step | `release.yml` *Check the build distribution*: the README promises a binary built on Ubuntu 24.04, which fixes the glibc and WebKitGTK baseline |
 | Set the executable bit explicitly | action's *Add Linux perms* step | CI and release build steps |
 | One named artifact per platform | action's `upload-artifact` step | CI uploads `trivy-scanner-linux-amd64` (unsigned, 7 days) so reviewers can try a PR build |
-| Inject a version into the binary from the tag | guide's list of enhancements | `-X main.version=…` in release (and `ci-<sha>` in CI) |
+| Inject a version into the binary from the tag | guide's list of enhancements | `-X …/internal/app.version=…` in release (and `ci-<sha>` in CI) |
 | Cache dependencies | guide's list of enhancements | `setup-go` cache |
 | Create the release when a tag is pushed | action's release step | `gh release create` in `release.yml`, instead of a third-party action |
 | Test job: GTK4 + WebKitGTK 6 build dependencies, `GOTOOLCHAIN: local`, cancel superseded PR runs | Wails v3 `build-and-test-v3.yml` | `ci.yml` |

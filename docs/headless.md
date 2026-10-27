@@ -26,7 +26,7 @@ sudo loginctl enable-linger "$USER"
 # 2. Get the code and build the image (Go runs inside the build, not on the host).
 git clone https://github.com/cthtrifork/trivy-dashboard-wail3.git
 cd trivy-dashboard-wail3
-podman build -t trivy-scanner --build-arg VERSION="$(git describe --tags --always)" -f headless.Dockerfile .
+podman build -t trivy-scanner --build-arg VERSION="$(git describe --tags --always)" -f build/docker/headless.Dockerfile .
 
 # 3. Run it.
 podman run -d --name trivy-scanner --restart unless-stopped \
@@ -67,7 +67,7 @@ make headless-down     # remove the container (data volume stays)
 ```sh
 cd trivy-dashboard-wail3
 git pull origin main
-podman build -t trivy-scanner --build-arg VERSION="$(git describe --tags --always)" -f headless.Dockerfile .
+podman build -t trivy-scanner --build-arg VERSION="$(git describe --tags --always)" -f build/docker/headless.Dockerfile .
 podman rm -f trivy-scanner
 # then repeat the `podman run` command above
 ```
