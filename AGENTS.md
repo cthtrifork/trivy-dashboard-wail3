@@ -58,6 +58,6 @@ The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. U
 | `frontend/` | Vue 3 + Vite app (`src/`), generated Wails bindings (`bindings/`, committed); `dist/` is build output embedded with `go:embed` |
 | `.devcontainer/`, `.air.toml`, `scripts/dev.sh` | Dev container and the `make dev` hot-reload loop, see `docs/devcontainer.md` |
 | `mcp_guard.go`, `.mcp.json` | Compile error for `mcp`+`production`; project MCP client entry for `make run-mcp` |
-| `Containerfile` | Podman-only server deployment, see `docs/headless.md` |
+| `headless.Dockerfile` | Podman-only server deployment, see `docs/headless.md` |
 | `.github/workflows` | `ci`, `security`, `release`, `tag-release` |
 | `scripts/` | release/version helpers and the screenshot driver |

@@ -108,7 +108,7 @@ headless-socket: ## Enable the rootless podman API socket the app drives
 	systemctl --user enable --now podman.socket
 
 headless-image: ## Build the image
-	$(PODMAN) build -t $(IMAGE) --build-arg VERSION=$(VERSION) -f Containerfile .
+	$(PODMAN) build -t $(IMAGE) --build-arg VERSION=$(VERSION) -f headless.Dockerfile .
 
 headless-up: headless-image ## (Re)create and start the container, listening on 127.0.0.1:$(PORT)
 	-$(PODMAN) rm -f $(NAME)

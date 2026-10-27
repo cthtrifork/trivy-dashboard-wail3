@@ -1,5 +1,6 @@
 # Keeps Go modules (including the pre-1.0 Wails v3 beta), the SHA-pinned
-# actions in .github/workflows, the frontend npm packages and the default Trivy image version up to date.
+# actions in .github/workflows, the frontend npm packages, the default Trivy image version and the
+# base images of the headless and dev container builds up to date.
 version: 2
 updates:
   - package-ecosystem: gomod
@@ -29,5 +30,16 @@ updates:
   # internal/trivy/image/Dockerfile holds the Trivy version scans run with (embedded in the binary).
   - package-ecosystem: docker
     directory: /internal/trivy/image
+    schedule:
+      interval: weekly
+  # The headless server image. Dependabot only recognises files with "dockerfile" in the name,
+  # which is why this is not called Containerfile.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  # The dev container's base images.
+  - package-ecosystem: docker
+    directory: /.devcontainer
     schedule:
       interval: weekly
