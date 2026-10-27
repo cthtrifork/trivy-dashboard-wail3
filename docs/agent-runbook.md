@@ -32,7 +32,7 @@ The sandbox has the Docker CLI but no daemon, no `wails3` and no podman. The dev
 ```sh
 dockerd >/tmp/dockerd.log 2>&1 &                    # no daemon by default; wait until `docker info` answers
 npm i -g @devcontainers/cli                         # once
-devcontainer up --workspace-folder .                # builds the image, runs post-create.sh (npm ci, air, wails3)
+devcontainer up --workspace-folder .                # builds the image, runs post-create.sh (npm ci, wails3)
 devcontainer exec --workspace-folder . make bindings
 ```
 

@@ -73,7 +73,7 @@ wails3-install: ## Install the wails3 CLI at the go.mod version into GOBIN (defa
 bindings: ## Regenerate frontend/bindings from the Go services (needs the wails3 CLI)
 	CGO_ENABLED=0 wails3 generate bindings -silent
 
-dev: ## Hot reload: Vite HMR + rebuild-on-save Go server (http://localhost:8080)
+dev: ## Hot reload via `wails3 dev` in server mode: Vite HMR + rebuild-on-save Go (http://localhost:8080)
 	scripts/dev.sh
 
 dev-frontend: ## Vite dev server with hot reload; then run: FRONTEND_DEVSERVER_URL=http://127.0.0.1:9245 go run .
