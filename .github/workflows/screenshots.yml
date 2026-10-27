@@ -84,6 +84,17 @@ jobs:
           SCREENSHOT_VIEWS: core # everything but the dependency graph, see the header
         run: make screenshots
 
+      # Dry run of what the main run does below: which committed images the fresh render differs
+      # from, and whether each is render noise or a change that would open the update PR.
+      - name: Compare with the committed screenshots
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo "### Screenshots vs. committed"
+            echo
+            scripts/screenshots-noise.sh report
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Upload 01-priorities
         id: shot-01-priorities
         if: github.event_name == 'pull_request'
@@ -279,6 +290,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH: bot/update-screenshots
         run: |
+          # Reset images that differ only by render noise, so noise alone opens no PR.
+          scripts/screenshots-noise.sh restore
           if [ -z "$(git status --porcelain -- docs/screenshots)" ]; then
             echo "Screenshots are up to date." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
