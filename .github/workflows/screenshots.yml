@@ -1,15 +1,22 @@
 name: Screenshots
 
-# docs/screenshots is rendered here, never committed from a feature branch: every PR that rewrote
-# the PNGs conflicted with every other one, because git cannot merge binary files.
+# docs/screenshots is rendered here, not committed from a feature branch: every PR that rewrote
+# the PNGs conflicted with every other one, because git cannot merge binary files. The one exception
+# is the dependency graph (06-09), see below.
 #
 #   pull_request  Render the screenshots from the recorded fixtures, upload each image as its own
 #                 unzipped artifact (`archive: false`) and embed them in one sticky PR comment
 #                 that is updated on every push. Nothing is pushed anywhere. Fork PRs (read-only
-#                 token) get the artifacts on the run page but no comment.
-#   push to main  Render again and, if any image differs from docs/screenshots, open or update one
-#                 PR (branch bot/update-screenshots) with the new images and enable auto-merge
-#                 on it, so it lands once the required checks pass.
+#                 token) get the artifacts on the run page but no comment. When the push (or, on
+#                 open, the PR) changes the dependency graph code (DepsPanel.vue, deps.css,
+#                 graph.js), the rendered 06-09 images are also committed to the PR branch.
+#   push to main  Render again, without the dependency graph, and, if any image differs from
+#                 docs/screenshots, open or update one PR (branch bot/update-screenshots) with the
+#                 new images and enable auto-merge on it, so it lands once the required checks pass.
+#
+# The dependency graph is a canvas whose anti-aliasing varies between runs, so a render on main
+# opened PRs with no real change. It is rendered on main never, and committed only by a PR that
+# touches the graph code, where a human reviews the result.
 #
 # The bot PR only touches docs/screenshots, which is not in `paths`, so merging it does not
 # trigger another run.
@@ -55,7 +62,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: ${{ github.event_name != 'pull_request' }} # only the main run pushes
+          # A same-repo PR is checked out on its branch (not the merge commit) so the graph images
+          # can be committed to it; a fork PR has a read-only token and keeps the default.
+          ref: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref || '' }}
+          fetch-depth: ${{ github.event_name == 'pull_request' && 0 || 1 }} # a PR diffs against its base
+          persist-credentials: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -78,6 +89,8 @@ jobs:
       - name: Generate screenshots
         env:
           SCREENSHOT_BROWSER_CHANNEL: chrome
+          # PRs render everything for the comment; main leaves the dependency graph out.
+          SCREENSHOT_VIEWS: ${{ github.event_name == 'pull_request' && 'all' || 'core' }}
         run: make screenshots
 
       - name: Upload 01-priorities
@@ -304,6 +317,43 @@ jobs:
           fi
           echo "Screenshots are in the PR comment and in the run's artifacts." >> "$GITHUB_STEP_SUMMARY"
 
+      # Pushed with GITHUB_TOKEN, so no workflow starts on it: run CI by hand, and this workflow does
+      # not loop. Only a push that changes the graph code re-renders, so noise alone never commits.
+      - name: Commit the dependency graph screenshots
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          ACTION: ${{ github.event.action }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          code="frontend/src/components/DepsPanel.vue frontend/src/styles/deps.css frontend/src/lib/graph.js"
+          if [ "$ACTION" = synchronize ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
+            range="$BEFORE HEAD"
+          else
+            range="origin/${BASE_REF}...HEAD"
+          fi
+          # shellcheck disable=SC2086
+          if [ -z "$(git diff --name-only $range -- $code)" ]; then
+            echo "The dependency graph code is unchanged: not committing its screenshots." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          shots="docs/screenshots/0[6-9]-dependencies-*.png"
+          # shellcheck disable=SC2086
+          if [ -z "$(git status --porcelain -- $shots)" ]; then
+            echo "The dependency graph screenshots are unchanged." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # shellcheck disable=SC2086
+          git add $shots
+          git commit -m "Update dependency graph screenshots"
+          git push origin "HEAD:${HEAD_REF}"
+          gh workflow run ci.yml --ref "$HEAD_REF"
+          echo "Committed the dependency graph screenshots to \`${HEAD_REF}\`." | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Summarise (fork pull request)
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
         run: |
@@ -315,18 +365,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH: bot/update-screenshots
         run: |
-          # Chrome's anti-aliasing can move a handful of pixels between runs (e.g. an edge in the
-          # dependency graph). Treat an image that is identical within a 5% colour fuzz as unchanged,
-          # so noise alone does not open a PR. Skipped when ImageMagick is missing.
-          if command -v compare >/dev/null; then
-            git diff --name-only -- docs/screenshots | while read -r f; do
-              git show "HEAD:$f" > "$RUNNER_TEMP/old.png" 2>/dev/null || continue
-              if [ "$(compare -metric AE -fuzz 5% "$RUNNER_TEMP/old.png" "$f" null: 2>&1)" = "0" ]; then
-                echo "Ignoring render noise in $f"
-                git checkout -- "$f"
-              fi
-            done
-          fi
           if [ -z "$(git status --porcelain -- docs/screenshots)" ]; then
             echo "Screenshots are up to date." | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
