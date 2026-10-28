@@ -24,7 +24,7 @@ RUN apk add --no-cache podman-remote ca-certificates \
 COPY --from=build /out/trivy-scanner /usr/local/bin/trivy-scanner
 # The project's OpenVEX statements. Scanners do not discover this on their own: pass it with
 # `--vex <file>`, or use the attestation on the registry (`--vex oci`). See docs/headless.md.
-COPY vex/openvex.json /usr/share/doc/trivy-scanner/openvex.json
+COPY vex/openvex.json /usr/share/doc/trivy-scanner/trivy-scanner.vex.json
 ENV WAILS_SERVER_HOST=127.0.0.1 \
     WAILS_SERVER_PORT=8080 \
     CONTAINER_HOST=unix:///run/podman/podman.sock \
