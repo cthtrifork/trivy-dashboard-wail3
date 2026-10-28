@@ -34,11 +34,11 @@ const pinnedTrivyImage = "docker.io/aquasec/trivy:0.76.1@sha256:790fd66d1697395d
 var DefaultTrivyImage, defaultTrivyDigest, _ = strings.Cut(pinnedTrivyImage, "@")
 
 // DefaultDBRepository is the vulnerability DB Trivy downloads, unless TRIVY_DB_REPOSITORY names a
-// mirror. The tag is the DB schema version; the digest pins the exact DB that was reviewed. The DB is
-// rebuilt every few hours, so a pin is only as fresh as the last merged Renovate digest update (an
-// automerged PR, see .github/renovate.json5): between updates scans use that DB, not the newest one.
+// mirror. The tag is the DB schema version, so it is a floating tag that rarely changes; Renovate
+// still tracks it so a schema bump shows up as a PR. It is deliberately not pinned by digest: the DB is
+// rebuilt every few hours, and a pin would freeze the advisories scans see.
 // renovate: datasource=docker depName=ghcr.io/aquasecurity/trivy-db
-const DefaultDBRepository = "ghcr.io/aquasecurity/trivy-db:2@sha256:b0775787665d5fb9d55fdb8946b1319eb18766f84c67d9908f90975d3943fbbd"
+const DefaultDBRepository = "ghcr.io/aquasecurity/trivy-db:2"
 
 // ResolveTrivyImage turns the "Trivy version" setting into an image reference: empty means
 // the pinned default, a version ("0.77.0", "v0.77.0") means that tag of the same repository. The

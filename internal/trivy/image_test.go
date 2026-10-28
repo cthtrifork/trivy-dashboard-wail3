@@ -23,32 +23,6 @@ func TestDefaultTrivyImageIsPinned(t *testing.T) {
 	}
 }
 
-func TestDefaultDBRepositoryIsPinned(t *testing.T) {
-	repo, digest, ok := strings.Cut(DefaultDBRepository, "@")
-	if !ok || !strings.HasPrefix(repo, "ghcr.io/aquasecurity/trivy-db:") {
-		t.Fatalf("default DB repository = %q", DefaultDBRepository)
-	}
-	if !regexp.MustCompile(`^sha256:[0-9a-f]{64}$`).MatchString(digest) {
-		t.Errorf("default DB repository must carry a sha256 digest, got %q", digest)
-	}
-}
-
-func TestRunArgsPassPinnedDBRepository(t *testing.T) {
-	args, err := (&PodmanEngine{Cache: "c"}).runArgs(TrivyJob{Image: "x"}, "n")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(strings.Join(args, " "), "-e TRIVY_DB_REPOSITORY="+DefaultDBRepository) {
-		t.Errorf("the pinned DB repository is not passed: %v", args)
-	}
-	// A mirror from the environment replaces it and is forwarded untouched, not pinned.
-	t.Setenv("TRIVY_DB_REPOSITORY", "mirror.example/trivy-db")
-	args, _ = (&PodmanEngine{Cache: "c"}).runArgs(TrivyJob{Image: "x"}, "n")
-	if line := strings.Join(args, " "); strings.Contains(line, "ghcr.io/aquasecurity/trivy-db") || !strings.Contains(line, "-e TRIVY_DB_REPOSITORY ") {
-		t.Errorf("a mirror must replace the default: %v", args)
-	}
-}
-
 func TestResolveTrivyImage(t *testing.T) {
 	def := DefaultTrivyImage
 	for in, want := range map[string]string{

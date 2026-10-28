@@ -47,15 +47,6 @@
       automerge: false,
     },
     {
-      // The vulnerability DB is pinned by digest too, and its tag ("2" is the schema version) is rebuilt
-      // every few hours, so this is a digest update several times a day. It must merge without waiting:
-      // the pin is only as fresh as the last merged PR, and a digest has no release date for
-      // minimumReleaseAge to count from anyway. The CI checks still have to pass.
-      matchDepNames: ["ghcr.io/aquasecurity/trivy-db"],
-      automerge: true,
-      minimumReleaseAge: null,
-    },
-    {
       // Patches stay out of these groups on purpose: a group is merged as a whole, so a minor in the
       // same branch would hold the patches back. Patches get their own PR and automerge.
       matchManagers: ["github-actions"],
