@@ -12,11 +12,18 @@ if (!url || !outDir) {
 }
 
 function loadPlaywright() {
-  const here = createRequire(import.meta.url);
-  for (const name of ["playwright", "playwright-core"]) {
-    try {
-      return here(name);
-    } catch {}
+  // frontend/node_modules (playwright-core, from `make frontend`) first, then the script's own
+  // resolution (a local `npm install --no-save playwright`), then a global install.
+  const requirers = [
+    createRequire(new URL("../frontend/noop.js", import.meta.url)),
+    createRequire(import.meta.url),
+  ];
+  for (const here of requirers) {
+    for (const name of ["playwright", "playwright-core"]) {
+      try {
+        return here(name);
+      } catch {}
+    }
   }
   const root = execSync("npm root -g", { encoding: "utf8" }).trim();
   return createRequire(path.join(root, "noop.js"))("playwright");
