@@ -442,6 +442,25 @@ func (s *ScanService) Compare(req trivy.CompareRequest) (*trivy.CompareResult, e
 	return s.scanner.Compare(s.appCtx(), req)
 }
 
+// ImageParts is an image reference split into its repository and tag.
+type ImageParts struct {
+	Repo string `json:"repo"`
+	Tag  string `json:"tag"`
+}
+
+// SplitImage splits an image reference into repository and tag, dropping any digest.
+func (s *ScanService) SplitImage(ref string) ImageParts {
+	return ImageParts{Repo: trivy.ImageRepo(ref), Tag: trivy.ImageTag(ref)}
+}
+
+// LatestTag returns the highest semantic-version tag a registry offers for an image repository,
+// preferring one with the same suffix as baseTag (see trivy.Scanner.LatestTag).
+func (s *ScanService) LatestTag(repo, baseTag string) (string, error) {
+	ctx, cancel := context.WithTimeout(s.appCtx(), time.Minute)
+	defer cancel()
+	return s.scanner.LatestTag(ctx, repo, baseTag)
+}
+
 // ListTags returns the tags a registry offers for an image repository.
 func (s *ScanService) ListTags(repo string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(s.appCtx(), time.Minute)

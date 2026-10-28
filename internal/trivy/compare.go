@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/aquasecurity/go-version/pkg/version"
 	"github.com/distribution/reference"
 )
 
@@ -141,8 +142,51 @@ func (s *Scanner) ListTags(ctx context.Context, repo string) ([]string, error) {
 			tags = append(tags, t)
 		}
 	}
-	sort.Slice(tags, func(i, j int) bool { return compareVersions("", tags[i], tags[j]) > 0 })
+	sort.SliceStable(tags, func(i, j int) bool { return compareTags(tags[i], tags[j]) > 0 })
 	return tags, nil
+}
+
+// tagRank groups tags for sorting: 2 for a plain version ("1.27.1"), 1 for a version with a
+// suffix ("1.27-alpine", "2.0-rc1") and 0 for anything else ("latest", "stable").
+func tagRank(tag string) int {
+	if _, err := version.Parse(tag); err != nil {
+		return 0
+	}
+	if strings.ContainsAny(tag, "-+") {
+		return 1
+	}
+	return 2
+}
+
+// compareTags orders tags by best-effort semver: plain versions first, then suffixed ones,
+// then the rest; within a group by version, falling back to the name.
+func compareTags(a, b string) int {
+	if ra, rb := tagRank(a), tagRank(b); ra != rb {
+		return ra - rb
+	}
+	return compareVersions("", a, b)
+}
+
+// LatestTag returns the highest semantic version among repo's tags, or "" when none is one.
+// When baseTag carries a suffix ("1.27-alpine") it returns the highest tag with that same
+// suffix; with no such tag, or no suffix, it returns the highest plain version. Tags that are
+// not versions ("latest") are never returned.
+func (s *Scanner) LatestTag(ctx context.Context, repo, baseTag string) (string, error) {
+	tags, err := s.ListTags(ctx, repo) // best-effort semver, plain versions first
+	if err != nil {
+		return "", err
+	}
+	if _, suffix, ok := strings.Cut(baseTag, "-"); ok {
+		for _, t := range tags {
+			if tagRank(t) == 1 && strings.HasSuffix(t, "-"+suffix) {
+				return t, nil
+			}
+		}
+	}
+	if len(tags) > 0 && tagRank(tags[0]) == 2 {
+		return tags[0], nil
+	}
+	return "", nil
 }
 
 // qualifyRepo makes the registry explicit, defaulting to Docker Hub. `podman search`

@@ -230,6 +230,21 @@ function remember(ref, r) {
 }
 export const cmpForm = reactive({ repo: lsGet("cmp-repo"), a: lsGet("cmp-a"), b: lsGet("cmp-b") });
 
+// The last comparison, kept here so a new scan can clear it.
+export const compareData = shallowRef(null);
+
+// fillLatestTag looks up the repository's newest semver tag (a registry lookup, not a scan) and
+// puts it in the Target box (with the base tag's suffix, e.g. -alpine, when one exists). A failed lookup leaves it as is.
+async function fillLatestTag(repo, baseTag) {
+  if (!repo) return;
+  try {
+    const latest = await ScanService.LatestTag(repo, baseTag);
+    if (latest && cmpForm.repo === repo) cmpForm.b = latest;
+  } catch {
+    /* the user can still type the tag */
+  }
+}
+
 // scanning is true while any scan runs (single scan or compare); comparing marks the latter.
 export const scanning = ref(false);
 export const comparing = ref(false);
@@ -256,6 +271,12 @@ export async function loadVEX() {
 
 export async function runScan() {
   scanning.value = true;
+  compareData.value = null;
+  const { repo, tag } = await ScanService.SplitImage(image.value);
+  cmpForm.repo = repo;
+  cmpForm.a = tag;
+  cmpForm.b = "";
+  fillLatestTag(repo, tag);
   refreshFootprint(); // recalculate now; it is measured again when the scan ends
   logText.value = "";
   vex.value = new Map(); // the backend drops the saved VEX file when a scan starts
@@ -276,7 +297,6 @@ export async function runScan() {
       ignoreFile: opts.ignoreFile,
       markUnderInvestigation: opts.markUnderInvestigation,
     });
-    if (!cmpForm.repo) cmpForm.repo = r.image.replace(/@.*$/, "").replace(/:[^/:]*$/, "");
     result.value = r;
     rememberScan(r);
     remember(image.value.trim(), r);

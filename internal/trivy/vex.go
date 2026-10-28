@@ -77,6 +77,18 @@ func ImageRepo(ref string) string {
 	return ref
 }
 
+// ImageTag returns the tag of ref, or "" when it has none (a bare name or a digest).
+func ImageTag(ref string) string {
+	named, err := reference.Parse(NormalizeImage(ref))
+	if err != nil {
+		return ""
+	}
+	if t, ok := named.(reference.Tagged); ok {
+		return t.Tag()
+	}
+	return ""
+}
+
 // Validate enforces the OpenVEX rules for each status.
 func (e *VEXEntry) Validate() error {
 	if e.Vulnerability == "" {

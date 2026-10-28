@@ -1,11 +1,12 @@
 <script setup>
-import { computed, reactive, ref, shallowRef } from "vue";
+import { computed, reactive, ref } from "vue";
 import {
   ScanService,
   SEVERITIES,
   sevStyle,
   opts,
   cmpForm,
+  compareData as data,
   scanning,
   comparing,
   logText,
@@ -29,7 +30,6 @@ const CHG_COLOR = {
 const CHG_SIGN = { added: "+", removed: "−", unchanged: "=", upgraded: "↑", downgraded: "↓" };
 const chgStyle = (c) => ({ "--c": CHG_COLOR[c] });
 
-const data = shallowRef(null);
 const view = ref("vulns");
 const show = reactive(new Set(["added", "removed"]));
 const filter = ref("");
@@ -40,7 +40,7 @@ async function loadTags() {
   note.value = "Loading tags…";
   try {
     tags.value = await ScanService.ListTags(cmpForm.repo);
-    note.value = `${tags.value.length} tags loaded (newest first, by name) — type to filter.`;
+    note.value = `${tags.value.length} tags loaded (newest version first) — type to filter.`;
   } catch (e) {
     note.value = "Could not list tags — type them in. " + errText(e);
   }

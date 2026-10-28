@@ -100,6 +100,17 @@ export function InstallUpdate() {
 }
 
 /**
+ * LatestTag returns the highest semantic-version tag a registry offers for an image repository,
+ * preferring one with the same suffix as baseTag (see trivy.Scanner.LatestTag).
+ * @param {string} repo
+ * @param {string} baseTag
+ * @returns {$CancellablePromise<string>}
+ */
+export function LatestTag(repo, baseTag) {
+    return $Call.ByID(2547070678, repo, baseTag);
+}
+
+/**
  * ListTags returns the tags a registry offers for an image repository.
  * @param {string} repo
  * @returns {$CancellablePromise<string[]>}
@@ -171,12 +182,23 @@ export function Scan(req) {
 }
 
 /**
+ * SplitImage splits an image reference into repository and tag, dropping any digest.
+ * @param {string} ref
+ * @returns {$CancellablePromise<$models.ImageParts>}
+ */
+export function SplitImage(ref) {
+    return $Call.ByID(1978002968, ref).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType13($result);
+    }));
+}
+
+/**
  * UpdateInfo reports the running version and whether it can update itself.
  * @returns {$CancellablePromise<$models.UpdateInfo>}
  */
 export function UpdateInfo() {
     return $Call.ByID(2877341576).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType13($result);
+        return $$createType14($result);
     }));
 }
 
@@ -219,7 +241,7 @@ export function VEXExport(image, author, role, onlyCurrent) {
  */
 export function VEXImport(image, doc, markRest, minSeverity) {
     return $Call.ByID(1138230009, image, doc, markRest, minSeverity).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType14($result);
+        return $$createType15($result);
     }));
 }
 
@@ -230,7 +252,7 @@ export function VEXImport(image, doc, markRest, minSeverity) {
  */
 export function VEXList(image) {
     return $Call.ByID(1476021980, image).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType16($result);
+        return $$createType17($result);
     }));
 }
 
@@ -267,7 +289,7 @@ export function VEXSave(image, author, role, onlyCurrent) {
  */
 export function VEXSet(image, e) {
     return $Call.ByID(537230204, image, e).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType15($result);
+        return $$createType16($result);
     }));
 }
 
@@ -285,7 +307,8 @@ const $$createType9 = trivy$0.Preset.createFrom;
 const $$createType10 = $Create.Array($$createType9);
 const $$createType11 = trivy$0.ScanResult.createFrom;
 const $$createType12 = $Create.Nullable($$createType11);
-const $$createType13 = $models.UpdateInfo.createFrom;
-const $$createType14 = trivy$0.ImportReport.createFrom;
-const $$createType15 = trivy$0.VEXEntry.createFrom;
-const $$createType16 = $Create.Array($$createType15);
+const $$createType13 = $models.ImageParts.createFrom;
+const $$createType14 = $models.UpdateInfo.createFrom;
+const $$createType15 = trivy$0.ImportReport.createFrom;
+const $$createType16 = trivy$0.VEXEntry.createFrom;
+const $$createType17 = $Create.Array($$createType16);
