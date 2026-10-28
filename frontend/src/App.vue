@@ -15,6 +15,7 @@ import {
   ensureTrivyTags,
   trivyTags,
   trivyImageSetting,
+  refreshFootprint,
   trivyNewest,
   setTag,
   clearAll,
@@ -144,7 +145,11 @@ async function updateStep(busyMsg, run) {
 // The DB is checked once per session; this checks again now. Trivy downloads only if the cached one is out of date.
 const updateDB = () =>
   updateStep("Checking the vulnerability database…", async () => {
-    await ScanService.UpdateDB(trivyImageSetting());
+    try {
+      await ScanService.UpdateDB(trivyImageSetting());
+    } finally {
+      refreshFootprint(); // a download changes the cache size shown in the footer
+    }
     setStatus("Vulnerability database checked.");
   });
 
