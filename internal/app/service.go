@@ -32,7 +32,9 @@ type ScanService struct {
 	mu      sync.Mutex
 	product map[string]string                // image repo -> product purl from the latest scan
 	found   map[string][]trivy.Vulnerability // image repo -> findings from the latest scan, for VEX import
-	latest  []trivy.Vulnerability            // findings of the most recent scan, in the order the UI holds them, for Rescore
+	last    *trivy.ScanResult                // the most recent scan and the options it ran with, so Compare can reuse it as the base
+	lastReq trivy.ScanRequest
+	latest  []trivy.Vulnerability // findings of the most recent scan, in the order the UI holds them, for Rescore
 }
 
 // Mode tells the UI whether scans are real. Fixtures is true in development
@@ -273,6 +275,7 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 	s.mu.Lock()
 	s.found = map[string][]trivy.Vulnerability{}
 	s.latest = nil
+	s.last = nil
 	s.mu.Unlock()
 	res, err := s.scanner.Scan(s.appCtx(), req)
 	if err == nil {
@@ -280,6 +283,7 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 		s.product[trivy.ImageRepo(res.Image)] = res.ProductPURL
 		s.found[trivy.ImageRepo(res.Image)] = res.Vulnerabilities
 		s.latest = res.Vulnerabilities
+		s.last, s.lastReq = res, req
 		s.mu.Unlock()
 		if req.MarkUnderInvestigation {
 			if _, merr := s.vex.MarkUnassessed(res.Image, res.Vulnerabilities, "", ""); merr != nil {
@@ -438,7 +442,16 @@ func (s *ScanService) VEXSave(image, author, role string, onlyCurrent bool) (str
 }
 
 // Compare scans two tags of an image and returns what changed between them.
+// The base is not scanned again when it is the image of the last scan, made with the same options.
 func (s *ScanService) Compare(req trivy.CompareRequest) (*trivy.CompareResult, error) {
+	s.mu.Lock()
+	if s.last != nil && s.lastReq.SameFindings(trivy.ScanRequest{
+		IgnoreUnfixed: req.IgnoreUnfixed, ShowSuppressed: req.ShowSuppressed, ShowWillNotFix: req.ShowWillNotFix,
+		ShowNotAffected: req.ShowNotAffected, TrivyImage: req.TrivyImage, IgnorePolicy: req.IgnorePolicy, IgnoreFile: req.IgnoreFile,
+	}) {
+		req.Base = s.last
+	}
+	s.mu.Unlock()
 	return s.scanner.Compare(s.appCtx(), req)
 }
 

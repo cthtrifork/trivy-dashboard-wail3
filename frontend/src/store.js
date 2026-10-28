@@ -228,7 +228,8 @@ function remember(ref, r) {
   recent.value = [entry, ...recent.value.filter((e) => e.image !== ref)].slice(0, RECENT_MAX);
   lsSet(RECENT_KEY, JSON.stringify(recent.value));
 }
-export const cmpForm = reactive({ repo: lsGet("cmp-repo"), a: lsGet("cmp-a"), b: lsGet("cmp-b") });
+// Compare: the base is the image at the top (read only); only the target tag is its own.
+export const cmpForm = reactive({ b: lsGet("cmp-b") });
 
 // The last comparison, kept here so a new scan can clear it.
 export const compareData = shallowRef(null);
@@ -239,7 +240,7 @@ async function fillLatestTag(repo, baseTag) {
   if (!repo) return;
   try {
     const latest = await ScanService.LatestTag(repo, baseTag);
-    if (latest && cmpForm.repo === repo) cmpForm.b = latest;
+    if (latest && imageRepo.value === repo) cmpForm.b = latest;
   } catch {
     /* the user can still type the tag */
   }
@@ -248,26 +249,40 @@ async function fillLatestTag(repo, baseTag) {
 // After a scan the image box splits into the repository (read only) and an editable tag with the
 // registry's tags to pick from; reset goes back to the single box. image stays the one reference a scan uses.
 export const split = ref(false);
+// splitRef is SplitImage for the single box, where a call per keystroke would be wasteful.
+export function splitRef(ref) {
+  const r = ref.trim().split("@")[0];
+  const i = r.lastIndexOf(":");
+  return i > r.lastIndexOf("/") ? { repo: r.slice(0, i), tag: r.slice(i + 1) } : { repo: r, tag: "" };
+}
 export const imageRepo = ref("");
 export const imageTag = ref("");
 export const repoTags = ref([]); // newest first, as ListTags returns them
 let tagsFor = "";
 
-export async function enterSplit(repo, tag) {
-  if (!repo) return;
-  split.value = true;
-  imageRepo.value = repo;
-  imageTag.value = tag;
-  if (tagsFor === repo) return;
+// ensureTags loads the registry's tags for repo once; a failed lookup leaves the list empty (tags can still be typed).
+export async function ensureTags(repo) {
+  if (!repo || tagsFor === repo) return;
   tagsFor = repo;
   repoTags.value = [];
   try {
     const tags = (await ScanService.ListTags(repo)) || [];
     if (tagsFor === repo) repoTags.value = tags;
   } catch {
-    /* offline or private registry: the tag can still be typed */
+    tagsFor = ""; // try again on the next open
   }
 }
+
+export function enterSplit(repo, tag) {
+  if (!repo) return;
+  split.value = true;
+  imageRepo.value = repo;
+  imageTag.value = tag;
+  ensureTags(repo);
+}
+
+// The compare base: the split view's repository and tag, or the single box read the same way.
+export const cmpBase = computed(() => (split.value ? { repo: imageRepo.value, tag: imageTag.value } : splitRef(image.value)));
 
 // setTag edits the tag; the shown findings belonged to the old one, so they go until the next scan.
 export function setTag(tag) {
@@ -310,11 +325,9 @@ export async function runScan() {
   scanning.value = true;
   compareData.value = null;
   const { repo, tag } = await ScanService.SplitImage(image.value);
-  cmpForm.repo = repo;
-  cmpForm.a = tag;
   cmpForm.b = "";
-  fillLatestTag(repo, tag);
   enterSplit(repo, tag);
+  fillLatestTag(repo, tag);
   refreshFootprint(); // recalculate now; it is measured again when the scan ends
   logText.value = "";
   vex.value = new Map(); // the backend drops the saved VEX file when a scan starts
@@ -399,8 +412,6 @@ export function init() {
       mode.value = m;
       if (!m.fixtures) return;
       if (!image.value) image.value = m.image;
-      if (!cmpForm.repo) cmpForm.repo = m.repo;
-      if (!cmpForm.a) cmpForm.a = m.tagA;
       if (!cmpForm.b) cmpForm.b = m.tagB;
     },
     () => {},

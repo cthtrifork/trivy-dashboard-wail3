@@ -192,7 +192,9 @@ header {
   gap: 8px;
 }
 #image-repo,
-#image-tag {
+#cmp-repo,
+#cmp-a,
+.tag-input {
   box-sizing: border-box;
   height: 50px;
   padding: 0 16px;
@@ -211,22 +213,23 @@ header {
   position: relative;
   width: 220px;
 }
-#image-tag {
+.tag-input {
   width: 100%;
   padding-right: 36px;
 }
-.scan-row .tag-toggle {
+.scan-row .tag-toggle,
+.tag-toggle {
   position: absolute;
   right: 4px;
   top: 4px;
-  height: 42px;
+  height: calc(100% - 8px);
   padding: 0 10px;
   font-size: 14px;
   background: transparent;
   box-shadow: none;
   color: var(--mute);
 }
-#tag-list {
+.tag-list {
   position: absolute;
   z-index: 6;
   left: 0;
@@ -240,16 +243,16 @@ header {
   border-radius: 10px;
   box-shadow: 0 12px 32px #0008;
 }
-#tag-list > div {
+.tag-list > div {
   display: flex;
   padding: 8px 16px;
   cursor: pointer;
 }
-#tag-list > div.active,
-#tag-list [role="option"]:hover {
+.tag-list > div.active,
+.tag-list [role="option"]:hover {
   background: var(--line);
 }
-#tag-list .recent-head {
+.tag-list .recent-head {
   cursor: default;
   color: var(--mute);
   font-size: 11px;

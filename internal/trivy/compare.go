@@ -26,6 +26,28 @@ type CompareRequest struct {
 	ShowSuppressed  bool `json:"showSuppressed"`
 	ShowWillNotFix  bool `json:"showWillNotFix"`
 	ShowNotAffected bool `json:"showNotAffected"`
+	// Base is an earlier scan of TagA made with the same options. Compare uses it instead of
+	// scanning the base again. It is set by the service, never by the UI, so it stays out of the bindings.
+	Base *ScanResult `json:"-"`
+}
+
+// SameFindings reports whether two requests produce the same findings for the same image,
+// so a result of one can stand in for the other. Credentials do not change what is found.
+func (r ScanRequest) SameFindings(o ScanRequest) bool {
+	return r.IgnoreUnfixed == o.IgnoreUnfixed && r.ShowSuppressed == o.ShowSuppressed &&
+		r.ShowWillNotFix == o.ShowWillNotFix && r.ShowNotAffected == o.ShowNotAffected &&
+		strings.TrimSpace(r.TrivyImage) == strings.TrimSpace(o.TrivyImage) &&
+		r.IgnorePolicy == o.IgnorePolicy && r.IgnoreFile == o.IgnoreFile
+}
+
+// sameImage compares two references after normalising them (docker.io/library/ is implied).
+func sameImage(a, b string) bool {
+	na, errA := reference.ParseNormalizedNamed(strings.TrimSpace(a))
+	nb, errB := reference.ParseNormalizedNamed(strings.TrimSpace(b))
+	if errA != nil || errB != nil {
+		return a == b
+	}
+	return reference.TagNameOnly(na).String() == reference.TagNameOnly(nb).String()
 }
 
 // CompareSide summarises one scanned image.
@@ -96,8 +118,10 @@ func (s *Scanner) Compare(parent context.Context, req CompareRequest) (*CompareR
 		return s.scanImage(ctx, ScanRequest{Image: ref, Username: req.Username, Password: req.Password, IgnoreUnfixed: req.IgnoreUnfixed, TrivyImage: req.TrivyImage, IgnorePolicy: req.IgnorePolicy, IgnoreFile: req.IgnoreFile,
 			ShowSuppressed: req.ShowSuppressed, ShowWillNotFix: req.ShowWillNotFix, ShowNotAffected: req.ShowNotAffected})
 	}
-	a, err := scan("Base", refA)
-	if err != nil {
+	a := req.Base
+	if a != nil && sameImage(a.Image, refA) {
+		s.logf("=== Base: %s (reusing the scan) ===", refA)
+	} else if a, err = scan("Base", refA); err != nil {
 		return nil, fmt.Errorf("scanning %s: %w", refA, err)
 	}
 	b, err := scan("Target", refB)
