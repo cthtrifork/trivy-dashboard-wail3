@@ -22,7 +22,6 @@ static void setWindowIcon(const char *dir, const char *name, void *window) {
 import "C"
 
 import (
-	_ "embed"
 	"os"
 	"path/filepath"
 	"unsafe"
@@ -33,14 +32,12 @@ import (
 
 const windowIconName = "trivy-scanner"
 
-//go:embed window_icon.png
-var windowIcon []byte
-
-// SetWindowIcon gives the window the app icon (the same art as frontend/public/favicon.svg).
-// GTK4 has no API to set a window icon from bytes, only by name from the icon theme, so the
-// PNG is written to the user cache dir, which is added to the theme's search path. A packaged
-// install already has the icon in hicolor and this is a harmless duplicate. Best effort: any
-// failure leaves the desktop's default icon.
+// SetWindowIcon gives the window the app icon. Wails' Icon options (set in main.go) are the
+// documented way, but with GTK4 they are no-ops (beta.34): GTK4 has no API to set a window icon
+// from bytes, only by name from the icon theme. So the PNG is also written to the user cache
+// dir, which is added to the theme's search path. A packaged install already has the icon in
+// hicolor and this is a harmless duplicate. Best effort: any failure leaves the desktop's
+// default icon.
 func SetWindowIcon(app *application.App, window application.Window) {
 	dir, err := os.UserCacheDir()
 	if err != nil {
@@ -50,7 +47,7 @@ func SetWindowIcon(app *application.App, window application.Window) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return
 	}
-	if err := os.WriteFile(filepath.Join(dir, windowIconName+".png"), windowIcon, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, windowIconName+".png"), WindowIcon, 0o644); err != nil {
 		return
 	}
 	app.Event.OnApplicationEvent(events.Linux.ApplicationStartup, func(*application.ApplicationEvent) {
