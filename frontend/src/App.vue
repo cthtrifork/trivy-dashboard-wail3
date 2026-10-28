@@ -7,6 +7,12 @@ import {
   vex,
   image,
   recent,
+  split,
+  imageRepo,
+  imageTag,
+  repoTags,
+  setTag,
+  resetImage,
   opts,
   saveTrivyImage,
   saveIgnorePolicy,
@@ -68,6 +74,56 @@ function pickRecent(e, rescan) {
   image.value = e.image;
   closeHistory();
   if (rescan && !scanning.value) runScan();
+}
+// Tag combobox: the five newest tags until something is typed, then every loaded tag that matches.
+const TAG_LATEST = 5,
+  TAG_MAX = 50;
+const tagOpen = ref(false);
+const tagIdx = ref(-1);
+const tagTyped = ref(false);
+const tagOptions = computed(() => {
+  const q = imageTag.value.trim().toLowerCase();
+  if (!tagTyped.value || !q) return repoTags.value.slice(0, TAG_LATEST);
+  return repoTags.value.filter((t) => t.toLowerCase().includes(q)).slice(0, TAG_MAX);
+});
+const showTags = computed(() => tagOpen.value && tagOptions.value.length > 0);
+function onTagInput(ev) {
+  tagTyped.value = true;
+  tagOpen.value = true;
+  tagIdx.value = -1;
+  setTag(ev.target.value);
+}
+function openTags(ev) {
+  tagTyped.value = false;
+  tagOpen.value = true;
+  ev?.target?.select?.();
+}
+const closeTags = () => {
+  tagOpen.value = false;
+  tagIdx.value = -1;
+};
+function pickTag(t) {
+  setTag(t);
+  closeTags();
+}
+function tagKey(ev) {
+  const n = tagOptions.value.length;
+  if (ev.key === "Escape") return closeTags();
+  if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+    ev.preventDefault();
+    if (!showTags.value) return openTags();
+    const step = ev.key === "ArrowDown" ? 1 : -1;
+    tagIdx.value = ((tagIdx.value + 1 + step + n + 1) % (n + 1)) - 1; // -1 is the typed text
+    nextTick(() => document.getElementById("tag-" + tagIdx.value)?.scrollIntoView({ block: "nearest" }));
+  } else if (ev.key === "Enter" && showTags.value && tagIdx.value >= 0) {
+    ev.preventDefault(); // picking an option; the next Enter scans
+    pickTag(tagOptions.value[tagIdx.value]);
+  }
+}
+function resetView() {
+  closeTags();
+  resetImage();
+  nextTick(() => document.getElementById("image")?.focus());
 }
 function imageKey(ev) {
   const n = history.value.length;
@@ -267,7 +323,59 @@ onMounted(() => {
         </details>
       </div>
       <div class="scan-row">
-        <div class="image-wrap">
+        <div v-if="split" class="image-wrap image-split">
+          <input id="image-repo" :value="imageRepo" readonly tabindex="-1" aria-label="Image repository" :title="imageRepo" />
+          <div class="tag-wrap">
+            <input
+              id="image-tag"
+              :value="imageTag"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="tag-list"
+              aria-label="Tag"
+              :aria-expanded="showTags"
+              :aria-activedescendant="tagIdx >= 0 ? 'tag-' + tagIdx : undefined"
+              placeholder="tag"
+              autocomplete="off"
+              spellcheck="false"
+              :disabled="scanning"
+              @focus="openTags"
+              @click="tagOpen = true"
+              @input="onTagInput"
+              @blur="closeTags"
+              @keydown="tagKey"
+            />
+            <button
+              type="button"
+              class="tag-toggle"
+              tabindex="-1"
+              aria-label="Show tags"
+              :disabled="scanning"
+              @mousedown.prevent="tagOpen ? closeTags() : openTags()"
+            >
+              ▾
+            </button>
+            <div id="tag-list" v-show="showTags" role="listbox" aria-label="Tags">
+              <div class="recent-head" aria-hidden="true">{{ tagTyped && imageTag.trim() ? "Matching tags" : "Latest tags" }}</div>
+              <div
+                v-for="(t, i) in tagOptions"
+                :id="'tag-' + i"
+                :key="t"
+                role="option"
+                tabindex="-1"
+                :aria-selected="i === tagIdx"
+                :class="{ active: i === tagIdx }"
+                @mousedown.prevent="pickTag(t)"
+              >
+                <span class="recent-name">{{ t }}</span>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="ghost reset-btn" title="Back to the single image field" :disabled="scanning" @click="resetView">
+            Reset
+          </button>
+        </div>
+        <div v-else class="image-wrap">
           <input
             id="image"
             v-model="image"

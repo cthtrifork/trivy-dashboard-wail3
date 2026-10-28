@@ -245,6 +245,43 @@ async function fillLatestTag(repo, baseTag) {
   }
 }
 
+// After a scan the image box splits into the repository (read only) and an editable tag with the
+// registry's tags to pick from; reset goes back to the single box. image stays the one reference a scan uses.
+export const split = ref(false);
+export const imageRepo = ref("");
+export const imageTag = ref("");
+export const repoTags = ref([]); // newest first, as ListTags returns them
+let tagsFor = "";
+
+export async function enterSplit(repo, tag) {
+  if (!repo) return;
+  split.value = true;
+  imageRepo.value = repo;
+  imageTag.value = tag;
+  if (tagsFor === repo) return;
+  tagsFor = repo;
+  repoTags.value = [];
+  try {
+    const tags = (await ScanService.ListTags(repo)) || [];
+    if (tagsFor === repo) repoTags.value = tags;
+  } catch {
+    /* offline or private registry: the tag can still be typed */
+  }
+}
+
+// setTag edits the tag; the shown findings belonged to the old one, so they go until the next scan.
+export function setTag(tag) {
+  imageTag.value = tag;
+  image.value = tag ? imageRepo.value + ":" + tag : imageRepo.value;
+  result.value = null;
+  compareData.value = null;
+  vex.value = new Map();
+  rerank();
+  setStatus("Tag changed. Press Scan to scan " + image.value + ".");
+}
+
+export const resetImage = () => (split.value = false);
+
 // scanning is true while any scan runs (single scan or compare); comparing marks the latter.
 export const scanning = ref(false);
 export const comparing = ref(false);
@@ -277,6 +314,7 @@ export async function runScan() {
   cmpForm.a = tag;
   cmpForm.b = "";
   fillLatestTag(repo, tag);
+  enterSplit(repo, tag);
   refreshFootprint(); // recalculate now; it is measured again when the scan ends
   logText.value = "";
   vex.value = new Map(); // the backend drops the saved VEX file when a scan starts
@@ -335,6 +373,10 @@ async function restoreScan() {
   const saved = lsJSON(RESULT_KEY, null);
   if (saved?.result && saved.forImage === want) {
     result.value = saved.result;
+    ScanService.SplitImage(want).then(
+      ({ repo, tag }) => enterSplit(repo, tag),
+      () => {},
+    );
     rerank();
     await loadVEX();
     setStatus(`Restored the last scan of ${want}.`);
