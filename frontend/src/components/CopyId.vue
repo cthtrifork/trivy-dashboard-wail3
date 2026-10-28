@@ -1,15 +1,18 @@
 <script setup>
-import { Clipboard } from "@wailsio/runtime";
 import { onBeforeUnmount, ref } from "vue";
+import { ScanService } from "../store.js";
 
 const props = defineProps({ text: { type: String, required: true } });
 const done = ref(false);
 let timer;
 
 async function copy() {
-  // The browser clipboard comes first: in headless mode the Wails call resolves
-  // without ever reaching the browser, so it can't be used to detect failure.
-  if (!(await webCopy(props.text))) await Clipboard.SetText(props.text).catch(() => {});
+  // The native clipboard first; server mode has none and errors, so use the browser's.
+  try {
+    await ScanService.CopyText(props.text);
+  } catch {
+    await webCopy(props.text);
+  }
   done.value = true;
   clearTimeout(timer);
   timer = setTimeout(() => (done.value = false), 1500);

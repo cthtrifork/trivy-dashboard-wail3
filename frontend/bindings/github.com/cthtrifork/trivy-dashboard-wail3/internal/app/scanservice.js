@@ -81,6 +81,17 @@ export function Config() {
 }
 
 /**
+ * CopyText puts text on the system clipboard. Server mode has no system
+ * clipboard of its own (it would be the server's, not the browser's), so it
+ * returns an error and the UI falls back to the browser clipboard.
+ * @param {string} text
+ * @returns {$CancellablePromise<void>}
+ */
+export function CopyText(text) {
+    return $Call.ByID(1862820627, text);
+}
+
+/**
  * Footprint measures the cache directories.
  * @returns {$CancellablePromise<$models.Footprint>}
  */
