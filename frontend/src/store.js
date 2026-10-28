@@ -285,6 +285,13 @@ const loadTrivyTags = tagLoader(trivyTags);
 // ensureTrivyTags loads the tags of the default Trivy repository for the version picker.
 export const ensureTrivyTags = () => loadTrivyTags((mode.value?.trivyImage || "docker.io/aquasec/trivy").replace(/:[^/:]*$/, ""));
 
+// trivyNewest is the newest plain version found in the Trivy repository ("0.76.1": not the floating
+// "latest" tag). The list is sorted newest plain version first. Empty until the lookup succeeds.
+export const trivyNewest = computed(() => trivyTags.value.find((t) => /^\d+(\.\d+)+$/.test(t)) || "");
+// trivyImageSetting is what scans send: the user's choice, else the newest version found, else
+// empty so the backend falls back to its Renovate-managed default.
+export const trivyImageSetting = () => opts.trivyImage.trim() || trivyNewest.value;
+
 export function enterSplit(repo, tag) {
   if (!repo) return;
   split.value = true;
@@ -373,7 +380,7 @@ export async function runScan() {
       showSuppressed: opts.showSuppressed,
       showWillNotFix: !opts.ignoreWillNotFix,
       showNotAffected: !opts.ignoreNotAffected,
-      trivyImage: opts.trivyImage.trim(),
+      trivyImage: trivyImageSetting(),
       ignorePolicy: opts.ignorePolicy,
       ignoreFile: opts.ignoreFile,
       markUnderInvestigation: opts.markUnderInvestigation,
@@ -438,6 +445,7 @@ export function init() {
   ScanService.Mode().then(
     (m) => {
       mode.value = m;
+      ensureTrivyTags(); // so the default can be the newest version
       if (!m.fixtures) return;
       if (!image.value) image.value = m.image;
       if (!cmpForm.b) cmpForm.b = m.tagB;

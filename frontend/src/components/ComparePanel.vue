@@ -9,6 +9,7 @@ import {
   cmpBase,
   repoTags,
   ensureTags,
+  trivyImageSetting,
   compareData as data,
   scanning,
   comparing,
@@ -49,7 +50,7 @@ async function run() {
     showSuppressed: opts.showSuppressed,
     showWillNotFix: !opts.ignoreWillNotFix,
     showNotAffected: !opts.ignoreNotAffected,
-    trivyImage: opts.trivyImage.trim(),
+    trivyImage: trivyImageSetting(),
     ignorePolicy: opts.ignorePolicy,
     ignoreFile: opts.ignoreFile,
   };

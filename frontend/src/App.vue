@@ -14,6 +14,7 @@ import {
   ensureTags,
   ensureTrivyTags,
   trivyTags,
+  trivyNewest,
   setTag,
   clearAll,
   scanState,
@@ -100,11 +101,10 @@ function imageKey(ev) {
 }
 const sevTag = (n, sev) => ({ n, sev, style: sevStyle(sev) });
 
-const trivyPlaceholder = computed(() =>
-  mode.value?.trivyImage
-    ? "Trivy version or image (default " + mode.value.trivyImage.split("/").pop() + ")"
-    : "Trivy version or image (default)",
-);
+const trivyPlaceholder = computed(() => {
+  const def = trivyNewest.value || mode.value?.trivyImage?.split(":").pop();
+  return def ? "Trivy version or image (default " + def + ")" : "Trivy version or image (default)";
+});
 const meta = computed(() => (result.value ? `${result.value.image}${result.value.os ? " · " + result.value.os : ""}` : ""));
 const counts = computed(() => ({
   vulns: result.value?.vulnerabilities.length ?? 0,
