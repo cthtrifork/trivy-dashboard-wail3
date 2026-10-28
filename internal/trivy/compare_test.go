@@ -257,3 +257,18 @@ func TestLatestTagPicksHighestSemver(t *testing.T) {
 		t.Fatalf("LatestTag = %q, %v; want 1.27", got, err)
 	}
 }
+
+func TestImageTag(t *testing.T) {
+	digest := "@sha256:" + strings.Repeat("a", 64)
+	for ref, want := range map[string]string{
+		"nginx:1.27":                     "1.27",
+		"nginx":                          "",
+		"localhost:5000/app:v2" + digest: "v2",
+		"localhost:5000/app":             "",
+		"nginx" + digest:                 "",
+	} {
+		if got := ImageTag(ref); got != want {
+			t.Errorf("ImageTag(%q) = %q, want %q", ref, got, want)
+		}
+	}
+}

@@ -13,6 +13,7 @@ export {
     ConfigPath,
     Footprint,
     FootprintPart,
+    ImageParts,
     Mode,
     UpdateInfo,
     UpdateStatus

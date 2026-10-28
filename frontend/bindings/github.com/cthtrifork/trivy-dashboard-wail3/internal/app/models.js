@@ -293,6 +293,44 @@ export class FootprintPart {
 }
 
 /**
+ * ImageParts is an image reference split into its repository and tag.
+ */
+export class ImageParts {
+    /**
+     * Creates a new ImageParts instance.
+     * @param {Partial<ImageParts>} [$$source = {}] - The source object to create the ImageParts.
+     */
+    constructor($$source = {}) {
+        if (!("repo" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["repo"] = "";
+        }
+        if (!("tag" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["tag"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImageParts instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {ImageParts}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ImageParts(/** @type {Partial<ImageParts>} */($$parsedSource));
+    }
+}
+
+/**
  * Mode tells the UI whether scans are real. Fixtures is true in development
  * builds that replay recorded scans; the other fields are demo defaults for
  * the input boxes.

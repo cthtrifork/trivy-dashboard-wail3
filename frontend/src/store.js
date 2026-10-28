@@ -233,13 +233,6 @@ export const cmpForm = reactive({ repo: lsGet("cmp-repo"), a: lsGet("cmp-a"), b:
 // The last comparison, kept here so a new scan can clear it.
 export const compareData = shallowRef(null);
 
-// splitImage splits an image reference into its repository and tag ("" when it has none).
-function splitImage(ref) {
-  const base = ref.trim().replace(/@.*$/, "");
-  const m = base.match(/^(.*):([^/:]*)$/);
-  return m ? { repo: m[1], tag: m[2] } : { repo: base, tag: "" };
-}
-
 // fillLatestTag looks up the repository's newest semver tag (a registry lookup, not a scan) and
 // puts it in the Target box. A failed lookup leaves it as is.
 async function fillLatestTag(repo) {
@@ -279,7 +272,7 @@ export async function loadVEX() {
 export async function runScan() {
   scanning.value = true;
   compareData.value = null;
-  const { repo, tag } = splitImage(image.value);
+  const { repo, tag } = await ScanService.SplitImage(image.value);
   cmpForm.repo = repo;
   cmpForm.a = tag;
   cmpForm.b = "";
