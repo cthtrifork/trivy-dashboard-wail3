@@ -38,20 +38,40 @@ function errorLine(doc) {
   return 1;
 }
 
-// The Rego grammar is young: it flags some valid rules (a one-line `x := v if cond`, `every` blocks). So its
-// findings are only warnings, a few at most, and the wording says the check can be wrong.
+// The Rego grammar is young: it flags valid rules that use a one-line `if` (`x if cond`, `x := v if cond`),
+// `every` or `contains`. Findings on such lines are dropped, and so is the end-of-file one when the braces
+// balance (a real missing `}` still shows). What is left is only a warning, a few at most, and the wording
+// says the check can be wrong.
 const SYNTAX_WARNING = "Possible Rego syntax problem here. This check can be wrong on valid policies: Trivy has the final say.";
 const MAX_SYNTAX_WARNINGS = 5;
+const UNSUPPORTED_FORM = /\b(if(?!\s*\{)|every|contains)\b/;
+
+function bracesBalance(text) {
+  const code = text.replace(/"(?:[^"\\\n]|\\.)*"|`[^`]*`|#.*/g, "");
+  let depth = 0;
+  for (const c of code) {
+    if (c === "{") depth++;
+    else if (c === "}") depth--;
+    if (depth < 0) return false;
+  }
+  return depth === 0;
+}
 
 function syntaxWarnings(state) {
   const doc = state.doc;
   const found = [];
   if (props.language !== "rego" || !doc.length) return found;
+  const text = doc.toString();
+  const unsupportedForms = UNSUPPORTED_FORM.test(text);
   ensureSyntaxTree(state, doc.length, 50)?.iterate({
     enter: (node) => {
       if (!node.type.isError || found.length >= MAX_SYNTAX_WARNINGS) return;
-      const from = Math.min(node.from, doc.length - 1);
-      found.push({ from, to: Math.min(Math.max(node.to, from + 1), doc.length), severity: "warning", message: SYNTAX_WARNING });
+      if (UNSUPPORTED_FORM.test(doc.lineAt(Math.min(node.from, doc.length)).text)) return;
+      if (node.from >= doc.length && unsupportedForms && bracesBalance(text)) return;
+      // A mark on a line break is not drawn, so anchor findings past the last visible character on it.
+      const lastVisible = text.trimEnd().length;
+      const from = Math.min(node.from, lastVisible - 1);
+      found.push({ from, to: Math.min(Math.max(node.to, from + 1), lastVisible), severity: "warning", message: SYNTAX_WARNING });
     },
   });
   return found;
@@ -75,6 +95,7 @@ onMounted(() => {
     props.language === "rego" ? rego() : yaml(),
     syntaxHighlighting(highlight),
     theme,
+    EditorView.lineWrapping, // the popover is narrow: wrap long lines instead of scrolling sideways
     EditorView.contentAttributes.of({ "aria-label": props.taId || props.language }),
     EditorView.updateListener.of((u) => {
       if (u.docChanged) {
