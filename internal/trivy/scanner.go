@@ -289,22 +289,27 @@ func (s *Scanner) checkDB(ctx context.Context, trivyImage string, log func(strin
 
 // UpdateDB checks for a newer vulnerability DB now instead of waiting for the next session. It is the
 // same check as before a scan, so Trivy skips the download while the cached DB is still current, and
-// a failed download keeps the cached copy. It returns why the check failed, if it did.
-func (s *Scanner) UpdateDB(parent context.Context, trivyImage string) error {
+// a failed download keeps the cached copy. downloaded is true when Trivy's output said it downloaded
+// one; the error says why the check failed, if it did.
+func (s *Scanner) UpdateDB(parent context.Context, trivyImage string) (downloaded bool, err error) {
 	if _, err := ResolveTrivyImage(trivyImage); err != nil {
-		return err
+		return false, err
 	}
 	ctx, release, err := s.begin(parent)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer release()
 	s.dbMu.Lock()
 	defer s.dbMu.Unlock()
-	if err := s.checkDB(ctx, trivyImage, func(l string) { s.logf("%s", l) }); err != nil {
-		return err
+	log := func(l string) {
+		downloaded = downloaded || strings.Contains(l, "Downloading")
+		s.logf("%s", l)
 	}
-	return s.dbErr
+	if err := s.checkDB(ctx, trivyImage, log); err != nil {
+		return false, err
+	}
+	return downloaded && s.dbErr == nil, s.dbErr
 }
 
 func (s *Scanner) lastDBError() error {

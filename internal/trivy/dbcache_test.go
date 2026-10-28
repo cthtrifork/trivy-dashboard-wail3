@@ -17,6 +17,7 @@ type recEngine struct {
 	mu     sync.Mutex
 	jobs   []TrivyJob
 	dbFail bool
+	dbLine string // logged by a DB check, like Trivy's "Downloading vulnerability DB..."
 }
 
 func (r *recEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(string)) ([]byte, error) {
@@ -25,6 +26,9 @@ func (r *recEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(string)
 	r.mu.Unlock()
 	if r.dbFail && slices.Contains(job.Flags, "--download-db-only") {
 		return nil, errors.New("offline")
+	}
+	if r.dbLine != "" && slices.Contains(job.Flags, "--download-db-only") {
+		log(r.dbLine)
 	}
 	return r.FixtureEngine.RunTrivy(ctx, job, log)
 }
@@ -255,22 +259,26 @@ func TestScanRejectsInvalidIgnoreTextBeforeRunningTrivy(t *testing.T) {
 	}
 }
 
-func TestUpdateDBChecksOnDemandAndKeepsTheCacheOnFailure(t *testing.T) {
+func TestUpdateDBChecksOnDemandReportsDownloadsAndKeepsTheCacheOnFailure(t *testing.T) {
 	r, s := newRec(t)
 	if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.UpdateDB(context.Background(), ""); err != nil {
-		t.Fatal(err)
+	if downloaded, err := s.UpdateDB(context.Background(), ""); err != nil || downloaded {
+		t.Fatalf("a current DB: downloaded = %v, err = %v", downloaded, err)
 	}
 	if n := r.dbJobs(); n != 2 {
 		t.Errorf("db checks = %d, want 2 (the scan's, then the requested one)", n)
 	}
-	r.dbFail = true
-	if err := s.UpdateDB(context.Background(), ""); err == nil {
-		t.Error("a failed check must be reported")
+	r.dbLine = "INFO\t[db] Downloading vulnerability DB..."
+	if downloaded, err := s.UpdateDB(context.Background(), ""); err != nil || !downloaded {
+		t.Errorf("a download must be reported: downloaded = %v, err = %v", downloaded, err)
 	}
-	if err := s.UpdateDB(context.Background(), "--privileged"); err == nil {
+	r.dbFail = true
+	if downloaded, err := s.UpdateDB(context.Background(), ""); err == nil || downloaded {
+		t.Errorf("a failed check must be reported as an error: downloaded = %v, err = %v", downloaded, err)
+	}
+	if _, err := s.UpdateDB(context.Background(), "--privileged"); err == nil {
 		t.Error("an invalid version must be refused")
 	}
 }

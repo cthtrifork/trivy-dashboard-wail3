@@ -145,12 +145,13 @@ async function updateStep(busyMsg, run) {
 // The DB is checked once per session; this checks again now. Trivy downloads only if the cached one is out of date.
 const updateDB = () =>
   updateStep("Checking the vulnerability database…", async () => {
+    let downloaded;
     try {
-      await ScanService.UpdateDB(trivyImageSetting());
+      downloaded = await ScanService.UpdateDB(trivyImageSetting());
     } finally {
       refreshFootprint(); // a download changes the cache size shown in the footer
     }
-    setStatus("Vulnerability database checked.");
+    setStatus(downloaded ? "Downloaded a newer vulnerability database." : "Vulnerability database is up to date (no download reported).");
   });
 
 const checkForUpdates = () =>
