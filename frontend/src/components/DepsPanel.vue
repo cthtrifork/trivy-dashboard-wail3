@@ -1,13 +1,15 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
-import { depsTarget, result, SEVERITIES, SEV_COLOR, sevStyle } from "../store.js";
+import { depsTarget, result, SEVERITIES, SEV_COLOR, sevStyle, showInPriorities, vex, vulns } from "../store.js";
 import { Graph } from "../lib/graph.js";
+import { STATUS_LABEL, suppresses, tierStyle } from "../lib/format.js";
+import Chip from "./Chip.vue";
 import SevBadges from "./SevBadges.vue";
 
 const IMAGE_NODE = "__image__";
 const MAX_NODES = 400;
 
-const dep = reactive({ filter: "", cat: "all", vulnOnly: true, focus: 0, selected: null, labels: false });
+const dep = reactive({ filter: "", cat: "all", vulnOnly: true, focus: 0, selected: null, vuln: null, labels: false });
 // The search box redraws the graph, so wait for a pause in typing before applying it.
 const typed = ref("");
 let typing = 0;
@@ -35,6 +37,19 @@ const shownVulns = computed(() => selectedVulns.value.slice(0, LIST_MAX));
 const LIST_MAX = 100;
 const more = (n) => (n > LIST_MAX ? n - LIST_MAX : 0);
 const count = computed(() => Object.keys(nodes.value).length);
+
+// Each finding's place in the Priorities ranking, for the card under a picked vulnerability. Resolved
+// findings (VEX) are not ranked there, so they count for neither rank nor total.
+const vkey = (v) => v.key + "|" + v.target;
+const TOP = 10; // the Priorities tab's default list length
+const ranking = computed(() => {
+  const byKey = new Map();
+  let n = 0;
+  for (const v of vulns.value) byKey.set(vkey(v), { v, rank: suppresses(vex.value.get(v.key)) ? 0 : ++n });
+  return { byKey, of: n };
+});
+const info = (v) => ranking.value.byKey.get(vkey(v));
+const toPriorities = (v) => showInPriorities(v, { ref: dep.selected, label: `${selectedNode.value.name} ${selectedNode.value.version}` });
 
 const total = (n) => SEVERITIES.reduce((t, s) => t + (n.totalCounts[s] || 0), 0);
 const worst = (counts) => SEVERITIES.find((s) => counts[s]);
@@ -173,6 +188,7 @@ function describe(id) {
 // Select a component. If it is currently filtered out, relax the filters so it shows; the watcher
 // below redraws, and the graph is told afterwards so it can centre on the result.
 async function select(ref, center = false) {
+  if (ref !== dep.selected) dep.vuln = null;
   dep.selected = ref;
   if (ref) {
     if (!visibleRefs().refs.includes(ref)) {
@@ -200,6 +216,7 @@ watch(
 );
 watch(result, () => {
   dep.selected = null;
+  dep.vuln = null;
   depth = null;
   renderGraph();
 });
@@ -268,11 +285,34 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
           Vulnerabilities ({{ selectedVulns.length
           }}{{ total(selectedNode) > selectedVulns.length ? `, ${total(selectedNode)} incl. dependencies` : "" }})
         </h4>
-        <div v-for="v in shownVulns" :key="v.key + '|' + v.target" class="vrow">
-          <span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span>
-          <span class="mono">{{ v.id }}</span>
-          <span class="kv">{{ v.fixed ? `fixed in ${v.fixed}` : "no fix" }}</span>
-        </div>
+        <template v-for="v in shownVulns" :key="vkey(v)">
+          <button
+            type="button"
+            class="vrow vpick"
+            :class="{ sel: dep.vuln === vkey(v) }"
+            :aria-expanded="dep.vuln === vkey(v)"
+            @click="dep.vuln = dep.vuln === vkey(v) ? null : vkey(v)"
+          >
+            <span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span>
+            <span class="mono">{{ v.id }}</span>
+            <span class="kv">{{ v.fixed ? `fixed in ${v.fixed}` : "no fix" }}</span>
+            <span class="caret" aria-hidden="true">{{ dep.vuln === vkey(v) ? "▾" : "›" }}</span>
+          </button>
+          <div v-if="dep.vuln === vkey(v) && info(v)" class="vcard">
+            <div class="vcard-title">{{ v.title || v.id }}</div>
+            <div class="vcard-meta">
+              <span v-if="info(v).rank" class="sev tier" :style="tierStyle(info(v).v.tier)">{{ info(v).v.tier }} {{ info(v).v.priority }}</span>
+              <Chip v-else kind="vex">VEX: {{ STATUS_LABEL[vex.get(v.key).status] }}</Chip>
+              <span v-if="info(v).rank"
+                >Rank <b>#{{ info(v).rank }}</b> of {{ ranking.of }} in Priorities</span
+              >
+              <span v-else>Not ranked while resolved</span>
+            </div>
+            <button type="button" class="link" @click="toPriorities(v)">Show in Priorities →</button>
+            <div v-if="!info(v).rank" class="kv">Opens the Suppressed by VEX list at this finding.</div>
+            <div v-else-if="info(v).rank > TOP" class="kv">Ranked below the top {{ TOP }}; the list widens if it needs to.</div>
+          </div>
+        </template>
         <div v-if="more(selectedVulns.length)" class="kv">…and {{ more(selectedVulns.length) }} more</div>
         <div v-if="!selectedVulns.length" class="kv">none in this package</div>
         <template

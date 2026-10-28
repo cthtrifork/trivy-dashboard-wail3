@@ -57,6 +57,14 @@ export function showInGraph(ref) {
   tab.value = "deps";
 }
 
+// The reverse trip: the Dependencies inspector asks the Priorities tab to show one finding. `from` is the
+// component it was picked on, so Priorities can offer the way back.
+export const prioTarget = ref(null); // { key, from: { ref, label }, seq }
+export function showInPriorities(v, from) {
+  prioTarget.value = { key: v.key + "|" + v.target, from, seq: (prioTarget.value?.seq ?? 0) + 1 };
+  tab.value = "prio";
+}
+
 // The latest scan. Shallow: the dependency graph holds thousands of read-only objects.
 export const result = shallowRef(null);
 // Findings of the latest scan by CVE id, one per VEX key (a finding repeated across image layers counts once),

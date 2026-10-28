@@ -135,5 +135,14 @@ export function useVirtualList(items, { key, estimate = 40, gap = 0, overscan = 
     cancelAnimationFrame(raf);
   });
 
-  return { scroller, rows, before, after, vMeasure };
+  // Bring row `i` to the top of the viewport. Rows never measured are estimated, so once they have
+  // rendered the real element is aligned too.
+  function scrollToIndex(i) {
+    const el = scroller.value;
+    if (!el || i < 0) return;
+    el.scrollTop = offsets.value[i];
+    requestAnimationFrame(() => requestAnimationFrame(() => nodes.get(key(items.value[i], i))?.scrollIntoView({ block: "start" })));
+  }
+
+  return { scroller, rows, before, after, vMeasure, scrollToIndex };
 }
