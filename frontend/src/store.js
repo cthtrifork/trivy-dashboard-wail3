@@ -319,6 +319,24 @@ export function setTag(tag) {
   image.value = joinRef(imageRepo.value, tag);
 }
 
+// scanSettings is every option that changes what a scan reports; credentials are left out because they
+// only decide whether the image can be pulled. A Trivy version that is merely the followed default does
+// not count, so the newest version arriving after a scan does not mark it stale.
+const scanSettings = () =>
+  JSON.stringify([
+    opts.ignoreUnfixed,
+    opts.showSuppressed,
+    opts.ignoreWillNotFix,
+    opts.ignoreNotAffected,
+    opts.markUnderInvestigation,
+    opts.trivyImage === trivyAuto ? "" : opts.trivyImage.trim(),
+    opts.ignorePolicy,
+    opts.ignoreFile,
+  ]);
+const scannedSettings = ref("");
+const settingsChanged = computed(() => !!result.value && scannedSettings.value !== scanSettings());
+export { settingsChanged };
+
 // scanState tells the three situations apart: "new" (nothing scanned), "current" (the shown results are
 // for exactly this input, so Scan is a rescan, e.g. for a floating tag) and "changed" (edited since, not scanned).
 const sameRef = (a, b) => {
@@ -326,7 +344,13 @@ const sameRef = (a, b) => {
     y = splitRef(b);
   return joinRef(x.repo, x.tag) === joinRef(y.repo, y.tag);
 };
-export const scanState = computed(() => (!result.value ? "new" : sameRef(result.value.image, image.value) ? "current" : "changed"));
+// A fourth state, "settings", means the image is the scanned one but an option that changes what Trivy
+// reports was edited since, so Scan is not a plain rescan.
+export const scanState = computed(() => {
+  if (!result.value) return "new";
+  if (!sameRef(result.value.image, image.value)) return "changed";
+  return settingsChanged.value ? "settings" : "current";
+});
 
 // clearAll empties the shown findings and goes back to the single image box (which keeps the reference).
 export function clearAll() {
@@ -382,6 +406,7 @@ export async function runScan() {
   rerank();
   setStatus("Starting scan…", { busy: true });
   const trivyVersion = trivyImageSetting();
+  const settings = scanSettings();
   try {
     const r = await ScanService.Scan({
       image: image.value,
@@ -397,6 +422,7 @@ export async function runScan() {
       markUnderInvestigation: opts.markUnderInvestigation,
     });
     result.value = r;
+    scannedSettings.value = settings;
     rememberTrivyVersion(trivyVersion);
     rememberScan(r);
     remember(image.value.trim(), r);
@@ -435,6 +461,7 @@ async function restoreScan() {
   const saved = lsJSON(RESULT_KEY, null);
   if (saved?.result && saved.forImage === want) {
     result.value = saved.result;
+    scannedSettings.value = scanSettings(); // the options are not saved with the result: assume they match
     const { repo, tag } = splitRef(want);
     enterSplit(repo, tag);
     rerank();

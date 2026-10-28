@@ -23,7 +23,7 @@ One page describing how the UI looks and behaves, so new screens and components 
 ```
 
 - Single window, no routing. The active tab is one `ref`; panels stay mounted and are shown/hidden, so filters and scroll survive tab switches.
-- Header: monospace image input grows to fill; **Scan** is disabled while a scan runs and a red **Cancel** appears next to it. Secondary settings sit in the **Options** popover (260 px wide, right-aligned). **?** opens Help (glossary, configuration).
+- Header: monospace image input grows to fill; **Scan** is disabled while a scan runs and a red **Cancel** appears next to it. Secondary settings sit in the **Options** popover (340 px wide, right-aligned): the finding filters are always visible, and each other setting is a collapsed row that shows its current value (Registry login, Trivy version, Ignore rules, Mark all as under investigation) next to a **Check now** row for the vulnerability database. The Options button shows how many switches are on. **?** opens Help (glossary, configuration).
 - Tabs carry count badges (findings that need attention, vulnerabilities, components). **Log** is pushed to the far right because it is diagnostic.
 - Panels use 12 px / 16 px padding and a 12 px gap between blocks.
 
@@ -122,14 +122,13 @@ Interactions checked by running them:
 - **VEX drawer**: modal docked to the right; header with CVE, severity chip, tier chip and "Full advisory"; plain-language summary with four facts (Attack from, Needs, Impact, Fix); "Applies to" list with Select all; four status buttons; Cancel (ghost) and Save assessment (disabled until a status is chosen).
 - **Help**: centered modal with Glossary and App config tabs.
 
-Options popover contents: Ignore unfixed, registry username, registry password/token, Trivy version, app version with Check for updates.
+Options popover contents: the four finding filters, then collapsible Registry login (username, password/token), Trivy version, Ignore rules (Rego policy, ignore file) and Mark all as under investigation, a vulnerability database check, and the app version with Check for updates.
 
 ## Known inconsistencies
 
 Found while running the UI; not fixed by this sheet.
 
 - **Vulnerabilities CVE links use the browser default blue** (`rgb(0,0,238)`) instead of `--accent`, which is close to unreadable on the dark background. Priorities links use `--accent`. Links should share one style.
-- **Options placeholder is clipped** ("Trivy version or image (default t…") at the 260 px popover width.
 - **At 800 px** the demo banner wraps and the open Options popover covers the right-hand tabs. Usable.
 - **At 500 px** the tab bar is clipped (Compare and Log are off-screen), the page scrolls horizontally, the Priorities toolbar overflows, and the Scoring rules card leaves a large blank gap. 700 px has no horizontal scroll.
 - **Vulnerabilities links** also affected the VEX drawer (CVE link, Full advisory); both are fixed by PR #44 (`a { color: var(--accent) }`).
