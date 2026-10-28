@@ -282,19 +282,11 @@ function tagLoader(target) {
 }
 export const ensureTags = tagLoader(repoTags);
 const loadTrivyTags = tagLoader(trivyTags);
-// trivyNewest is the newest plain version in the Trivy repository ("0.76.1", never the floating
-// "latest" tag), from the backend's semver sort. Empty until the lookup succeeds.
-export const trivyNewest = ref("");
-// ensureTrivyTags loads the tags of the default Trivy repository for the version picker and the newest version.
-export function ensureTrivyTags() {
-  const repo = (mode.value?.trivyImage || "docker.io/aquasec/trivy").split(":")[0];
-  loadTrivyTags(repo);
-  if (!trivyNewest.value)
-    ScanService.LatestTag(repo, "").then(
-      (v) => (trivyNewest.value = v || ""),
-      () => {},
-    );
-}
+// ensureTrivyTags loads the tags of the default Trivy repository for the version picker.
+export const ensureTrivyTags = () => loadTrivyTags((mode.value?.trivyImage || "docker.io/aquasec/trivy").split(":")[0]);
+// trivyNewest is the first tag: ListTags sorts plain versions first, newest first, so it is the newest
+// release ("0.76.1") and not the floating "latest". Empty until the lookup succeeds.
+export const trivyNewest = computed(() => trivyTags.value[0] || "");
 // The field is never left empty: once the newest version is known it is filled in, unless the user
 // has chosen one. It is not saved until the user edits it, so the default keeps following the newest.
 watch(trivyNewest, (v) => {
