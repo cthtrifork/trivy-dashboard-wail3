@@ -141,14 +141,12 @@ async function updateStep(busyMsg, run) {
   }
 }
 
-// The DB is checked once per session; this deletes the cache and downloads the latest one now.
-const updateDB = () => {
-  if (!window.confirm("Delete the cached vulnerability database and download the latest one? This needs network access.")) return;
-  updateStep("Downloading the vulnerability database…", async () => {
+// The DB is checked once per session; this checks again now. Trivy downloads only if the cached one is out of date.
+const updateDB = () =>
+  updateStep("Checking the vulnerability database…", async () => {
     await ScanService.UpdateDB(trivyImageSetting());
-    setStatus("Vulnerability database updated.");
+    setStatus("Vulnerability database checked.");
   });
-};
 
 const checkForUpdates = () =>
   updateStep("Checking for updates…", async () => {
@@ -278,10 +276,10 @@ onMounted(() => {
             class="ghost"
             id="update-db-btn"
             :disabled="scanning || updateBusy"
-            title="Delete the cached vulnerability database and download the latest one"
+            title="Check for a newer vulnerability database now. Trivy downloads one only if the cached copy is out of date."
             @click="updateDB"
           >
-            Update vulnerability database
+            Check vulnerability database
           </button>
           <div class="opts-update">
             <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>

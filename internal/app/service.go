@@ -294,9 +294,8 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 	return res, err
 }
 
-// UpdateDB deletes the cached vulnerability database and downloads the latest one with the given
-// Trivy version (empty means the default). It needs network access: if the download fails the cache
-// stays empty until the next successful scan check.
+// UpdateDB checks for a newer vulnerability database with the given Trivy version (empty means the
+// default). Trivy only downloads when the cached one is out of date, and a failure keeps the cache.
 func (s *ScanService) UpdateDB(trivyImage string) error {
 	return s.scanner.UpdateDB(s.appCtx(), trivyImage)
 }

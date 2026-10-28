@@ -255,24 +255,20 @@ func TestScanRejectsInvalidIgnoreTextBeforeRunningTrivy(t *testing.T) {
 	}
 }
 
-func TestUpdateDBCleansThenDownloadsAndTheNextScanDoesNotCheckAgain(t *testing.T) {
+func TestUpdateDBChecksOnDemandAndKeepsTheCacheOnFailure(t *testing.T) {
 	r, s := newRec(t)
 	if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13"}); err != nil {
 		t.Fatal(err)
 	}
-	r.jobs = nil
 	if err := s.UpdateDB(context.Background(), ""); err != nil {
 		t.Fatal(err)
 	}
-	if len(r.jobs) != 2 || !r.jobs[0].CleanDB || !slices.Contains(r.jobs[1].Flags, "--download-db-only") {
-		t.Fatalf("want a clean job then a download, got %+v", r.jobs)
+	if n := r.dbJobs(); n != 2 {
+		t.Errorf("db checks = %d, want 2 (the scan's, then the requested one)", n)
 	}
-	r.jobs = nil
-	if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13"}); err != nil {
-		t.Fatal(err)
-	}
-	if n := r.dbJobs(); n != 0 {
-		t.Errorf("db checks = %d after an update, want 0", n)
+	r.dbFail = true
+	if err := s.UpdateDB(context.Background(), ""); err == nil {
+		t.Error("a failed check must be reported")
 	}
 	if err := s.UpdateDB(context.Background(), "--privileged"); err == nil {
 		t.Error("an invalid version must be refused")
@@ -293,9 +289,5 @@ func TestRunArgsPassTheDBRepository(t *testing.T) {
 	t.Setenv("TRIVY_DB_REPOSITORY", "mirror.example/db:2")
 	if got := line(); strings.Contains(got, DefaultDBRepository) || !strings.Contains(got, "-e TRIVY_DB_REPOSITORY ") {
 		t.Errorf("the user's mirror must be forwarded from the environment: %s", got)
-	}
-	args, _ := (&PodmanEngine{Cache: "c"}).runArgs(TrivyJob{CleanDB: true}, "n")
-	if got := strings.Join(args, " "); !strings.Contains(got, "clean --vuln-db --cache-dir") || strings.Contains(got, " image ") {
-		t.Errorf("clean job args: %s", got)
 	}
 }

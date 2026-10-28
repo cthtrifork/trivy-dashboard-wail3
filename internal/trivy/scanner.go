@@ -262,7 +262,7 @@ func (s *Scanner) begin(parent context.Context) (context.Context, func(), error)
 // run with --skip-db-update. Trivy only downloads when the DB is past its NextUpdate, so a stale
 // cache is refreshed on the first scan after startup, and a comparison (four scans) checks once.
 // A scan with an existing cache still works offline: a failed check only logs a warning and is
-// retried on the next scan. It returns an error only if ctx was cancelled. UpdateDB forces a new one.
+// retried on the next scan. It returns an error only if ctx was cancelled. UpdateDB checks again on demand.
 func (s *Scanner) ensureDB(ctx context.Context, trivyImage string, log func(string)) error {
 	s.dbMu.Lock()
 	defer s.dbMu.Unlock()
@@ -287,9 +287,9 @@ func (s *Scanner) checkDB(ctx context.Context, trivyImage string, log func(strin
 	return nil
 }
 
-// UpdateDB deletes the cached vulnerability DB and downloads the latest one. Unlike the check before
-// a scan it does not wait for Trivy's NextUpdate. If the download fails the cache stays empty and
-// the error is returned.
+// UpdateDB checks for a newer vulnerability DB now instead of waiting for the next session. It is the
+// same check as before a scan, so Trivy skips the download while the cached DB is still current, and
+// a failed download keeps the cached copy. It returns why the check failed, if it did.
 func (s *Scanner) UpdateDB(parent context.Context, trivyImage string) error {
 	if _, err := ResolveTrivyImage(trivyImage); err != nil {
 		return err
@@ -301,13 +301,7 @@ func (s *Scanner) UpdateDB(parent context.Context, trivyImage string) error {
 	defer release()
 	s.dbMu.Lock()
 	defer s.dbMu.Unlock()
-	log := func(l string) { s.logf("%s", l) }
-	s.logf("Deleting the cached vulnerability database…")
-	if _, err := s.engine().RunTrivy(ctx, TrivyJob{TrivyImage: trivyImage, CleanDB: true}, log); err != nil {
-		return err
-	}
-	s.dbChecked = false
-	if err := s.checkDB(ctx, trivyImage, log); err != nil {
+	if err := s.checkDB(ctx, trivyImage, func(l string) { s.logf("%s", l) }); err != nil {
 		return err
 	}
 	return s.dbErr

@@ -91,7 +91,7 @@ func (f *FixtureEngine) ListTags(context.Context, string) ([]string, error) {
 
 // RunTrivy returns the recording for the image's tag.
 func (f *FixtureEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(string)) ([]byte, error) {
-	if job.CleanDB || slices.Contains(job.Flags, "--download-db-only") {
+	if slices.Contains(job.Flags, "--download-db-only") {
 		return nil, nil // recordings need no vulnerability DB
 	}
 	set, err := f.index()

@@ -103,8 +103,6 @@ type TrivyJob struct {
 	IgnorePolicy string
 	// IgnoreFile is the source of a .trivyignore.yaml for `--ignorefile`; empty means none.
 	IgnoreFile string
-	// CleanDB runs `trivy clean --vuln-db` (deletes the cached vulnerability DB) instead of a scan.
-	CleanDB bool
 }
 
 // Engine is whatever actually runs Trivy and talks to registries.
@@ -250,9 +248,6 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 	// --vuln-severity-source redhat,auto prefers Red Hat severities, then the vendor default.
 	// --disable-telemetry and --offline-scan keep Trivy from phoning home beyond the DB download.
 	trivyArgs := []string{"image", "--cache-dir", cacheMount, "--skip-version-check", "--disable-telemetry", "--offline-scan", "--vuln-severity-source", "redhat,auto"}
-	if job.CleanDB {
-		trivyArgs = []string{"clean", "--vuln-db", "--cache-dir", cacheMount}
-	}
 	// The policy and ignore file travel as environment variables and are written to files inside
 	// the container, so they work with a remote podman too (a bind mount would need the files on
 	// the podman host). The wrapper replaces the image's entrypoint, hence "trivy" below.
