@@ -142,18 +142,12 @@ func TestChangingTrivyImageRechecksDBAndIsUsedByEveryJob(t *testing.T) {
 	if n := r.dbJobs(); n != 2 {
 		t.Errorf("db checks = %d, want 2 (default once, then the new version)", n)
 	}
-	for _, j := range r.jobs {
-		want := DefaultTrivyImage()
-		if len(r.jobs) > 0 && strings.HasSuffix(j.TrivyImage, ":0.99.0") {
-			want = j.TrivyImage
-		}
-		if j.TrivyImage != want || j.TrivyImage == "" {
-			t.Errorf("job %v has TrivyImage %q", j.Flags, j.TrivyImage)
-		}
-	}
 	last := r.jobs[len(r.jobs)-1]
-	if last.TrivyImage != "docker.io/aquasec/trivy:0.99.0" {
+	if last.TrivyImage != "0.99.0" {
 		t.Errorf("last job used %q", last.TrivyImage)
+	}
+	if first := r.jobs[0]; first.TrivyImage != "" {
+		t.Errorf("default jobs must leave the version empty, got %q", first.TrivyImage)
 	}
 }
 
@@ -163,7 +157,7 @@ func TestCompareForwardsTrivyImage(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, j := range r.jobs {
-		if j.TrivyImage != "docker.io/aquasec/trivy:0.99.0" {
+		if j.TrivyImage != "v0.99.0" {
 			t.Errorf("job %v used %q", j.Flags, j.TrivyImage)
 		}
 	}

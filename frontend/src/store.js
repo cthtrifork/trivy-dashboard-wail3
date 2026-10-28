@@ -262,7 +262,7 @@ export const joinRef = (repo, tag) => (!tag ? repo : tag.startsWith("sha256:") ?
 export const imageRepo = ref("");
 export const imageTag = ref("");
 export const repoTags = ref([]); // newest first, as ListTags returns them
-export const trivyTags = ref([]); // the same for the Trivy image option
+export const trivyTags = ref([]); // the same for the Trivy version option
 
 // tagLoader returns a function that loads the registry's tags for a repository into target once;
 // a failed lookup leaves the list empty (tags can still be typed).

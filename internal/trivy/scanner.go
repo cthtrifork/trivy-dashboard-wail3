@@ -29,7 +29,7 @@ type ScanRequest struct {
 	ShowSuppressed  bool `json:"showSuppressed"`
 	ShowWillNotFix  bool `json:"showWillNotFix"`
 	ShowNotAffected bool `json:"showNotAffected"`
-	// TrivyImage selects the Trivy image or version to scan with. Empty means the default.
+	// TrivyImage selects the Trivy version to scan with. Empty means the default.
 	TrivyImage string `json:"trivyImage"`
 	// IgnorePolicy is the source of a Rego policy passed to Trivy's --ignore-policy: findings for
 	// which it defines `ignore` are left out of the report. Empty means none.
@@ -325,10 +325,10 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 		return nil, err
 	}
 	username, password := withDefaultCredentials(image, req.Username, req.Password)
-	job := TrivyJob{Image: image, Username: username, Password: password, TrivyImage: trivyImage}
+	job := TrivyJob{Image: image, Username: username, Password: password, TrivyImage: strings.TrimSpace(req.TrivyImage)}
 	logLine := func(l string) { s.logf("%s", l) }
 
-	if err := s.ensureDB(ctx, trivyImage, logLine); err != nil {
+	if err := s.ensureDB(ctx, job.TrivyImage, logLine); err != nil {
 		return nil, err
 	}
 	s.logf("Scanning %s for vulnerabilities with %s…", image, trivyImage)

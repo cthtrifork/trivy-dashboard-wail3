@@ -11,7 +11,7 @@ func TestDefaultTrivyImageIsPinned(t *testing.T) {
 	if !ok || repo != defaultTrivyRepo {
 		t.Fatalf("default image = %q", img)
 	}
-	if tag == "latest" || !isBareVersion(tag) {
+	if tag == "latest" || !isVersion(tag) {
 		t.Errorf("default must be a pinned version, got tag %q", tag)
 	}
 }
@@ -19,19 +19,16 @@ func TestDefaultTrivyImageIsPinned(t *testing.T) {
 func TestResolveTrivyImage(t *testing.T) {
 	def := DefaultTrivyImage()
 	for in, want := range map[string]string{
-		"":                                  def,
-		"  ":                                def,
-		"0.77.0":                            "docker.io/aquasec/trivy:0.77.0",
-		"nginx":                             "nginx",
-		"v0.77.0":                           "docker.io/aquasec/trivy:0.77.0",
-		"registry.local/mirror/trivy:0.7":   "registry.local/mirror/trivy:0.7",
-		"docker.io/aquasec/trivy@sha256:ab": "docker.io/aquasec/trivy@sha256:ab",
+		"":        def,
+		"  ":      def,
+		"0.77.0":  "docker.io/aquasec/trivy:0.77.0",
+		"v0.77.0": "docker.io/aquasec/trivy:0.77.0",
 	} {
 		if got, err := ResolveTrivyImage(in); err != nil || got != want {
 			t.Errorf("resolve(%q) = %q, %v; want %q", in, got, err, want)
 		}
 	}
-	for _, bad := range []string{"--privileged", "a b", "x\ny"} {
+	for _, bad := range []string{"--privileged", "a b", "x\ny", "nginx", "registry.local/mirror/trivy:0.7", "docker.io/aquasec/trivy@sha256:ab"} {
 		if _, err := ResolveTrivyImage(bad); err == nil {
 			t.Errorf("%q should be rejected", bad)
 		}

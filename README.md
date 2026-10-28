@@ -1,7 +1,7 @@
 # Trivy Scanner (Wails v3)
 
 Desktop app: enter a container image reference, and Trivy runs inside a local
-Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/engine.go`](internal/trivy/engine.go); choose another version or image under **Options → Trivy version or image**).
+Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/engine.go`](internal/trivy/engine.go); choose another version under **Options → Trivy version**).
 
 - **Priorities** – the landing view: a ranked shortlist instead of 150 CVEs, filterable by CVSS severity and by tier. An explainable 0–100 score combines CISA **KEV**, **EPSS**, CVSS severity, attack vector and fix availability. Tiers: Act now / Fix soon / Plan / Monitor. Tuning: [`docs/scoring.md`](docs/scoring.md).
 - **VEX editor** – assess a finding as `affected`, `not_affected`, `fixed` or `under_investigation`, export or import OpenVEX (v0.2.0). Assessments are stored per image repository in `<user config dir>/trivy-scanner/vex.json`; resolved findings are hidden from the shortlist.

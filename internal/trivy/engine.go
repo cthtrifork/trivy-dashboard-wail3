@@ -22,7 +22,7 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
-// defaultTrivyRepo is the repository a bare version in the Trivy image setting refers to.
+// defaultTrivyRepo is the Trivy repository; the Trivy version setting only picks a tag of it.
 const defaultTrivyRepo = "docker.io/aquasec/trivy"
 
 // defaultTrivyImage is the Trivy image scans run with unless the user picks another version or
@@ -34,10 +34,9 @@ const defaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
 // DefaultTrivyImage is the Trivy image used when the "Trivy image" setting is empty.
 func DefaultTrivyImage() string { return defaultTrivyImage }
 
-// isBareVersion reports whether v is just a version ("0.77.0", "v0.77.0"), not an image reference.
-// A name such as "nginx" is not a version, and anything with a registry, path, tag or digest
-// separator is a reference.
-func isBareVersion(v string) bool {
+// isVersion reports whether v parses as a version ("0.77.0", "v0.77.0"); anything with a registry,
+// path, tag or digest separator is an image reference, not a version.
+func isVersion(v string) bool {
 	if strings.ContainsAny(v, "/:@") {
 		return false
 	}
@@ -45,20 +44,18 @@ func isBareVersion(v string) bool {
 	return err == nil
 }
 
-// ResolveTrivyImage turns the "Trivy image" setting into an image reference: empty means the
-// default, a bare version ("0.77.0", "v0.77.0") means that tag of the default repository, and
-// anything else is taken as a full reference. Flag-like or whitespace values are refused.
+// ResolveTrivyImage turns the "Trivy version" setting into an image reference: empty means the
+// default image, a version ("0.77.0", "v0.77.0") means that tag of the default repository. The
+// repository itself cannot be changed.
 func ResolveTrivyImage(v string) (string, error) {
 	v = strings.TrimSpace(v)
 	switch {
 	case v == "":
 		return DefaultTrivyImage(), nil
-	case strings.HasPrefix(v, "-") || strings.ContainsAny(v, " \t\r\n"):
-		return "", fmt.Errorf("%q is not a valid Trivy image", v)
-	case isBareVersion(v):
+	case isVersion(v):
 		return defaultTrivyRepo + ":" + strings.TrimPrefix(v, "v"), nil
 	}
-	return v, nil
+	return "", fmt.Errorf("%q is not a valid Trivy version", v)
 }
 
 const (
@@ -106,7 +103,7 @@ func loadEnv() Env {
 // TrivyJob is one `trivy image` invocation.
 type TrivyJob struct {
 	Image string // image reference to scan; empty for --download-db-only
-	// TrivyImage is the scanner image (reference or bare version); empty means the engine's default.
+	// TrivyImage is the Trivy version to run (see ResolveTrivyImage); empty means the engine's default.
 	TrivyImage string
 	Flags      []string // e.g. --format json --scanners vuln
 	Username   string   // optional registry credentials
@@ -133,8 +130,8 @@ type Engine interface {
 type PodmanEngine struct {
 	// Bin is the podman binary; defaults to $PODMAN or "podman".
 	Bin string
-	// Image is the Trivy image to run when a job does not name one (see TrivyJob.TrivyImage):
-	// a reference or a bare version. Empty means defaultTrivyImage.
+	// Image is the Trivy version to run when a job does not name one (see TrivyJob.TrivyImage).
+	// Empty means defaultTrivyImage.
 	Image string
 	// Cache is the Trivy cache source mounted into the scanner: a podman volume name or an
 	// absolute directory on the machine running podman. Defaults to $TRIVY_SCANNER_CACHE, then

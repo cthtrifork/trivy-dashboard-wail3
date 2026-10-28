@@ -47,7 +47,7 @@ type Mode struct {
 	Repo     string `json:"repo"`  // example repository for Compare
 	TagA     string `json:"tagA"`
 	TagB     string `json:"tagB"`
-	// TrivyImage is the default Trivy image, shown as the placeholder of the Options field.
+	// TrivyImage is the default Trivy image, the fallback for the Options field.
 	TrivyImage string `json:"trivyImage"`
 	// RegistryToken is true when GITHUB_TOKEN is set; the token itself never leaves Go.
 	// RegistryUser is the login that goes with it. Both only prefill the Options fields (ghcr.io).

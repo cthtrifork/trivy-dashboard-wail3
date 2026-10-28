@@ -101,7 +101,7 @@ function imageKey(ev) {
 }
 const sevTag = (n, sev) => ({ n, sev, style: sevStyle(sev) });
 
-const trivyPlaceholder = computed(() => trivyNewest.value || mode.value?.trivyImage?.split(":").pop() || "Trivy version or image");
+const trivyPlaceholder = computed(() => trivyNewest.value || mode.value?.trivyImage?.split(":").pop() || "Trivy version");
 const meta = computed(() => (result.value ? `${result.value.image}${result.value.os ? " · " + result.value.os : ""}` : ""));
 const counts = computed(() => ({
   vulns: result.value?.vulnerabilities.length ?? 0,
@@ -215,9 +215,9 @@ onMounted(() => {
             id="trivy-image"
             v-model="opts.trivyImage"
             :tags="trivyTags"
-            label="Trivy version or image"
+            label="Trivy version"
             :placeholder="trivyPlaceholder"
-            title="Empty uses the default version. Enter a version such as 0.77.0, or a full image reference."
+            title="Empty uses the newest version found. Enter a version such as 0.77.0."
             @update:model-value="saveTrivyImage"
             @open="ensureTrivyTags"
           />

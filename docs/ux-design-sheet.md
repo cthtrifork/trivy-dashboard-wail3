@@ -122,7 +122,7 @@ Interactions checked by running them:
 - **VEX drawer**: modal docked to the right; header with CVE, severity chip, tier chip and "Full advisory"; plain-language summary with four facts (Attack from, Needs, Impact, Fix); "Applies to" list with Select all; four status buttons; Cancel (ghost) and Save assessment (disabled until a status is chosen).
 - **Help**: centered modal with Glossary and App config tabs.
 
-Options popover contents: Ignore unfixed, registry username, registry password/token, Trivy version or image, app version with Check for updates.
+Options popover contents: Ignore unfixed, registry username, registry password/token, Trivy version, app version with Check for updates.
 
 ## Known inconsistencies
 
