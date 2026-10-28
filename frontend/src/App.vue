@@ -355,13 +355,13 @@ onMounted(() => {
                   />
               <div class="opts-label">Vulnerability database</div>
               <div class="opts-row-plain">
-                <span class="kv">Trivy downloads one only if the cached copy is out of date.</span>
+                <span class="kv">Downloads a new database only when the cached one is outdated.</span>
                 <button
                   type="button"
                   class="ghost"
                   id="update-db-btn"
                   :disabled="scanning || updateBusy"
-                  title="Check for a newer vulnerability database now. Trivy downloads one only if the cached copy is out of date."
+                  title="Check for a newer vulnerability database now. Downloads a new database only when the cached one is outdated."
                   @click="updateDB"
                 >
                   Check now
