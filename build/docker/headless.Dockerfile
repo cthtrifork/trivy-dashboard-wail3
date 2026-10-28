@@ -19,17 +19,12 @@ RUN go build -tags server,production -trimpath -ldflags "-w -s -X github.com/cth
 
 # The app only needs the podman *client*: scans run on the host's podman through its API socket.
 # Upstream's static podman-remote runs on distroless (Alpine's is linked against musl). Keep
-# PODMAN_VERSION close to the host's podman, and update the checksums with it.
+# PODMAN_VERSION close to the host's podman; Renovate bumps it.
 FROM docker.io/library/alpine:3.24 AS podman
+# renovate: datasource=github-releases depName=containers/podman
 ARG PODMAN_VERSION=v6.1.4
 ARG TARGETARCH
-RUN case "$TARGETARCH" in \
-      amd64) sha=af1f85c22214088a0a9986b9c82b4c9b5b74eda8ecaa6c8cca82b1a63f339b4a ;; \
-      arm64) sha=1d7c2a3241b56effa68c724359fb30e603a802699b2b7b20fe2fae5ff6819601 ;; \
-      *) echo "unsupported arch: $TARGETARCH" >&2; exit 1 ;; \
-    esac \
- && wget -q -O /tmp/podman.tgz "https://github.com/containers/podman/releases/download/${PODMAN_VERSION}/podman-remote-static-linux_${TARGETARCH}.tar.gz" \
- && echo "$sha  /tmp/podman.tgz" | sha256sum -c - \
+RUN wget -q -O /tmp/podman.tgz "https://github.com/containers/podman/releases/download/${PODMAN_VERSION}/podman-remote-static-linux_${TARGETARCH}.tar.gz" \
  && tar -xzf /tmp/podman.tgz -C /tmp \
  && install -m 0755 "/tmp/bin/podman-remote-static-linux_${TARGETARCH}" /podman \
  && install -d -m 0777 /data-skel
