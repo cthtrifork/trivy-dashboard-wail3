@@ -140,8 +140,6 @@ export class CompareRequest {
         }
         if (!("ignoreStatus" in $$source)) {
             /**
-             * IgnoreStatus is the list of vendor statuses passed to --ignore-status. nil means the default
-             * (will_not_fix and not_affected); an empty, non-nil list ignores none.
              * @member
              * @type {string[]}
              */
@@ -157,10 +155,10 @@ export class CompareRequest {
      * @returns {CompareRequest}
      */
     static createFrom($$source = {}) {
-        const $$createField_ignoreStatus = $$createType6;
+        const $$createField10_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ignoreStatus" in $$parsedSource) {
-            $$parsedSource["ignoreStatus"] = $$createField_ignoreStatus($$parsedSource["ignoreStatus"]);
+            $$parsedSource["ignoreStatus"] = $$createField10_0($$parsedSource["ignoreStatus"]);
         }
         return new CompareRequest(/** @type {Partial<CompareRequest>} */($$parsedSource));
     }
@@ -244,13 +242,13 @@ export class CompareResult {
      * @returns {CompareResult}
      */
     static createFrom($$source = {}) {
-        const $$createField0_0 = $$createType0;
-        const $$createField1_0 = $$createType0;
-        const $$createField2_0 = $$createType2;
-        const $$createField3_0 = $$createType4;
-        const $$createField4_0 = $$createType5;
-        const $$createField5_0 = $$createType5;
-        const $$createField6_0 = $$createType5;
+        const $$createField0_0 = $$createType1;
+        const $$createField1_0 = $$createType1;
+        const $$createField2_0 = $$createType3;
+        const $$createField3_0 = $$createType5;
+        const $$createField4_0 = $$createType6;
+        const $$createField5_0 = $$createType6;
+        const $$createField6_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("a" in $$parsedSource) {
             $$parsedSource["a"] = $$createField0_0($$parsedSource["a"]);
@@ -338,7 +336,7 @@ export class CompareSide {
      * @returns {CompareSide}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType5;
+        const $$createField2_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("counts" in $$parsedSource) {
             $$parsedSource["counts"] = $$createField2_0($$parsedSource["counts"]);
@@ -408,7 +406,7 @@ export class Component {
      * @returns {Component}
      */
     static createFrom($$source = {}) {
-        const $$createField4_0 = $$createType6;
+        const $$createField4_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("licenses" in $$parsedSource) {
             $$parsedSource["licenses"] = $$createField4_0($$parsedSource["licenses"]);
@@ -519,11 +517,11 @@ export class DepNode {
      * @returns {DepNode}
      */
     static createFrom($$source = {}) {
-        const $$createField6_0 = $$createType6;
-        const $$createField7_0 = $$createType6;
+        const $$createField6_0 = $$createType0;
+        const $$createField7_0 = $$createType0;
         const $$createField8_0 = $$createType7;
-        const $$createField9_0 = $$createType5;
-        const $$createField10_0 = $$createType5;
+        const $$createField9_0 = $$createType6;
+        const $$createField10_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("children" in $$parsedSource) {
             $$parsedSource["children"] = $$createField6_0($$parsedSource["children"]);
@@ -661,7 +659,7 @@ export class EnrichInfo {
      * @returns {EnrichInfo}
      */
     static createFrom($$source = {}) {
-        const $$createField3_0 = $$createType6;
+        const $$createField3_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("warnings" in $$parsedSource) {
             $$parsedSource["warnings"] = $$createField3_0($$parsedSource["warnings"]);
@@ -728,7 +726,7 @@ export class ImportReport {
      * @returns {ImportReport}
      */
     static createFrom($$source = {}) {
-        const $$createField3_0 = $$createType6;
+        const $$createField3_0 = $$createType0;
         const $$createField4_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("warnings" in $$parsedSource) {
@@ -1218,7 +1216,7 @@ export class SBOMSummary {
      */
     static createFrom($$source = {}) {
         const $$createField2_0 = $$createType13;
-        const $$createField3_0 = $$createType5;
+        const $$createField3_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("binaries" in $$parsedSource) {
             $$parsedSource["binaries"] = $$createField2_0($$parsedSource["binaries"]);
@@ -1269,8 +1267,7 @@ export class ScanRequest {
         }
         if (!("showSuppressed" in $$source)) {
             /**
-             * Findings Trivy hides by default. These are "show" flags so the zero value is the default:
-             * suppressed (VEX/ignore-file) findings and the will_not_fix and not_affected statuses stay out.
+             * ShowSuppressed includes findings suppressed by VEX or ignore files, which Trivy hides by default.
              * @member
              * @type {boolean}
              */
@@ -1330,10 +1327,10 @@ export class ScanRequest {
      * @returns {ScanRequest}
      */
     static createFrom($$source = {}) {
-        const $$createField_ignoreStatus = $$createType6;
+        const $$createField5_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ignoreStatus" in $$parsedSource) {
-            $$parsedSource["ignoreStatus"] = $$createField_ignoreStatus($$parsedSource["ignoreStatus"]);
+            $$parsedSource["ignoreStatus"] = $$createField5_0($$parsedSource["ignoreStatus"]);
         }
         return new ScanRequest(/** @type {Partial<ScanRequest>} */($$parsedSource));
     }
@@ -1446,12 +1443,12 @@ export class ScanResult {
      */
     static createFrom($$source = {}) {
         const $$createField2_0 = $$createType15;
-        const $$createField3_0 = $$createType5;
+        const $$createField3_0 = $$createType6;
         const $$createField4_0 = $$createType17;
-        const $$createField5_0 = $$createType5;
+        const $$createField5_0 = $$createType6;
         const $$createField7_0 = $$createType19;
         const $$createField8_0 = $$createType22;
-        const $$createField9_0 = $$createType6;
+        const $$createField9_0 = $$createType0;
         const $$createField11_0 = $$createType23;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("vulnerabilities" in $$parsedSource) {
@@ -1908,13 +1905,13 @@ export class Vulnerability {
 }
 
 // Private type creation functions
-const $$createType0 = CompareSide.createFrom;
-const $$createType1 = VulnChange.createFrom;
-const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = PkgChange.createFrom;
-const $$createType4 = $Create.Array($$createType3);
-const $$createType5 = $Create.Map($Create.Any, $Create.Any);
-const $$createType6 = $Create.Array($Create.Any);
+const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = CompareSide.createFrom;
+const $$createType2 = VulnChange.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = PkgChange.createFrom;
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = $Create.Map($Create.Any, $Create.Any);
 const $$createType7 = $Create.Array($Create.Any);
 const $$createType8 = DocMeta.createFrom;
 const $$createType9 = Rules.createFrom;
