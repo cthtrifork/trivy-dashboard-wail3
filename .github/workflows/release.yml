@@ -97,7 +97,7 @@ jobs:
             echo "::error::Tagged commit is not on main"; exit 1
           fi
 
-      - uses: ./.github/actions/linux-build-deps
+      - uses: $/.github/actions/linux-build-deps
 
         with:
 
@@ -108,7 +108,7 @@ jobs:
         with:
           go-version: '1.26'
           check-latest: true
-          cache: true
+          cache: false # publishing job: a restored cache could poison the release artifacts
           cache-dependency-path: go.sum
 
       - name: Toolchain versions

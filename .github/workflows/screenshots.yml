@@ -70,11 +70,11 @@ jobs:
       # The runner image already has Google Chrome, so install only the Playwright client library
       # (playwright-core, no browser download) and drive that Chrome.
       - name: Install Playwright client
-        run: npm install --no-save --no-package-lock "playwright-core@${PLAYWRIGHT_VERSION}"
+        run: npm install --no-save --no-package-lock "playwright-core@${PLAYWRIGHT_VERSION}" # zizmor: ignore[adhoc-packages] exact version pinned in env
 
       # scripts/screenshots.mjs pins Inter for the UI; DejaVu Sans Mono is the monospace default.
       - name: Install fonts
-        uses: ./.github/actions/linux-build-deps
+        uses: $/.github/actions/linux-build-deps
         with:
           packages: fonts-inter fonts-dejavu-core
 

@@ -44,6 +44,8 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+          # The credentials stay: a later step pushes the images to the PR branch.
+          persist-credentials: true # zizmor: ignore[artipacked]
 
       # `paths` above matches the whole PR against its base, so on a later push check that this
       # push itself touched the graph code. Keep this list in step with `paths`.
@@ -79,12 +81,12 @@ jobs:
       # (playwright-core, no browser download) and drive that Chrome.
       - name: Install Playwright client
         if: steps.changed.outputs.render
-        run: npm install --no-save --no-package-lock "playwright-core@${PLAYWRIGHT_VERSION}"
+        run: npm install --no-save --no-package-lock "playwright-core@${PLAYWRIGHT_VERSION}" # zizmor: ignore[adhoc-packages] exact version pinned in env
 
       # scripts/screenshots.mjs pins Inter for the UI; DejaVu Sans Mono is the monospace default.
       - name: Install fonts
         if: steps.changed.outputs.render
-        uses: ./.github/actions/linux-build-deps
+        uses: $/.github/actions/linux-build-deps
         with:
           packages: fonts-inter fonts-dejavu-core
 

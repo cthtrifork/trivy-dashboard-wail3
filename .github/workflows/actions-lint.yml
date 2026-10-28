@@ -1,0 +1,75 @@
+name: Actions lint
+
+# Static checks on the workflows themselves:
+#   - zizmor finds security problems in workflows and composite actions (injection, excessive
+#     permissions, cache poisoning, unpinned or impostor action refs, ...).
+#   - gh-pin-actions checks that every `uses:` is pinned to a commit SHA with a version comment.
+# They run when workflow, action or Dependabot files change, and weekly, because new zizmor audits
+# and advisories appear without any change here. They use a paths filter, so do not mark them as
+# required checks.
+on:
+  pull_request:
+    paths:
+      - .github/**
+  push:
+    branches: [main]
+    paths:
+      - .github/**
+  schedule:
+    - cron: '41 5 * * 1' # Mondays 05:41 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: actions-lint-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Findings fail the job here instead of going to code scanning, which
+      # needs Advanced Security on private repositories. The token lets it run the online audits.
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        with:
+          advanced-security: false
+          token: ${{ github.token }}
+
+  pin-actions:
+    name: pin actions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Rewrites every unpinned `uses:` in .github/workflows in place (already pinned ones are left
+      # alone), so any diff means a workflow references a tag or branch instead of a SHA.
+      - name: Pin actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh extension install amenocal/gh-pin-actions --pin v0.1.0
+          gh pin-actions workflows --overwrite
+
+      - name: Fail on unpinned actions
+        run: |
+          if ! git diff --exit-code -- .github/workflows; then
+            echo "::error::Unpinned actions found. Run 'gh pin-actions workflows --overwrite' and commit the result."
+            exit 1
+          fi
+          if [ -n "$(git ls-files --others --exclude-standard -- .github/workflows)" ]; then
+            git ls-files --others --exclude-standard -- .github/workflows
+            echo "::error::gh pin-actions left unexpected files in .github/workflows."
+            exit 1
+          fi
