@@ -8,10 +8,13 @@ name: Renovate
 #   - on a pull request that changes the config or this workflow: a dry run, which writes nothing and
 #     shows what Renovate would do on the PR's branch in the job summary (the full debug log is in
 #     the step output). Read it to check a config change.
-# PRs opened with the default GITHUB_TOKEN do not start other workflows, so CI would not run on them
-# and an automerge would have no checks to wait for. Add a RENOVATE_TOKEN secret (a fine-grained PAT
-# or a GitHub App token with contents, pull requests and issues write), and require the CI checks in
-# branch protection. The workflow uses the secret when it exists.
+# The real run authenticates as a GitHub App (renovatebot/github-action "Example with GitHub App"),
+# not with GITHUB_TOKEN: PRs opened with GITHUB_TOKEN do not start other workflows, so CI would not run
+# on them and an automerge would have no checks to wait for. Setup: create a GitHub App with the
+# permissions below, install it on this repository, then add the repository variable
+# RENOVATE_APP_CLIENT_ID and the secret RENOVATE_APP_PRIVATE_KEY (the downloaded .pem). Also require
+# the CI checks in branch protection. App permissions (repository): Contents, Pull requests, Issues
+# and Workflows read & write; Checks, Commit statuses and Dependabot alerts read.
 on:
   pull_request:
     paths:
@@ -93,30 +96,37 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
-      contents: write # push the update branches
-      pull-requests: write # open and update the update PRs
-      issues: write # the dependency dashboard issue
+      contents: read # check out the config; Renovate itself uses the GitHub App token below
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Warn when CI cannot run on the update PRs
-        env:
-          HAS_RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN != '' }}
-        run: |
-          if [ "$HAS_RENOVATE_TOKEN" != true ]; then
-            echo "::warning::RENOVATE_TOKEN is not set. Update PRs opened with GITHUB_TOKEN do not start CI, so automerge has no checks to wait for. See the header of renovate.yml."
-          fi
+      # A short-lived installation token, limited to the permissions listed here.
+      - name: Get a GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          permission-contents: write # push the update branches
+          permission-pull-requests: write # open and update the update PRs
+          permission-issues: write # the dependency dashboard issue
+          permission-workflows: write # update files under .github/workflows
+          permission-checks: read # CI results, for automerge
+          permission-statuses: read # CI results, for automerge
+          permission-vulnerability-alerts: read # GitHub's security alerts
 
       - name: Renovate
         uses: renovatebot/github-action@2804199d260ad00c1fae0e9e842888369391c776 # v46.3.10
         with:
           configurationFile: .github/renovate.json5
-          token: ${{ secrets.RENOVATE_TOKEN || github.token }}
+          token: ${{ steps.app-token.outputs.token }}
           renovate-version: '44' # Renovate's github-actions manager updates this itself
         env:
           LOG_LEVEL: info
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_ONBOARDING: 'false'
           RENOVATE_REQUIRE_CONFIG: ignored
+          # An installation token cannot ask GitHub who it is, so name the bot (to recognise its own PRs).
+          RENOVATE_USERNAME: ${{ steps.app-token.outputs.app-slug }}[bot]

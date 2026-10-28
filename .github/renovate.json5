@@ -14,14 +14,17 @@
   minimumReleaseAge: "2 days",
   internalChecksFilter: "strict",
   postUpdateOptions: ["gomodTidy"],
+  // Commits go through GitHub's API as the GitHub App, so they are verified (signed) without a key.
+  platformCommit: "enabled",
 
   // The dependency dashboard issue (needs issues: write, which the real run has).
   dependencyDashboard: true,
   dependencyDashboardTitle: "Dependency Dashboard",
   dependencyDashboardLabels: ["dependencies"],
 
-  // Security advisories from OSV.dev. GitHub's own alerts are not readable with the workflow's
-  // GITHUB_TOKEN ("Cannot access vulnerability alerts" in the dry run), OSV needs no token.
+  // Security advisories from OSV.dev as well as GitHub's own alerts. The dry run runs with the
+  // workflow's GITHUB_TOKEN, which cannot read the alerts ("Cannot access vulnerability alerts"); the
+  // real run's GitHub App token can.
   osvVulnerabilityAlerts: true,
   vulnerabilityAlerts: {
     labels: ["dependencies", "security"],
@@ -31,7 +34,7 @@
   packageRules: [
     {
       // Patch and digest updates merge by themselves once CI is green. Only meaningful when CI runs
-      // on Renovate's PRs, which needs a RENOVATE_TOKEN secret (see renovate.yml), and with branch
+      // on Renovate's PRs, which the GitHub App token makes happen (see renovate.yml), and with branch
       // protection requiring the CI checks: without them nothing stands between a PR and the merge.
       matchUpdateTypes: ["patch", "digest"],
       automerge: true,
