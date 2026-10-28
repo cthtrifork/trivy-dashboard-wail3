@@ -264,7 +264,7 @@ onMounted(() => {
                   Fixable only
                 </button>
               </div>
-              <label class="opts-switch" title="Include findings suppressed by VEX or ignore files"
+              <label class="opts-switch" title="Include findings left out by your ignore policy or ignore file"
                 ><span>Include suppressed <code>--show-suppressed</code></span><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed"
               /></label>
               <div class="opts-label">Hide vendor statuses <code>--ignore-status</code></div>
