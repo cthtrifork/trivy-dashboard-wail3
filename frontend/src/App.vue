@@ -107,8 +107,23 @@ const sevTag = (n, sev) => ({ n, sev, style: sevStyle(sev) });
 const trivyPlaceholder = computed(() => trivyNewest.value || mode.value?.trivyImage?.split(":").pop() || "Trivy version");
 // What the Options popover shows without opening a section.
 const activeCount = computed(
-  () => [opts.ignoreUnfixed, opts.showSuppressed, opts.ignoreWillNotFix, opts.ignoreNotAffected, opts.markUnderInvestigation].filter(Boolean).length,
+  () => [opts.ignoreUnfixed, opts.showSuppressed, opts.markUnderInvestigation].filter(Boolean).length + opts.ignoreStatus.length,
 );
+const VENDOR_STATUSES = [
+  { id: "will_not_fix", hint: "The vendor will not fix it" },
+  { id: "not_affected", hint: "The vendor says the package is not affected" },
+  { id: "affected", hint: "Affected, no fix yet" },
+  { id: "fixed", hint: "Already fixed in this version" },
+  { id: "under_investigation", hint: "The vendor is still looking into it" },
+  { id: "fix_deferred", hint: "A fix is planned for later" },
+  { id: "end_of_life", hint: "The package is end of life" },
+  { id: "unknown", hint: "No status reported" },
+];
+const toggleStatus = (id) => {
+  const i = opts.ignoreStatus.indexOf(id);
+  if (i < 0) opts.ignoreStatus.push(id);
+  else opts.ignoreStatus.splice(i, 1);
+};
 const registrySummary = computed(() => opts.username.trim() || (mode.value?.registryToken ? mode.value.registryUser + " (token)" : "not set"));
 const ignoreSummary = computed(() => [opts.ignorePolicy.trim() && "Rego", opts.ignoreFile.trim() && "ignore file"].filter(Boolean).join(" + ") || "none");
 const meta = computed(() => (result.value ? `${result.value.image}${result.value.os ? " · " + result.value.os : ""}` : ""));
@@ -231,14 +246,29 @@ onMounted(() => {
             <label title="--show-suppressed: include findings suppressed by VEX or ignore files"
               ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Include suppressed (VEX / ignore file)</label
             >
-            <div class="opts-label opts-gap" title="--ignore-status">Hide vendor statuses</div>
-            <label title="Hide findings the vendor will not fix"
-              ><input type="checkbox" id="ignore-will-not-fix" v-model="opts.ignoreWillNotFix" /> will_not_fix</label
-            >
-            <label title="Hide findings the vendor says do not affect the package"
-              ><input type="checkbox" id="ignore-not-affected" v-model="opts.ignoreNotAffected" /> not_affected</label
-            >
             <div class="opts-secs">
+              <details class="opts-sec" id="opts-status">
+                <summary>
+                  Hide vendor statuses<span class="opts-val">{{ opts.ignoreStatus.length ? opts.ignoreStatus.join(", ") : "none" }}</span>
+                </summary>
+                <div class="opts-sec-body">
+                  <div class="chips">
+                    <button
+                      v-for="st in VENDOR_STATUSES"
+                      :key="st.id"
+                      type="button"
+                      class="chip"
+                      :class="{ on: opts.ignoreStatus.includes(st.id) }"
+                      :aria-pressed="opts.ignoreStatus.includes(st.id)"
+                      :title="st.hint"
+                      @click="toggleStatus(st.id)"
+                    >
+                      {{ st.id }}
+                    </button>
+                  </div>
+                  <span class="kv"><code>--ignore-status</code>: highlighted statuses are hidden.</span>
+                </div>
+              </details>
               <details class="opts-sec" id="opts-registry">
                 <summary>Registry login<span class="opts-val">{{ registrySummary }}</span></summary>
                 <div class="opts-sec-body">

@@ -170,8 +170,23 @@ header {
   color: var(--mute);
   font-size: 12px;
 }
-.opts-gap {
-  margin-top: 4px;
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.opts-body .chip {
+  padding: 3px 10px;
+  color: var(--mute);
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.opts-body .chip.on {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 .seg-field {
   margin: 0;

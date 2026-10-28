@@ -24,11 +24,11 @@ type ScanRequest struct {
 	Username      string `json:"username"`
 	Password      string `json:"password"`
 	IgnoreUnfixed bool   `json:"ignoreUnfixed"`
-	// Findings Trivy hides by default. These are "show" flags so the zero value is the default:
-	// suppressed (VEX/ignore-file) findings and the will_not_fix and not_affected statuses stay out.
-	ShowSuppressed  bool `json:"showSuppressed"`
-	ShowWillNotFix  bool `json:"showWillNotFix"`
-	ShowNotAffected bool `json:"showNotAffected"`
+	// ShowSuppressed includes findings suppressed by VEX or ignore files, which Trivy hides by default.
+	ShowSuppressed bool `json:"showSuppressed"`
+	// IgnoreStatus is the list of vendor statuses passed to --ignore-status. nil means the default
+	// (will_not_fix and not_affected); an empty, non-nil list ignores none.
+	IgnoreStatus []string `json:"ignoreStatus"`
 	// TrivyImage selects the Trivy version to scan with. Empty means the default.
 	TrivyImage string `json:"trivyImage"`
 	// IgnorePolicy is the source of a Rego policy passed to Trivy's --ignore-policy: findings for
@@ -42,16 +42,15 @@ type ScanRequest struct {
 	MarkUnderInvestigation bool `json:"markUnderInvestigation"`
 }
 
-// ignoreStatus is the --ignore-status value: will_not_fix and not_affected unless shown.
+// DefaultIgnoreStatus is what --ignore-status gets when the request does not say.
+var DefaultIgnoreStatus = []string{"will_not_fix", "not_affected"}
+
+// ignoreStatus is the --ignore-status value.
 func (r ScanRequest) ignoreStatus() string {
-	var ignore []string
-	if !r.ShowWillNotFix {
-		ignore = append(ignore, "will_not_fix")
+	if r.IgnoreStatus == nil {
+		return strings.Join(DefaultIgnoreStatus, ",")
 	}
-	if !r.ShowNotAffected {
-		ignore = append(ignore, "not_affected")
-	}
-	return strings.Join(ignore, ",")
+	return strings.Join(r.IgnoreStatus, ",")
 }
 
 // Vulnerability is one finding, flattened from trivy's JSON report.

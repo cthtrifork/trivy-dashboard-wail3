@@ -138,19 +138,14 @@ export class CompareRequest {
              */
             this["showSuppressed"] = false;
         }
-        if (!("showWillNotFix" in $$source)) {
+        if (!("ignoreStatus" in $$source)) {
             /**
+             * IgnoreStatus is the list of vendor statuses passed to --ignore-status. nil means the default
+             * (will_not_fix and not_affected); an empty, non-nil list ignores none.
              * @member
-             * @type {boolean}
+             * @type {string[]}
              */
-            this["showWillNotFix"] = false;
-        }
-        if (!("showNotAffected" in $$source)) {
-            /**
-             * @member
-             * @type {boolean}
-             */
-            this["showNotAffected"] = false;
+            this["ignoreStatus"] = [];
         }
 
         Object.assign(this, $$source);
@@ -162,7 +157,11 @@ export class CompareRequest {
      * @returns {CompareRequest}
      */
     static createFrom($$source = {}) {
+        const $$createField_ignoreStatus = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("ignoreStatus" in $$parsedSource) {
+            $$parsedSource["ignoreStatus"] = $$createField_ignoreStatus($$parsedSource["ignoreStatus"]);
+        }
         return new CompareRequest(/** @type {Partial<CompareRequest>} */($$parsedSource));
     }
 }
@@ -1277,19 +1276,14 @@ export class ScanRequest {
              */
             this["showSuppressed"] = false;
         }
-        if (!("showWillNotFix" in $$source)) {
+        if (!("ignoreStatus" in $$source)) {
             /**
+             * IgnoreStatus is the list of vendor statuses passed to --ignore-status. nil means the default
+             * (will_not_fix and not_affected); an empty, non-nil list ignores none.
              * @member
-             * @type {boolean}
+             * @type {string[]}
              */
-            this["showWillNotFix"] = false;
-        }
-        if (!("showNotAffected" in $$source)) {
-            /**
-             * @member
-             * @type {boolean}
-             */
-            this["showNotAffected"] = false;
+            this["ignoreStatus"] = [];
         }
         if (!("trivyImage" in $$source)) {
             /**
@@ -1336,7 +1330,11 @@ export class ScanRequest {
      * @returns {ScanRequest}
      */
     static createFrom($$source = {}) {
+        const $$createField_ignoreStatus = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("ignoreStatus" in $$parsedSource) {
+            $$parsedSource["ignoreStatus"] = $$createField_ignoreStatus($$parsedSource["ignoreStatus"]);
+        }
         return new ScanRequest(/** @type {Partial<ScanRequest>} */($$parsedSource));
     }
 }

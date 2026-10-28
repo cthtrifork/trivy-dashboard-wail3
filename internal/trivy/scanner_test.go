@@ -131,9 +131,9 @@ func TestScanFlagsHideNoiseByDefault(t *testing.T) {
 		want string
 	}{
 		{ScanRequest{}, "will_not_fix,not_affected"},
-		{ScanRequest{ShowWillNotFix: true}, "not_affected"},
-		{ScanRequest{ShowNotAffected: true}, "will_not_fix"},
-		{ScanRequest{ShowWillNotFix: true, ShowNotAffected: true}, ""},
+		{ScanRequest{IgnoreStatus: []string{"not_affected"}}, "not_affected"},
+		{ScanRequest{IgnoreStatus: []string{"end_of_life", "fix_deferred"}}, "end_of_life,fix_deferred"},
+		{ScanRequest{IgnoreStatus: []string{}}, ""},
 	} {
 		if got := tc.req.ignoreStatus(); got != tc.want {
 			t.Errorf("%+v: ignoreStatus = %q, want %q", tc.req, got, tc.want)

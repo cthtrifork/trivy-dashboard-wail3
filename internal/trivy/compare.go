@@ -23,9 +23,8 @@ type CompareRequest struct {
 	IgnorePolicy  string `json:"ignorePolicy"` // see ScanRequest.IgnorePolicy
 	IgnoreFile    string `json:"ignoreFile"`   // see ScanRequest.IgnoreFile
 	// See the same fields on ScanRequest.
-	ShowSuppressed  bool `json:"showSuppressed"`
-	ShowWillNotFix  bool `json:"showWillNotFix"`
-	ShowNotAffected bool `json:"showNotAffected"`
+	ShowSuppressed bool     `json:"showSuppressed"`
+	IgnoreStatus   []string `json:"ignoreStatus"`
 	// Base is an earlier scan of TagA made with the same options. Compare uses it instead of
 	// scanning the base again. It is set by the service, never by the UI, so it stays out of the bindings.
 	Base *ScanResult `json:"-"`
@@ -35,7 +34,7 @@ type CompareRequest struct {
 // so a result of one can stand in for the other. Credentials do not change what is found.
 func (r ScanRequest) SameFindings(o ScanRequest) bool {
 	return r.IgnoreUnfixed == o.IgnoreUnfixed && r.ShowSuppressed == o.ShowSuppressed &&
-		r.ShowWillNotFix == o.ShowWillNotFix && r.ShowNotAffected == o.ShowNotAffected &&
+		r.ignoreStatus() == o.ignoreStatus() &&
 		strings.TrimSpace(r.TrivyImage) == strings.TrimSpace(o.TrivyImage) &&
 		r.IgnorePolicy == o.IgnorePolicy && r.IgnoreFile == o.IgnoreFile
 }
@@ -116,7 +115,7 @@ func (s *Scanner) Compare(parent context.Context, req CompareRequest) (*CompareR
 	scan := func(label, ref string) (*ScanResult, error) {
 		s.logf("=== %s: %s ===", label, ref)
 		return s.scanImage(ctx, ScanRequest{Image: ref, Username: req.Username, Password: req.Password, IgnoreUnfixed: req.IgnoreUnfixed, TrivyImage: req.TrivyImage, IgnorePolicy: req.IgnorePolicy, IgnoreFile: req.IgnoreFile,
-			ShowSuppressed: req.ShowSuppressed, ShowWillNotFix: req.ShowWillNotFix, ShowNotAffected: req.ShowNotAffected})
+			ShowSuppressed: req.ShowSuppressed, IgnoreStatus: req.IgnoreStatus})
 	}
 	a := req.Base
 	if a != nil && sameImage(a.Image, refA) {

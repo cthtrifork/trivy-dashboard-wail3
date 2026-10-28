@@ -453,8 +453,8 @@ func (s *ScanService) VEXSave(image, author, role string, onlyCurrent bool) (str
 func (s *ScanService) Compare(req trivy.CompareRequest) (*trivy.CompareResult, error) {
 	s.mu.Lock()
 	if s.last != nil && s.lastReq.SameFindings(trivy.ScanRequest{
-		IgnoreUnfixed: req.IgnoreUnfixed, ShowSuppressed: req.ShowSuppressed, ShowWillNotFix: req.ShowWillNotFix,
-		ShowNotAffected: req.ShowNotAffected, TrivyImage: req.TrivyImage, IgnorePolicy: req.IgnorePolicy, IgnoreFile: req.IgnoreFile,
+		IgnoreUnfixed: req.IgnoreUnfixed, ShowSuppressed: req.ShowSuppressed, IgnoreStatus: req.IgnoreStatus,
+		TrivyImage: req.TrivyImage, IgnorePolicy: req.IgnorePolicy, IgnoreFile: req.IgnoreFile,
 	}) {
 		req.Base = s.last
 	}
