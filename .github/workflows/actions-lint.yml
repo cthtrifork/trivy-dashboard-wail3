@@ -36,13 +36,15 @@ jobs:
         with:
           persist-credentials: false
 
-      # Findings fail the job here instead of going to code scanning, which
-      # needs Advanced Security on private repositories. The token lets it run the online audits.
+      # Installed from PyPI rather than through a marketplace action. The token lets zizmor run its
+      # online audits (impostor commits, known-vulnerable actions); findings fail the job.
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
-        with:
-          advanced-security: false
-          token: ${{ github.token }}
+        env:
+          ZIZMOR_VERSION: 1.31.1
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
+          "$HOME/.local/bin/zizmor" --format plain .
 
   pin-actions:
     name: pin actions
