@@ -26,11 +26,6 @@
 .opts-body .field-err {
   color: var(--CRITICAL);
 }
-.opts-body textarea {
-  font-family: ui-monospace, monospace;
-  font-size: 12px;
-  resize: vertical;
-}
 .opts-count {
   color: var(--accent);
 }
@@ -185,4 +180,10 @@
 .file-btn:focus-within {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+.code-box {
+  height: calc(var(--rows) * 1.45 * 13px + 14px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
 }

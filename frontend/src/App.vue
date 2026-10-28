@@ -43,6 +43,7 @@ import {
   errText,
 } from "./store.js";
 import { ago, bytes } from "./lib/format.js";
+import CodeBox from "./components/CodeBox.vue";
 import TagInput from "./components/TagInput.vue";
 import PrioritiesPanel from "./components/PrioritiesPanel.vue";
 import VulnsPanel from "./components/VulnsPanel.vue";
@@ -300,38 +301,36 @@ onMounted(() => {
                   />
               <div class="opts-label">Ignore rules <span class="opts-val">{{ ignoreSummary }}</span></div>
 
-                  <label class="policy"
-                    ><span>Ignore policy (Rego, <code>--ignore-policy</code>)</span>
-                    <textarea
-                      id="ignore-policy"
+                  <div class="policy">
+                    <span>Ignore policy (Rego, <code>--ignore-policy</code>)</span>
+                    <CodeBox
                       v-model="opts.ignorePolicy"
-                      rows="6"
+                      language="rego"
+                      ta-id="ignore-policy"
+                      :error="ignorePolicyError"
                       placeholder="package trivy&#10;&#10;ignore if input.PkgName == &quot;linux-libc-dev&quot;"
-                      autocomplete="off"
-                      spellcheck="false"
                       title="Findings matched by an ignore rule in this policy are left out. Empty means no rules."
-                      @change="saveIgnorePolicy"
-                    ></textarea>
+                      @commit="saveIgnorePolicy"
+                    />
                     <span v-if="ignorePolicyError" class="field-err" id="ignore-policy-err">{{ ignorePolicyError }}</span>
-                  </label>
+                  </div>
                   <label class="file-btn"
                     >Load policy from a .rego file…
                     <input id="ignore-policy-file" type="file" accept=".rego,text/plain" @change="loadIgnorePolicyFile($event.target.files[0])"
                   /></label>
-                  <label class="policy"
-                    ><span>Ignore file (<code>.trivyignore.yaml</code>, <code>--ignorefile</code>)</span>
-                    <textarea
-                      id="ignore-file"
+                  <div class="policy">
+                    <span>Ignore file (<code>.trivyignore.yaml</code>, <code>--ignorefile</code>)</span>
+                    <CodeBox
                       v-model="opts.ignoreFile"
-                      rows="6"
+                      language="yaml"
+                      ta-id="ignore-file"
+                      :error="ignoreFileError"
                       placeholder="vulnerabilities:&#10;  - id: CVE-2024-12345&#10;    statement: Not reachable in our setup"
-                      autocomplete="off"
-                      spellcheck="false"
                       title="Vulnerabilities listed here are left out. Empty means none."
-                      @change="saveIgnoreFile"
-                    ></textarea>
+                      @commit="saveIgnoreFile"
+                    />
                     <span v-if="ignoreFileError" class="field-err" id="ignore-file-err">{{ ignoreFileError }}</span>
-                  </label>
+                  </div>
                   <label class="file-btn"
                     >Load ignore file from a .yaml file…
                     <input id="ignore-file-file" type="file" accept=".yaml,.yml,text/yaml,text/plain" @change="loadIgnoreFile($event.target.files[0])"
