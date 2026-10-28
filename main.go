@@ -44,7 +44,6 @@ func main() {
 	})
 
 	app.AddTray(wails, window)
-	app.SetWindowIcon(wails, window)
 
 	if err := wails.Run(); err != nil {
 		log.Fatal(err)
