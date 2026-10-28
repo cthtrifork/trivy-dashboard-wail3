@@ -12,6 +12,16 @@ updates:
     groups:
       go-minor-and-patch:
         update-types: [minor, patch]
+  # goimports, golangci-lint and govulncheck, pinned as `tool` directives in tools/go.mod.
+  - package-ecosystem: gomod
+    directory: /tools
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 2 # zizmor: ignore[dependabot-cooldown] 2 days chosen on purpose
+    groups:
+      go-tools:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

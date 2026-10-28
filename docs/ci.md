@@ -31,7 +31,7 @@ Sources:
 
 ## Lint and format checks
 
-`ci.yml` also runs, in the `test` job: `make lint-frontend` (Biome lint and format check, config in `frontend/biome.json`) and `make lint-go` (golangci-lint with the config in `.golangci.yml`: default linters; staticcheck's tagged-switch quick fixes and unchecked `Close`/test-helper writes are excluded). golangci-lint is `go install`ed at a pinned version, like the `wails3` CLI, rather than through a third-party action. `make lint` runs both locally; `make fmt` and `make format-frontend` fix formatting.
+`ci.yml` also runs, in the `test` job: `make lint-frontend` (Biome lint and format check, config in `frontend/biome.json`) and `make lint-go` (golangci-lint with the config in `.golangci.yml`: default linters; staticcheck's tagged-switch quick fixes and unchecked `Close`/test-helper writes are excluded). golangci-lint, `govulncheck` and `goimports` are pinned as `tool` directives in `tools/go.mod` (a separate module, so their dependencies stay out of the app's `go.mod`, and `tools` is skipped by the Trivy scan and the release SBOM; Dependabot updates it) and run through `go tool -modfile=tools/go.mod`, rather than through a third-party action. `make tools` installs them into `GOBIN` for editors. `make lint` runs both locally; `make fmt` and `make format-frontend` fix formatting.
 
 ## Screenshots
 
