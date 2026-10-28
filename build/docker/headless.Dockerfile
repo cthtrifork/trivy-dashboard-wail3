@@ -1,13 +1,13 @@
 # Trivy Scanner in server mode, for hosts that have podman but no Go toolchain.
 # See docs/headless.md.
-FROM docker.io/library/node:26-alpine AS frontend
+FROM mirror.gcr.io/library/node:26-alpine AS frontend
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
-FROM docker.io/library/golang:1.26-alpine AS build
+FROM mirror.gcr.io/library/golang:1.26-alpine AS build
 ENV GOTOOLCHAIN=local CGO_ENABLED=0
 WORKDIR /src
 COPY go.mod go.sum ./
@@ -22,7 +22,7 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 # The app only needs the podman *client*: scans run on the host's podman through its API socket.
 # Upstream's static podman-remote runs on distroless (Alpine's is linked against musl). Keep
 # PODMAN_VERSION close to the host's podman; Renovate bumps it.
-FROM docker.io/library/alpine:3.24 AS podman
+FROM mirror.gcr.io/library/alpine:3.24 AS podman
 # renovate: datasource=github-releases depName=containers/podman
 ARG PODMAN_VERSION=v6.1.4
 ARG TARGETARCH
