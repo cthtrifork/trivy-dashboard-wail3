@@ -88,9 +88,17 @@ jobs:
             files=(.github/workflows/*.yml)
           fi
           printf 'Checking %s\n' "${files[@]}"
-          # Not a plain git diff: for immutable releases the tool writes the tag instead of the SHA.
-          if ! scripts/check-pinned-actions.py "${files[@]}"; then
-            echo "::error::Fix the actions above, e.g. with 'gh pin-actions workflows --latest --overwrite'."
+          # For immutable releases the tool writes the tag instead of the SHA. That is the same
+          # version, so show `action@<sha> # vX` as `action@vX` on both sides before comparing.
+          normalize() { sed -E 's/(uses: [^@ ]+)@[0-9a-f]{40} +# *([^ ]+).*/\1@\2/'; }
+          failed=false
+          for f in "${files[@]}"; do
+            if ! diff -u <(git show "HEAD:$f" | normalize) <(normalize < "$f"); then
+              failed=true
+            fi
+          done
+          if [ "$failed" = true ]; then
+            echo "::error::Unpinned or outdated actions found (diff above). Run 'gh pin-actions workflows --latest --overwrite' and commit the result."
             exit 1
           fi
           if [ -n "$(git ls-files --others --exclude-standard -- .github/workflows)" ]; then
