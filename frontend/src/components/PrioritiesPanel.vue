@@ -3,6 +3,7 @@ import { computed, reactive, ref } from "vue";
 import { result, vulns, vex } from "../store.js";
 import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
+import CopyId from "./CopyId.vue";
 import CvssBreakdown from "./CvssBreakdown.vue";
 import CvssMeter from "./CvssMeter.vue";
 import Ratings from "./Ratings.vue";
@@ -200,6 +201,7 @@ defineExpose({ count: computed(() => pool.value.length) });
               <span class="rank">#{{ rank }}</span>
               <a v-if="detailUrl(v)" class="id" :href="detailUrl(v)" title="Open CVE details" @click.prevent.stop="openUrl(detailUrl(v))">{{ v.id }}</a>
               <span v-else class="id">{{ v.id }}</span>
+              <CopyId :text="v.id" />
               <span class="mono">{{ v.package }} {{ v.installed }}</span>
             </span>
           </span>
