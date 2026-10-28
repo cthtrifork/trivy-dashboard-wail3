@@ -8,9 +8,7 @@ import {
   trivyNewest,
   ensureTrivyTags,
   saveTrivyImage,
-  saveIgnorePolicy,
   loadIgnorePolicyFile,
-  saveIgnoreFile,
   loadIgnoreFile,
   ignorePolicyError,
   ignoreFileError,
@@ -22,7 +20,7 @@ import {
   setStatus,
   errText,
 } from "../store.js";
-import CodeBox from "./CodeBox.vue";
+import IgnoreRulesDialog from "./IgnoreRulesDialog.vue";
 import TagInput from "./TagInput.vue";
 
 // The Options popover: tabs for what findings to show, where the scan gets credentials and ignore rules,
@@ -55,6 +53,43 @@ const toggleStatus = (id) => {
   else opts.ignoreStatus.splice(i, 1);
 };
 const ignoreSummary = computed(() => [opts.ignorePolicy.trim() && "Rego", opts.ignoreFile.trim() && "ignore file"].filter(Boolean).join(" + ") || "none");
+// The two rule sets as rows: what is set, with the editing in the IgnoreRulesDialog. Counts are a quick read of the text.
+const ignoreDialog = ref(null);
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const ignoreRows = computed(() => {
+  const policy = opts.ignorePolicy.trim();
+  const file = opts.ignoreFile.trim();
+  const regoRules = (policy.match(/^\s*ignore\b/gm) ?? []).length;
+  const entries = (file.match(/^\s*-\s+id\s*:/gm) ?? []).length;
+  return [
+    {
+      id: "ignore-policy",
+      tab: "policy",
+      name: "Ignore policy (Rego)",
+      flag: "--ignore-policy",
+      count: policy ? plural(regoRules, "rule", "rules") : "empty",
+      error: ignorePolicyError.value,
+      upload: "Upload .rego…",
+      accept: ".rego,text/plain",
+      load: loadIgnorePolicyFile,
+    },
+    {
+      id: "ignore-file",
+      tab: "file",
+      name: "Ignore file (.trivyignore.yaml)",
+      flag: "--ignorefile",
+      count: file ? plural(entries, "entry", "entries") : "empty",
+      error: ignoreFileError.value,
+      upload: "Upload .yaml…",
+      accept: ".yaml,.yml,text/yaml,text/plain",
+      load: loadIgnoreFile,
+    },
+  ];
+});
+async function uploadRules(row, ev) {
+  await row.load(ev.target.files[0]);
+  ev.target.value = ""; // picking the same file again must still fire
+}
 // Updating is three clicks, never automatic: check, then download, then restart.
 const update = ref({ step: "idle", version: "" }); // idle | available | ready
 const updateBusy = ref(false);
@@ -183,41 +218,20 @@ const updateAction = computed(() => {
             autocomplete="off"
           />
       <div class="opts-label">Ignore rules <span class="opts-val">{{ ignoreSummary }}</span></div>
-
-          <div class="policy">
-            <span>Ignore policy (Rego, <code>--ignore-policy</code>)</span>
-            <CodeBox
-              v-model="opts.ignorePolicy"
-              language="rego"
-              ta-id="ignore-policy"
-              :error="ignorePolicyError"
-              placeholder="package trivy&#10;&#10;ignore if input.PkgName == &quot;linux-libc-dev&quot;"
-              title="Findings matched by an ignore rule in this policy are left out. Empty means no rules."
-              @commit="saveIgnorePolicy"
-            />
-            <span v-if="ignorePolicyError" class="field-err" id="ignore-policy-err">{{ ignorePolicyError }}</span>
-          </div>
+      <div v-for="r in ignoreRows" :key="r.id" class="ignore-row">
+        <div class="ignore-top">
+          <span class="ignore-name">{{ r.name }}</span>
+          <span class="ignore-count" :class="{ err: r.error }">{{ r.error ? "has an error" : r.count }}</span>
+        </div>
+        <code>{{ r.flag }}</code>
+        <div class="ignore-acts">
           <label class="file-btn"
-            >Load policy from a .rego file…
-            <input id="ignore-policy-file" type="file" accept=".rego,text/plain" @change="loadIgnorePolicyFile($event.target.files[0])"
+            >{{ r.upload }}
+            <input :id="r.id + '-file'" type="file" :accept="r.accept" @change="uploadRules(r, $event)"
           /></label>
-          <div class="policy">
-            <span>Ignore file (<code>.trivyignore.yaml</code>, <code>--ignorefile</code>)</span>
-            <CodeBox
-              v-model="opts.ignoreFile"
-              language="yaml"
-              ta-id="ignore-file"
-              :error="ignoreFileError"
-              placeholder="vulnerabilities:&#10;  - id: CVE-2024-12345&#10;    statement: Not reachable in our setup"
-              title="Vulnerabilities listed here are left out. Empty means none."
-              @commit="saveIgnoreFile"
-            />
-            <span v-if="ignoreFileError" class="field-err" id="ignore-file-err">{{ ignoreFileError }}</span>
-          </div>
-          <label class="file-btn"
-            >Load ignore file from a .yaml file…
-            <input id="ignore-file-file" type="file" accept=".yaml,.yml,text/yaml,text/plain" @change="loadIgnoreFile($event.target.files[0])"
-          /></label>
+          <button type="button" class="ghost" :id="'edit-' + r.id" @click="ignoreDialog.open(r.tab)">Edit…</button>
+        </div>
+      </div>
     </div>
     <div v-show="optsTab === 'scanner'" class="opts-pane" role="tabpanel">
       <div class="opts-label">Trivy version</div>
@@ -265,4 +279,5 @@ const updateAction = computed(() => {
     </div>
   </div>
 </details>
+<IgnoreRulesDialog ref="ignoreDialog" />
 </template>
