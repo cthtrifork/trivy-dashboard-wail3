@@ -123,7 +123,7 @@ const VENDOR_STATUSES = [
   { id: "fixed", hint: "Already fixed in this version" },
   { id: "under_investigation", hint: "The vendor is still looking into it" },
   { id: "fix_deferred", hint: "A fix is planned for later" },
-  { id: "end_of_life", hint: "The package is end of life" },
+  { id: "end_of_life", hint: "The vendor no longer supports this package" },
   { id: "unknown", hint: "No status reported" },
 ];
 const toggleStatus = (id) => {
@@ -264,7 +264,7 @@ onMounted(() => {
                   Fixable only
                 </button>
               </div>
-              <label class="opts-switch" title="Include findings left out by your ignore policy or ignore file"
+              <label class="opts-switch" title="Show findings that your ignore policy or ignore file would otherwise hide"
                 ><span>Include suppressed <code>--show-suppressed</code></span><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed"
               /></label>
               <div class="opts-label">Hide vendor statuses <code>--ignore-status</code></div>
@@ -306,7 +306,7 @@ onMounted(() => {
                       placeholder="package trivy&#10;&#10;ignore if input.PkgName == &quot;linux-libc-dev&quot;"
                       autocomplete="off"
                       spellcheck="false"
-                      title="Findings for which the policy defines ignore are left out of the scan. Empty means none."
+                      title="Findings matched by an ignore rule in this policy are left out. Empty means no rules."
                       @change="saveIgnorePolicy"
                     ></textarea>
                     <span v-if="ignorePolicyError" class="field-err" id="ignore-policy-err">{{ ignorePolicyError }}</span>
@@ -327,7 +327,7 @@ onMounted(() => {
                       placeholder="vulnerabilities:&#10;  - id: CVE-2024-12345&#10;    statement: Not reachable in our setup"
                       autocomplete="off"
                       spellcheck="false"
-                      title="Vulnerabilities listed here are left out of the scan. Empty means none."
+                      title="Vulnerabilities listed here are left out. Empty means none."
                       @change="saveIgnoreFile"
                     ></textarea>
                     <span v-if="ignoreFileError" class="field-err" id="ignore-file-err">{{ ignoreFileError }}</span>
@@ -349,19 +349,19 @@ onMounted(() => {
                     :tags="trivyTags"
                     label="Trivy version"
                     :placeholder="trivyPlaceholder"
-                    title="Empty uses the newest version found. Enter a version such as 0.77.0."
+                    title="Leave empty to use the newest Trivy version, or enter one such as 0.77.0."
                     @update:model-value="saveTrivyImage"
                     @open="ensureTrivyTags"
                   />
               <div class="opts-label">Vulnerability database</div>
               <div class="opts-row-plain">
-                <span class="kv">Downloads a new database only when the cached one is outdated.</span>
+                <span class="kv">Only downloads a new database when the cached one is outdated.</span>
                 <button
                   type="button"
                   class="ghost"
                   id="update-db-btn"
                   :disabled="scanning || updateBusy"
-                  title="Check for a newer vulnerability database now. Downloads a new database only when the cached one is outdated."
+                  title="Check for a newer vulnerability database. Nothing is downloaded if the cached one is current."
                   @click="updateDB"
                 >
                   Check now
