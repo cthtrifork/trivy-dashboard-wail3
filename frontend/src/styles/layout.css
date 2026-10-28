@@ -63,6 +63,9 @@ main {
   min-height: 30px;
 }
 #footprint {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
   padding: 4px 16px;
   border-top: 1px solid var(--line);
   font-size: 11px;

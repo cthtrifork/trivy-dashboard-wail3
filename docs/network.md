@@ -11,7 +11,7 @@ What the app sends over the network, when, and what happens offline. There are n
 | Every scan | EPSS from `api.first.org` (no cache) and the CISA KEV feed (cached on disk for 12 hours). | Both are skipped with a warning; a cached KEV copy is used if there is one. |
 | Compare | The scan steps above, four times. The DB check still runs once. | Same as scan. |
 | Options → Check vulnerability database | The same `--download-db-only` check, on demand. | An error is shown and the cached DB is kept. Nothing is deleted. |
-| Options → Check for updates | GitHub Releases, looking only (release builds). | A status message shows the error. |
+| Options → App updates → Check for updates | GitHub Releases, looking only (release builds). | A status message shows the error. |
 | Options → Install update | The release download, with its checksum verified. | A status message shows the error. |
 
 ## Notes

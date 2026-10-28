@@ -4,9 +4,9 @@ import { EditorState } from "@codemirror/state";
 import { EditorView, placeholder as cmPlaceholder } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { json, jsonParseLinter } from "@codemirror/lang-json";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { syntaxHighlighting } from "@codemirror/language";
 import { linter, lintGutter } from "@codemirror/lint";
-import { tags as t } from "@lezer/highlight";
+import { highlight, theme } from "../lib/codemirror.js";
 
 // A JSON editor (CodeMirror 6) with syntax highlighting and inline syntax errors. With `vex` set it
 // also checks that the document looks like OpenVEX, so a wrong file is flagged before importing.
@@ -22,25 +22,6 @@ const emit = defineEmits(["update:modelValue"]);
 
 const root = ref(null);
 let view = null;
-
-const highlight = HighlightStyle.define([
-  { tag: t.propertyName, color: "var(--accent)" },
-  { tag: t.string, color: "var(--ok)" },
-  { tag: [t.number, t.bool, t.null], color: "var(--HIGH)" },
-  { tag: [t.brace, t.squareBracket, t.separator], color: "var(--mute)" },
-]);
-
-const theme = EditorView.theme({
-  "&": { height: "100%", backgroundColor: "var(--bg)", color: "var(--text)", fontSize: "13px" },
-  "&.cm-focused": { outline: "2px solid var(--accent)" },
-  ".cm-scroller": { fontFamily: "ui-monospace, monospace", lineHeight: "1.45" },
-  ".cm-gutters": { backgroundColor: "var(--panel)", color: "var(--mute)", border: "0", borderRight: "1px solid var(--line)" },
-  ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "transparent" },
-  ".cm-cursor": { borderLeftColor: "var(--text)" },
-  ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": { backgroundColor: "color-mix(in srgb, var(--accent) 35%, transparent)" },
-  ".cm-tooltip": { backgroundColor: "var(--panel)", color: "var(--text)", border: "1px solid var(--line)" },
-  ".cm-placeholder": { color: "var(--mute)" },
-});
 
 // An empty box is not an error: the placeholder explains what to paste.
 const parseLint = jsonParseLinter();

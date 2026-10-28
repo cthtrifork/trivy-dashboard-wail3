@@ -1,7 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import {
-  ScanService,
   sevStyle,
   result,
   vex,
@@ -12,23 +11,9 @@ import {
   imageTag,
   repoTags,
   ensureTags,
-  ensureTrivyTags,
-  trivyTags,
-  trivyImageSetting,
-  refreshFootprint,
-  trivyNewest,
   setTag,
   clearAll,
   scanState,
-  settingsChanged,
-  opts,
-  saveTrivyImage,
-  saveIgnorePolicy,
-  loadIgnorePolicyFile,
-  saveIgnoreFile,
-  loadIgnoreFile,
-  ignorePolicyError,
-  ignoreFileError,
   scanning,
   comparing,
   status,
@@ -39,10 +24,9 @@ import {
   runScan,
   cancel,
   init,
-  setStatus,
-  errText,
 } from "./store.js";
 import { ago, bytes } from "./lib/format.js";
+import OptionsPanel from "./components/OptionsPanel.vue";
 import TagInput from "./components/TagInput.vue";
 import PrioritiesPanel from "./components/PrioritiesPanel.vue";
 import VulnsPanel from "./components/VulnsPanel.vue";
@@ -104,13 +88,6 @@ function imageKey(ev) {
 }
 const sevTag = (n, sev) => ({ n, sev, style: sevStyle(sev) });
 
-const trivyPlaceholder = computed(() => trivyNewest.value || mode.value?.trivyImage?.split(":").pop() || "Trivy version");
-// What the Options popover shows without opening a section.
-const activeCount = computed(
-  () => [opts.ignoreUnfixed, opts.showSuppressed, opts.ignoreWillNotFix, opts.ignoreNotAffected, opts.markUnderInvestigation].filter(Boolean).length,
-);
-const registrySummary = computed(() => opts.username.trim() || (mode.value?.registryToken ? mode.value.registryUser + " (token)" : "not set"));
-const ignoreSummary = computed(() => [opts.ignorePolicy.trim() && "Rego", opts.ignoreFile.trim() && "ignore file"].filter(Boolean).join(" + ") || "none");
 const meta = computed(() => (result.value ? `${result.value.image}${result.value.os ? " · " + result.value.os : ""}` : ""));
 const counts = computed(() => ({
   vulns: result.value?.vulnerabilities.length ?? 0,
@@ -133,62 +110,6 @@ const footprintTitle = computed(() => {
   return [f.cacheLocation, ...parts].join("\n");
 });
 
-// Updating is three clicks, never automatic: check, then download, then restart.
-const update = ref({ step: "idle", version: "" }); // idle | available | ready
-const updateBusy = ref(false);
-
-async function updateStep(busyMsg, run) {
-  updateBusy.value = true;
-  setStatus(busyMsg, { busy: true });
-  try {
-    await run();
-  } catch (err) {
-    setStatus(errText(err), { err: true });
-  } finally {
-    updateBusy.value = false;
-  }
-}
-
-// The DB is checked once per session; this checks again now. Trivy downloads only if the cached one is out of date.
-const updateDB = () =>
-  updateStep("Checking the vulnerability database…", async () => {
-    let downloaded;
-    try {
-      downloaded = await ScanService.UpdateDB(trivyImageSetting.value);
-    } finally {
-      refreshFootprint(); // a download changes the cache size shown in the footer
-    }
-    setStatus(downloaded ? "Downloaded a newer vulnerability database." : "Vulnerability database is up to date (no download reported).");
-  });
-
-const checkForUpdates = () =>
-  updateStep("Checking for updates…", async () => {
-    const r = await ScanService.CheckForUpdates();
-    update.value = r.available ? { step: "available", version: r.version } : { step: "idle", version: "" };
-    setStatus(r.available ? `Version ${r.version} is available.` : "You are on the latest version.");
-  });
-
-const installUpdate = () =>
-  updateStep(`Downloading ${update.value.version}…`, async () => {
-    await ScanService.InstallUpdate();
-    update.value = { ...update.value, step: "ready" };
-    setStatus(`Version ${update.value.version} is downloaded and verified. Restart to apply it.`);
-  });
-
-const restartToUpdate = () => updateStep("Restarting…", () => ScanService.RestartToUpdate());
-
-const updateAction = computed(() => {
-  const v = update.value.version;
-  switch (update.value.step) {
-    case "available":
-      return { label: `Download ${v}`, run: installUpdate };
-    case "ready":
-      return { label: "Restart & apply", run: restartToUpdate };
-    default:
-      return { label: "Check for updates…", run: checkForUpdates };
-  }
-});
-
 // Follow the log as it grows.
 watch(logText, async () => {
   await nextTick();
@@ -208,134 +129,7 @@ onMounted(() => {
       <div class="head-top">
         <strong class="brand">Trivy Scanner</strong>
         <div id="meta">{{ meta }}</div>
-        <details id="opts">
-          <summary>Options<span v-if="activeCount" class="opts-count"> · {{ activeCount }} active</span
-          ><span v-if="settingsChanged" class="opts-count"> · rescan to apply</span></summary>
-          <div class="opts-body">
-            <div class="opts-label">Findings to show</div>
-            <label><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed" /> Ignore unfixed</label>
-            <label title="Include findings suppressed by VEX or ignore files"
-              ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Show suppressed</label
-            >
-            <label title="Hide findings the vendor will not fix"
-              ><input type="checkbox" id="ignore-will-not-fix" v-model="opts.ignoreWillNotFix" /> Ignore will_not_fix</label
-            >
-            <label title="Hide findings the vendor says do not affect the package"
-              ><input type="checkbox" id="ignore-not-affected" v-model="opts.ignoreNotAffected" /> Ignore not_affected</label
-            >
-            <div class="opts-secs">
-              <details class="opts-sec" id="opts-registry">
-                <summary>Registry login<span class="opts-val">{{ registrySummary }}</span></summary>
-                <div class="opts-sec-body">
-                  <input id="username" v-model="opts.username" :placeholder="mode?.registryToken ? mode.registryUser + ' (GITHUB_TOKEN, ghcr.io)' : 'Registry username'" autocomplete="off" />
-                  <input
-                    id="password"
-                    v-model="opts.password"
-                    type="password"
-                    :placeholder="mode?.registryToken ? '••••••••  GITHUB_TOKEN (ghcr.io)' : 'Registry password / token'"
-                    autocomplete="off"
-                  />
-                </div>
-              </details>
-              <details class="opts-sec" id="opts-trivy">
-                <summary>Trivy version<span class="opts-val">{{ opts.trivyImage || trivyPlaceholder }}</span></summary>
-                <div class="opts-sec-body">
-                  <TagInput
-                    id="trivy-image"
-                    v-model="opts.trivyImage"
-                    :tags="trivyTags"
-                    label="Trivy version"
-                    :placeholder="trivyPlaceholder"
-                    title="Empty uses the newest version found. Enter a version such as 0.77.0."
-                    @update:model-value="saveTrivyImage"
-                    @open="ensureTrivyTags"
-                  />
-                </div>
-              </details>
-              <div class="opts-sec opts-row">
-                <span>Vulnerability database</span>
-                <button
-                  type="button"
-                  class="ghost"
-                  id="update-db-btn"
-                  :disabled="scanning || updateBusy"
-                  title="Check for a newer vulnerability database now. Trivy downloads one only if the cached copy is out of date."
-                  @click="updateDB"
-                >
-                  Check now
-                </button>
-              </div>
-              <details class="opts-sec" id="opts-ignore">
-                <summary>Ignore rules<span class="opts-val">{{ ignoreSummary }}</span></summary>
-                <div class="opts-sec-body">
-                  <label class="policy"
-                    ><span>Ignore policy (Rego, <code>--ignore-policy</code>)</span>
-                    <textarea
-                      id="ignore-policy"
-                      v-model="opts.ignorePolicy"
-                      rows="6"
-                      placeholder="package trivy&#10;&#10;ignore if input.PkgName == &quot;linux-libc-dev&quot;"
-                      autocomplete="off"
-                      spellcheck="false"
-                      title="Findings for which the policy defines ignore are left out of the scan. Empty means none."
-                      @change="saveIgnorePolicy"
-                    ></textarea>
-                    <span v-if="ignorePolicyError" class="field-err" id="ignore-policy-err">{{ ignorePolicyError }}</span>
-                  </label>
-                  <input
-                    id="ignore-policy-file"
-                    type="file"
-                    accept=".rego,text/plain"
-                    title="Load the policy from a .rego file"
-                    @change="loadIgnorePolicyFile($event.target.files[0])"
-                  />
-                  <label class="policy"
-                    ><span>Ignore file (<code>.trivyignore.yaml</code>, <code>--ignorefile</code>)</span>
-                    <textarea
-                      id="ignore-file"
-                      v-model="opts.ignoreFile"
-                      rows="6"
-                      placeholder="vulnerabilities:&#10;  - id: CVE-2024-12345&#10;    statement: Not reachable in our setup"
-                      autocomplete="off"
-                      spellcheck="false"
-                      title="Vulnerabilities listed here are left out of the scan. Empty means none."
-                      @change="saveIgnoreFile"
-                    ></textarea>
-                    <span v-if="ignoreFileError" class="field-err" id="ignore-file-err">{{ ignoreFileError }}</span>
-                  </label>
-                  <input
-                    id="ignore-file-file"
-                    type="file"
-                    accept=".yaml,.yml,text/yaml,text/plain"
-                    title="Load the ignore file from a .trivyignore.yaml file"
-                    @change="loadIgnoreFile($event.target.files[0])"
-                  />
-                </div>
-              </details>
-              <details class="opts-sec" id="opts-investigate">
-                <summary>Mark all as under investigation<span class="opts-val">{{ opts.markUnderInvestigation ? "on" : "off" }}</span></summary>
-                <div class="opts-sec-body">
-                  <label title="Record an under investigation VEX statement for every finding that has none"
-                    ><input type="checkbox" id="mark-uninvestigated" v-model="opts.markUnderInvestigation" /> Record an under investigation statement for every finding that has none</label
-                  >
-                </div>
-              </details>
-            </div>
-            <div class="opts-update">
-              <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>
-              <button
-                type="button"
-                class="ghost"
-                id="update-btn"
-                :disabled="!appInfo?.enabled || updateBusy"
-                :title="appInfo?.enabled ? '' : appInfo?.reason"
-                @click="updateAction.run"
-              >
-                {{ updateAction.label }}
-              </button>
-            </div>
-          </div>
-        </details>
+        <OptionsPanel />
       </div>
       <div class="scan-row">
         <div v-if="split" class="image-wrap image-split">
@@ -481,5 +275,8 @@ onMounted(() => {
   <VexDrawer />
   <HelpDialog ref="helpDialog" />
   <div id="status" :class="[status.err ? 'err' : '', status.busy ? 'spin' : '']">{{ status.msg }}</div>
-  <footer id="footprint" v-if="footprintNote" :title="footprintTitle">{{ footprintNote }}</footer>
+  <footer id="footprint">
+    <span id="app-version">{{ appInfo?.version ? "Version " + appInfo.version : "" }}</span>
+    <span v-if="footprintNote" :title="footprintTitle">{{ footprintNote }}</span>
+  </footer>
 </template>

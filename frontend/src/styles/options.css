@@ -1,0 +1,192 @@
+/* Options popover: tabs, segmented control, status chips, form panes. */
+.opts-body {
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px #0006;
+}
+.opts-body .policy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--mute);
+  font-size: 12px;
+}
+.opts-body .field-err {
+  color: var(--CRITICAL);
+}
+.opts-count {
+  color: var(--accent);
+}
+.opts-label {
+  color: var(--mute);
+  font-size: 12px;
+}
+.opts-tabs {
+  display: flex;
+  margin: -4px -4px 0;
+  border-bottom: 1px solid var(--line);
+}
+.opts-body .opts-tab {
+  padding: 8px 10px;
+  white-space: nowrap;
+  color: var(--mute);
+  background: transparent;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+}
+.opts-body .opts-tab.on {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.opts-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 2px;
+}
+.opts-pane .opts-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+.opts-pane .opts-label code,
+.opts-switch code {
+  margin-left: auto;
+  color: var(--mute);
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.opts-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.opts-row-plain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.opts-body .chip {
+  padding: 3px 10px;
+  color: var(--mute);
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.opts-body .chip.on {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.opts-seg {
+  display: flex;
+  padding: 2px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.opts-body .opts-seg button {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  padding: 6px 8px;
+  color: var(--mute);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  cursor: pointer;
+}
+.opts-body .opts-seg button.on {
+  color: #fff;
+  background: var(--accent);
+}
+.opts-val {
+  text-transform: none;
+  letter-spacing: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--mute);
+  font-size: 12px;
+  line-height: 1.4; /* room for descenders: overflow is hidden for the ellipsis */
+}
+.opts-pane .tag-wrap {
+  width: 100%;
+}
+.opts-switch span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.opts-switch span code {
+  margin-left: 0;
+}
+.opts-row-plain button {
+  flex: none;
+  white-space: nowrap;
+}
+.file-btn {
+  position: relative;
+  align-self: flex-start;
+  padding: 5px 12px;
+  color: var(--accent);
+  font-size: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.file-btn:hover {
+  border-color: var(--accent);
+}
+.file-btn input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.file-btn:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.code-box {
+  height: calc(var(--rows) * 1.45 * 13px + 14px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+/* A heading starts a new group: more room above it than between the controls inside a group. */
+.opts-pane .opts-label:not(:first-child) {
+  margin-top: 10px;
+}
+.opts-pane .file-btn + .policy {
+  margin-top: 10px;
+}

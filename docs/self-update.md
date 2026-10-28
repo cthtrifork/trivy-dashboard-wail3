@@ -2,7 +2,7 @@
 
 The app can update itself from GitHub Releases. This follows Wails' tutorial
 [Self-Updating Wails App](https://v3.wails.io/tutorials/04-self-update-a-wails-app/) and the Updater guide,
-adapted to this app. Open **Options → Check for updates…**.
+adapted to this app. Open **Options → App updates** and press **Check for updates…**.
 
 ## What happens
 

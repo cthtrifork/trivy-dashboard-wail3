@@ -285,11 +285,6 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 		s.latest = res.Vulnerabilities
 		s.last, s.lastReq = res, req
 		s.mu.Unlock()
-		if req.MarkUnderInvestigation {
-			if _, merr := s.vex.MarkUnassessed(res.Image, res.Vulnerabilities, "", ""); merr != nil {
-				return res, errors.New("scan finished, but marking findings under investigation failed: " + merr.Error())
-			}
-		}
 	}
 	return res, err
 }
@@ -453,8 +448,8 @@ func (s *ScanService) VEXSave(image, author, role string, onlyCurrent bool) (str
 func (s *ScanService) Compare(req trivy.CompareRequest) (*trivy.CompareResult, error) {
 	s.mu.Lock()
 	if s.last != nil && s.lastReq.SameFindings(trivy.ScanRequest{
-		IgnoreUnfixed: req.IgnoreUnfixed, ShowSuppressed: req.ShowSuppressed, ShowWillNotFix: req.ShowWillNotFix,
-		ShowNotAffected: req.ShowNotAffected, TrivyImage: req.TrivyImage, IgnorePolicy: req.IgnorePolicy, IgnoreFile: req.IgnoreFile,
+		IgnoreUnfixed: req.IgnoreUnfixed, ShowSuppressed: req.ShowSuppressed, IgnoreStatus: req.IgnoreStatus,
+		TrivyImage: req.TrivyImage, IgnorePolicy: req.IgnorePolicy, IgnoreFile: req.IgnoreFile,
 	}) {
 		req.Base = s.last
 	}

@@ -24,11 +24,12 @@ type ScanRequest struct {
 	Username      string `json:"username"`
 	Password      string `json:"password"`
 	IgnoreUnfixed bool   `json:"ignoreUnfixed"`
-	// Findings Trivy hides by default. These are "show" flags so the zero value is the default:
-	// suppressed (VEX/ignore-file) findings and the will_not_fix and not_affected statuses stay out.
-	ShowSuppressed  bool `json:"showSuppressed"`
-	ShowWillNotFix  bool `json:"showWillNotFix"`
-	ShowNotAffected bool `json:"showNotAffected"`
+	// ShowSuppressed includes findings left out by the ignore policy or ignore file, which Trivy hides by default.
+	// VEX assessments are kept in the app and not sent to Trivy, so they do not affect this.
+	ShowSuppressed bool `json:"showSuppressed"`
+	// IgnoreStatus is the list of vendor statuses passed to --ignore-status. nil means the default
+	// (will_not_fix and not_affected); an empty, non-nil list ignores none.
+	IgnoreStatus []string `json:"ignoreStatus"`
 	// TrivyImage selects the Trivy version to scan with. Empty means the default.
 	TrivyImage string `json:"trivyImage"`
 	// IgnorePolicy is the source of a Rego policy passed to Trivy's --ignore-policy: findings for
@@ -37,21 +38,17 @@ type ScanRequest struct {
 	// IgnoreFile is the source of a .trivyignore.yaml passed to Trivy's --ignorefile: the listed
 	// vulnerabilities (with optional statements) are left out of the report. Empty means none.
 	IgnoreFile string `json:"ignoreFile"`
-	// MarkUnderInvestigation records an under_investigation VEX assessment for every
-	// finding that has none after the scan (handled by the service, which owns the store).
-	MarkUnderInvestigation bool `json:"markUnderInvestigation"`
 }
 
-// ignoreStatus is the --ignore-status value: will_not_fix and not_affected unless shown.
+// DefaultIgnoreStatus is what --ignore-status gets when the request does not say.
+var DefaultIgnoreStatus = []string{"will_not_fix", "not_affected"}
+
+// ignoreStatus is the --ignore-status value.
 func (r ScanRequest) ignoreStatus() string {
-	var ignore []string
-	if !r.ShowWillNotFix {
-		ignore = append(ignore, "will_not_fix")
+	if r.IgnoreStatus == nil {
+		return strings.Join(DefaultIgnoreStatus, ",")
 	}
-	if !r.ShowNotAffected {
-		ignore = append(ignore, "not_affected")
-	}
-	return strings.Join(ignore, ",")
+	return strings.Join(r.IgnoreStatus, ",")
 }
 
 // Vulnerability is one finding, flattened from trivy's JSON report.

@@ -174,9 +174,7 @@ export const opts = reactive({
   ignoreUnfixed: false,
   // Trivy-side noise: ignored by default.
   showSuppressed: false,
-  ignoreWillNotFix: true,
-  ignoreNotAffected: true,
-  markUnderInvestigation: false,
+  ignoreStatus: ["will_not_fix", "not_affected"],
   username: "",
   password: "",
   // The Trivy version is a preference, not a secret: remember it between runs.
@@ -350,9 +348,7 @@ const scanSettings = () =>
   JSON.stringify([
     opts.ignoreUnfixed,
     opts.showSuppressed,
-    opts.ignoreWillNotFix,
-    opts.ignoreNotAffected,
-    opts.markUnderInvestigation,
+    [...opts.ignoreStatus].sort(),
     opts.trivyImage === trivyAuto ? "" : opts.trivyImage.trim(),
     opts.ignorePolicy,
     opts.ignoreFile,
@@ -435,12 +431,10 @@ export async function runScan() {
       password: opts.password,
       ignoreUnfixed: opts.ignoreUnfixed,
       showSuppressed: opts.showSuppressed,
-      showWillNotFix: !opts.ignoreWillNotFix,
-      showNotAffected: !opts.ignoreNotAffected,
+      ignoreStatus: [...opts.ignoreStatus],
       trivyImage: trivyVersion,
       ignorePolicy: opts.ignorePolicy,
       ignoreFile: opts.ignoreFile,
-      markUnderInvestigation: opts.markUnderInvestigation,
     });
     result.value = r;
     scannedSettings.value = settings;

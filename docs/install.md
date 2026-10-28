@@ -79,7 +79,7 @@ remote machine, point `CONTAINER_HOST` at its podman socket (see [architecture.m
 
 - **Packages:** download the new `.deb`/`.rpm` and install it the same way; the config and VEX data in your home
   directory are kept. Packaged installs live in `/usr/bin`, so the in-app updater refuses them: use the package.
-- **Tarball or raw binary in a writable directory:** **Options → Check for updates…**.
+- **Tarball or raw binary in a writable directory:** **Options → App updates → Check for updates…**.
 
 ## Uninstall
 
