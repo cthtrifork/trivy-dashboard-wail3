@@ -26,7 +26,7 @@ import (
 const defaultTrivyRepo = "docker.io/aquasec/trivy"
 
 // defaultTrivyImage is the fallback Trivy image, used until (or unless) the newest release tag can
-// be looked up on Docker Hub (latest.go). Renovate keeps it current (the custom manager in
+// be looked up through podman (newest.go). Renovate keeps it current (the custom manager in
 // .github/renovate.json5 matches this line).
 const defaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
 
@@ -311,7 +311,7 @@ func (p *PodmanEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(stri
 	// A name we chose lets us stop the container ourselves if the scan is cancelled.
 	name := containerName()
 	if job.TrivyImage == "" && p.Image == "" {
-		refreshLatest(ctx)
+		refreshNewest(ctx, p)
 	}
 	args, err := p.runArgs(job, name)
 	if err != nil {
