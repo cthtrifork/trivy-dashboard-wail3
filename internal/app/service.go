@@ -294,6 +294,13 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 	return res, err
 }
 
+// UpdateDB deletes the cached vulnerability database and downloads the latest one with the given
+// Trivy version (empty means the default). It needs network access: if the download fails the cache
+// stays empty until the next successful scan check.
+func (s *ScanService) UpdateDB(trivyImage string) error {
+	return s.scanner.UpdateDB(s.appCtx(), trivyImage)
+}
+
 // RulePresets returns the built-in scoring presets.
 func (s *ScanService) RulePresets() []trivy.Preset { return trivy.Presets() }
 

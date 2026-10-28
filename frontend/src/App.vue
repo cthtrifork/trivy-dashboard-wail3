@@ -14,6 +14,7 @@ import {
   ensureTags,
   ensureTrivyTags,
   trivyTags,
+  trivyImageSetting,
   trivyNewest,
   setTag,
   clearAll,
@@ -140,6 +141,15 @@ async function updateStep(busyMsg, run) {
   }
 }
 
+// The DB is checked once per session; this deletes the cache and downloads the latest one now.
+const updateDB = () => {
+  if (!window.confirm("Delete the cached vulnerability database and download the latest one? This needs network access.")) return;
+  updateStep("Downloading the vulnerability database…", async () => {
+    await ScanService.UpdateDB(trivyImageSetting());
+    setStatus("Vulnerability database updated.");
+  });
+};
+
 const checkForUpdates = () =>
   updateStep("Checking for updates…", async () => {
     const r = await ScanService.CheckForUpdates();
@@ -263,6 +273,16 @@ onMounted(() => {
             title="Load the ignore file from a .trivyignore.yaml file"
             @change="loadIgnoreFile($event.target.files[0])"
           />
+          <button
+            type="button"
+            class="ghost"
+            id="update-db-btn"
+            :disabled="scanning || updateBusy"
+            title="Delete the cached vulnerability database and download the latest one"
+            @click="updateDB"
+          >
+            Update vulnerability database
+          </button>
           <div class="opts-update">
             <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>
             <button

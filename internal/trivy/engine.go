@@ -28,6 +28,12 @@ import (
 // renovate: datasource=docker depName=docker.io/aquasec/trivy
 const DefaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
 
+// DefaultDBRepository is the vulnerability DB Trivy downloads, unless TRIVY_DB_REPOSITORY names a
+// mirror. The tag is the DB schema version, so it is a floating tag that rarely changes; Renovate
+// still tracks it so a schema bump shows up as a PR.
+// renovate: datasource=docker depName=ghcr.io/aquasecurity/trivy-db
+const DefaultDBRepository = "ghcr.io/aquasecurity/trivy-db:2"
+
 // ResolveTrivyImage turns the "Trivy version" setting into an image reference: empty means
 // DefaultTrivyImage, a version ("0.77.0", "v0.77.0") means that tag of the same repository. Anything
 // with a registry, path, tag or digest separator is an image reference and is refused.
@@ -97,6 +103,8 @@ type TrivyJob struct {
 	IgnorePolicy string
 	// IgnoreFile is the source of a .trivyignore.yaml for `--ignorefile`; empty means none.
 	IgnoreFile string
+	// CleanDB runs `trivy clean --vuln-db` (deletes the cached vulnerability DB) instead of a scan.
+	CleanDB bool
 }
 
 // Engine is whatever actually runs Trivy and talks to registries.
@@ -231,6 +239,8 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 	e := loadEnv()
 	if e.DBRepository != "" {
 		args = append(args, "-e", "TRIVY_DB_REPOSITORY")
+	} else {
+		args = append(args, "-e", "TRIVY_DB_REPOSITORY="+DefaultDBRepository)
 	}
 	if e.JavaDBRepository != "" {
 		args = append(args, "-e", "TRIVY_JAVA_DB_REPOSITORY")
@@ -240,6 +250,9 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 	// --vuln-severity-source redhat,auto prefers Red Hat severities, then the vendor default.
 	// --disable-telemetry and --offline-scan keep Trivy from phoning home beyond the DB download.
 	trivyArgs := []string{"image", "--cache-dir", cacheMount, "--skip-version-check", "--disable-telemetry", "--offline-scan", "--vuln-severity-source", "redhat,auto"}
+	if job.CleanDB {
+		trivyArgs = []string{"clean", "--vuln-db", "--cache-dir", cacheMount}
+	}
 	// The policy and ignore file travel as environment variables and are written to files inside
 	// the container, so they work with a remote podman too (a bind mount would need the files on
 	// the podman host). The wrapper replaces the image's entrypoint, hence "trivy" below.
