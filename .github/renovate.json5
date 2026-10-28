@@ -22,9 +22,8 @@
   dependencyDashboardTitle: "Dependency Dashboard",
   dependencyDashboardLabels: ["dependencies"],
 
-  // Security advisories from OSV.dev as well as GitHub's own alerts. The dry run runs with the
-  // workflow's GITHUB_TOKEN, which cannot read the alerts ("Cannot access vulnerability alerts"); the
-  // real run's GitHub App token can.
+  // Security advisories from OSV.dev as well as GitHub's own alerts (the GitHub App's Dependabot
+  // alerts permission; without it Renovate logs "Cannot access vulnerability alerts").
   osvVulnerabilityAlerts: true,
   vulnerabilityAlerts: {
     labels: ["dependencies", "security"],

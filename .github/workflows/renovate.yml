@@ -38,19 +38,32 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
-      contents: read # read the repository
-      pull-requests: read # existing Renovate PRs
-      issues: read # the dependency dashboard issue
+      contents: read # check out the config; Renovate itself uses the GitHub App token below
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      # The same App as the real run, but read-only: this also checks the App's credentials and
+      # installation. The dry run itself writes nothing.
+      - name: Get a GitHub App token (read-only)
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          permission-contents: read
+          permission-pull-requests: read # existing Renovate PRs
+          permission-issues: read # the dependency dashboard issue
+          permission-checks: read
+          permission-statuses: read
+          permission-vulnerability-alerts: read # GitHub's security alerts
+
       - name: Renovate (dry run)
         uses: renovatebot/github-action@2804199d260ad00c1fae0e9e842888369391c776 # v46.3.10
         with:
           configurationFile: .github/renovate.json5
-          token: ${{ github.token }}
+          token: ${{ steps.app-token.outputs.token }}
           renovate-version: '44' # Renovate's github-actions manager updates this itself
         env:
           LOG_LEVEL: debug
@@ -61,6 +74,7 @@ jobs:
           # The config comes from the file above, not from a renovate.json on the default branch.
           RENOVATE_ONBOARDING: 'false'
           RENOVATE_REQUIRE_CONFIG: ignored
+          RENOVATE_USERNAME: ${{ steps.app-token.outputs.app-slug }}[bot]
           # A JSON report of the branches and updates, summarised below. /tmp is mounted into the
           # Renovate container by the action.
           RENOVATE_REPORT_TYPE: file
