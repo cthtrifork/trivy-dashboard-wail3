@@ -30,7 +30,7 @@ Long lists never put every row in the DOM. `src/lib/virtual.js` (`useVirtualList
 | Desktop release | `go build -tags production` | GTK4 + WebKitGTK 6; updater on; no fixtures |
 | Server (headless) | `-tags server` (+ `production`) | No window, HTTP on `WAILS_SERVER_HOST:PORT` (default `localhost:8080`); `headless=true` disables the updater; OpenVEX save falls back to a browser download |
 
-Linux desktop builds add a tray icon (`internal/app/tray_linux.go`, art in `internal/app/tray_icon.png`, same as `frontend/public/favicon.svg`; StatusNotifier; GNOME needs the AppIndicator extension). Click or "Show Trivy Scanner" raises the window, "Quit" quits. Closing the window still quits, so a scan is never left running unseen. Other platforms and server mode compile `tray_other.go`, a no-op.
+Linux desktop builds add a tray icon (`internal/app/tray_linux.go`, art in `internal/app/tray_icon.png`, same as `frontend/public/favicon.svg`; StatusNotifier; GNOME needs the AppIndicator extension). Click or "Show Trivy Scanner" raises the window, "Quit" quits. Closing the window still quits, so a scan is never left running unseen. Other platforms and server mode compile `tray_other.go`, a no-op. The same build sets the window icon (`window_icon_linux.go`; GTK4 can only set it by icon-theme name, so the PNG is written to the user cache dir and added to the theme search path).
 
 Build with `CGO_ENABLED=0` for server mode to avoid GTK.
 
