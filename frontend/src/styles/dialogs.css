@@ -89,3 +89,44 @@
 #vex-dialog .chk {
   margin: 10px 0;
 }
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+  font-size: 13px;
+}
+/* Generate sits in its own band at the foot of the dialog, labelled so it reads as the other path. */
+.vex-generate {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px -18px -18px;
+  padding: 16px 18px;
+  background: var(--bg);
+  border-top: 2px solid var(--line);
+  border-radius: 0 0 9px 9px;
+}
+.vex-generate::before {
+  content: "or start from scratch";
+  position: absolute;
+  top: -9px;
+  left: 18px;
+  padding: 0 8px;
+  margin-left: -8px;
+  background: var(--panel);
+  color: var(--mute);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.vex-generate-ctl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}

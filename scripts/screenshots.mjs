@@ -127,7 +127,7 @@ await page.waitForSelector("#vex-paste .cm-lint-marker-error");
 await page.hover("#vex-paste .cm-lint-marker-error"); // show the message tooltip
 await shot("03a-priorities-import-error");
 await setEditor("#vex-paste", exported);
-await page.check("#vex-mark-rest");
+await page.selectOption("#vex-uncovered", "ALL");
 await page.click("#vex-apply");
 await page.waitForSelector("#vex-import-log");
 await shot("03b-priorities-import-openvex");

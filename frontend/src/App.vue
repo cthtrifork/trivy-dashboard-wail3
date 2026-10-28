@@ -271,7 +271,7 @@ onMounted(() => {
   </main>
 
   <VexDialog ref="vexDialog" />
-  <VexImportDialog ref="vexImport" />
+  <VexImportDialog ref="vexImport" @generated="vexDialog.open()" />
   <VexDrawer />
   <HelpDialog ref="helpDialog" />
   <div id="status" :class="[status.err ? 'err' : '', status.busy ? 'spin' : '']">{{ status.msg }}</div>
