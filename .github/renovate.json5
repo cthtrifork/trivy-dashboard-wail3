@@ -40,6 +40,13 @@
       minimumReleaseAge: "2 days",
     },
     {
+      // The Trivy image is pinned by digest on purpose. A digest-only update means the same tag now
+      // points somewhere else, which is exactly what the pin guards against, so a person reviews it.
+      matchDepNames: ["docker.io/aquasec/trivy"],
+      matchUpdateTypes: ["digest"],
+      automerge: false,
+    },
+    {
       // Patches stay out of these groups on purpose: a group is merged as a whole, so a minor in the
       // same branch would hold the patches back. Patches get their own PR and automerge.
       matchManagers: ["github-actions"],
@@ -89,12 +96,12 @@
       // the line above a `KEY := value`, `KEY=value` or `KEY: value` line. Used for the Go dev tools in
       // the Makefile, zizmor and the gh-pin-actions extension in actions-lint.yml, and the podman-remote
       // release in headless.Dockerfile (`ARG`). internal/trivy/engine.go uses the same comment with `//` above
-      // `const name = "repo:tag"` (only the tag is the version). The dockerfile manager reads every FROM line by itself.
+      // `const name = "repo:tag@sha256:digest"` (the tag is the version, the digest is pinned with it). The dockerfile manager reads every FROM line by itself.
       customType: "regex",
       managerFilePatterns: ["/^internal/trivy/engine\\.go$/", "/(^|/)Makefile$/", "/^\\.github/workflows/[^/]+\\.ya?ml$/", "/^build/docker/[^/]+\\.Dockerfile$/"],
       matchStrings: [
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+(?:ARG\\s+)?\\S+\\s*(?::=|=|:)\\s*['\"]?(?<currentValue>[^\\s'\"]+)",
-        "// renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+const\\s+\\w+\\s*=\\s*\"[^\"\\s:]+:(?<currentValue>[^\"\\s]+)\"",
+        "// renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+const\\s+\\w+\\s*=\\s*\"[^\"\\s:]+:(?<currentValue>[^\"\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\"",
       ],
     },
   ],
