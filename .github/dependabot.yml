@@ -21,6 +21,13 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+  # zizmor, installed by the Actions lint workflow from .github/requirements.txt.
+  - package-ecosystem: pip
+    directory: /.github
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 2 # zizmor: ignore[dependabot-cooldown] 2 days chosen on purpose
   # The Vue + Vite frontend; the wails runtime package is kept in step with the Go module by hand.
   - package-ecosystem: npm
     directory: /frontend

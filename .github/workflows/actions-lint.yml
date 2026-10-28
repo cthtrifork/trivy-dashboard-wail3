@@ -37,14 +37,13 @@ jobs:
         with:
           persist-credentials: false
 
-      # Pedantic persona; see .github/zizmor.yml for the one threshold we relax. Installed from PyPI rather than through a marketplace action. The token lets zizmor run its
+      # Pedantic persona. Installed from PyPI rather than through a marketplace action. The token lets zizmor run its
       # online audits (impostor commits, known-vulnerable actions); findings fail the job.
       - name: Run zizmor
         env:
-          ZIZMOR_VERSION: 1.31.1
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
+          python3 -m pip install --user -r .github/requirements.txt
           "$HOME/.local/bin/zizmor" --persona pedantic --format plain .
 
   pin-actions:
@@ -73,7 +72,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh extension install amenocal/gh-pin-actions --pin v0.1.0
+          # Latest release, not pinned: Dependabot cannot track gh extensions, so a pin would go stale.
+          gh extension install amenocal/gh-pin-actions
           gh pin-actions workflows --latest --overwrite
 
       - name: Fail on unpinned or outdated actions

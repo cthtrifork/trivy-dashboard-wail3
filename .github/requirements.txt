@@ -1,0 +1,2 @@
+# Tools the Actions lint workflow installs. Dependabot (pip, /.github) keeps this up to date.
+zizmor==1.31.1
