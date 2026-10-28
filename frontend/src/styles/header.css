@@ -170,6 +170,56 @@ header {
   color: var(--mute);
   font-size: 12px;
 }
+.opts-tabs {
+  display: flex;
+  margin: -4px -4px 0;
+  border-bottom: 1px solid var(--line);
+}
+.opts-body .opts-tab {
+  padding: 8px 12px;
+  color: var(--mute);
+  background: transparent;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+}
+.opts-body .opts-tab.on {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.opts-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 2px;
+}
+.opts-pane .opts-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+.opts-pane .opts-label code,
+.opts-switch code {
+  margin-left: auto;
+  color: var(--mute);
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.opts-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.opts-row-plain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -401,4 +451,13 @@ header {
 #scan-state.changed,
 #scan-state.settings {
   color: var(--accent);
+}
+.opts-switch span {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.opts-row-plain button {
+  flex: none;
+  white-space: nowrap;
 }

@@ -23,7 +23,7 @@ One page describing how the UI looks and behaves, so new screens and components 
 ```
 
 - Single window, no routing. The active tab is one `ref`; panels stay mounted and are shown/hidden, so filters and scroll survive tab switches.
-- Header: monospace image input grows to fill; **Scan** is disabled while a scan runs and a red **Cancel** appears next to it. Secondary settings sit in the **Options** popover (340 px wide, right-aligned): the finding filters are always visible, and each other setting is a collapsed row that shows its current value (Registry login, Trivy version, Ignore rules, Mark all as under investigation) next to a **Check now** row for the vulnerability database. The Options button shows how many switches are on. **?** opens Help (glossary, configuration).
+- Header: monospace image input grows to fill; **Scan** is disabled while a scan runs and a red **Cancel** appears next to it. Secondary settings sit in the **Options** popover (340 px wide, right-aligned): settings sit on three tabs: **Findings** (fix availability, include suppressed, vendor statuses), **Sources** (registry login, ignore rules) and **Scanner** (Trivy version, a **Check now** button for the vulnerability database). The Options button shows how many filters are on. **?** opens Help (glossary, configuration).
 - Tabs carry count badges (findings that need attention, vulnerabilities, components). **Log** is pushed to the far right because it is diagnostic.
 - Panels use 12 px / 16 px padding and a 12 px gap between blocks.
 
@@ -122,7 +122,7 @@ Interactions checked by running them:
 - **VEX drawer**: modal docked to the right; header with CVE, severity chip, tier chip and "Full advisory"; plain-language summary with four facts (Attack from, Needs, Impact, Fix); "Applies to" list with Select all; four status buttons; Cancel (ghost) and Save assessment (disabled until a status is chosen).
 - **Help**: centered modal with Glossary and App config tabs.
 
-Options popover contents: the four finding filters, then collapsible Registry login (username, password/token), Trivy version, Ignore rules (Rego policy, ignore file) and Mark all as under investigation, a vulnerability database check, and the app version with Check for updates.
+Options popover contents: tabs Findings (All / Fixable only, Include suppressed, eight vendor-status chips), Sources (registry username and password/token, Rego policy, ignore file) and Scanner (Trivy version, vulnerability database check), and below them the app version with Check for updates. Marking findings under investigation is a one-off action in the VEX dialog and the VEX import dialog, not a scan option.
 
 ## Known inconsistencies
 

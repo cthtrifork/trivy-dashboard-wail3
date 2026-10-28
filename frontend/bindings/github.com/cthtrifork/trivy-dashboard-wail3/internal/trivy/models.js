@@ -1311,15 +1311,6 @@ export class ScanRequest {
              */
             this["ignoreFile"] = "";
         }
-        if (!("markUnderInvestigation" in $$source)) {
-            /**
-             * MarkUnderInvestigation records an under_investigation VEX assessment for every
-             * finding that has none after the scan (handled by the service, which owns the store).
-             * @member
-             * @type {boolean}
-             */
-            this["markUnderInvestigation"] = false;
-        }
 
         Object.assign(this, $$source);
     }

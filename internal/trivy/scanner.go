@@ -37,9 +37,6 @@ type ScanRequest struct {
 	// IgnoreFile is the source of a .trivyignore.yaml passed to Trivy's --ignorefile: the listed
 	// vulnerabilities (with optional statements) are left out of the report. Empty means none.
 	IgnoreFile string `json:"ignoreFile"`
-	// MarkUnderInvestigation records an under_investigation VEX assessment for every
-	// finding that has none after the scan (handled by the service, which owns the store).
-	MarkUnderInvestigation bool `json:"markUnderInvestigation"`
 }
 
 // DefaultIgnoreStatus is what --ignore-status gets when the request does not say.

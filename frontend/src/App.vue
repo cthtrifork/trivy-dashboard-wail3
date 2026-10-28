@@ -107,8 +107,14 @@ const sevTag = (n, sev) => ({ n, sev, style: sevStyle(sev) });
 const trivyPlaceholder = computed(() => trivyNewest.value || mode.value?.trivyImage?.split(":").pop() || "Trivy version");
 // What the Options popover shows without opening a section.
 const activeCount = computed(
-  () => [opts.ignoreUnfixed, opts.showSuppressed, opts.markUnderInvestigation].filter(Boolean).length + opts.ignoreStatus.length,
+  () => [opts.ignoreUnfixed, opts.showSuppressed].filter(Boolean).length + opts.ignoreStatus.length,
 );
+const OPT_TABS = [
+  { id: "findings", label: "Findings" },
+  { id: "sources", label: "Sources" },
+  { id: "scanner", label: "Scanner" },
+];
+const optsTab = ref("findings");
 const VENDOR_STATUSES = [
   { id: "will_not_fix", hint: "The vendor will not fix it" },
   { id: "not_affected", hint: "The vendor says the package is not affected" },
@@ -227,31 +233,41 @@ onMounted(() => {
           <summary>Options<span v-if="activeCount" class="opts-count"> · {{ activeCount }} active</span
           ><span v-if="settingsChanged" class="opts-count"> · rescan to apply</span></summary>
           <div class="opts-body">
-            <fieldset class="seg-field">
-              <legend class="opts-label">Findings to show</legend>
-              <div class="seg">
-              <button type="button" id="ignore-unfixed-off" :class="{ on: !opts.ignoreUnfixed }" :aria-pressed="!opts.ignoreUnfixed" @click="opts.ignoreUnfixed = false">All</button>
+            <div class="opts-tabs" role="tablist" aria-label="Options">
               <button
+                v-for="t in OPT_TABS"
+                :id="'opts-tab-' + t.id"
+                :key="t.id"
                 type="button"
-                id="ignore-unfixed"
-                :class="{ on: opts.ignoreUnfixed }"
-                :aria-pressed="opts.ignoreUnfixed"
-                title="--ignore-unfixed: hide findings without a fix"
-                @click="opts.ignoreUnfixed = true"
+                role="tab"
+                class="opts-tab"
+                :class="{ on: optsTab === t.id }"
+                :aria-selected="optsTab === t.id"
+                @click="optsTab = t.id"
               >
-                Fixable only
+                {{ t.label }}
               </button>
+            </div>
+            <div v-show="optsTab === 'findings'" class="opts-pane" role="tabpanel">
+              <div class="opts-label">Fix availability <code>--ignore-unfixed</code></div>
+              <div class="seg">
+                <button type="button" id="ignore-unfixed-off" :class="{ on: !opts.ignoreUnfixed }" :aria-pressed="!opts.ignoreUnfixed" @click="opts.ignoreUnfixed = false">All</button>
+                <button
+                  type="button"
+                  id="ignore-unfixed"
+                  :class="{ on: opts.ignoreUnfixed }"
+                  :aria-pressed="opts.ignoreUnfixed"
+                  title="Hide findings without a fix"
+                  @click="opts.ignoreUnfixed = true"
+                >
+                  Fixable only
+                </button>
               </div>
-            </fieldset>
-            <label title="--show-suppressed: include findings suppressed by VEX or ignore files"
-              ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Include suppressed (VEX / ignore file)</label
-            >
-            <div class="opts-secs">
-              <details class="opts-sec" id="opts-status">
-                <summary>
-                  Hide vendor statuses<span class="opts-val">{{ opts.ignoreStatus.length ? opts.ignoreStatus.join(", ") : "none" }}</span>
-                </summary>
-                <div class="opts-sec-body">
+              <label class="opts-switch" title="Include findings suppressed by VEX or ignore files"
+                ><span>Include suppressed <code>--show-suppressed</code></span><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed"
+              /></label>
+              <div class="opts-label">Hide vendor statuses <code>--ignore-status</code></div>
+
                   <div class="chips">
                     <button
                       v-for="st in VENDOR_STATUSES"
@@ -266,12 +282,10 @@ onMounted(() => {
                       {{ st.id }}
                     </button>
                   </div>
-                  <span class="kv"><code>--ignore-status</code>: highlighted statuses are hidden.</span>
-                </div>
-              </details>
-              <details class="opts-sec" id="opts-registry">
-                <summary>Registry login<span class="opts-val">{{ registrySummary }}</span></summary>
-                <div class="opts-sec-body">
+            </div>
+            <div v-show="optsTab === 'sources'" class="opts-pane" role="tabpanel">
+              <div class="opts-label">Registry login</div>
+
                   <input id="username" v-model="opts.username" :placeholder="mode?.registryToken ? mode.registryUser + ' (GITHUB_TOKEN, ghcr.io)' : 'Registry username'" autocomplete="off" />
                   <input
                     id="password"
@@ -280,39 +294,8 @@ onMounted(() => {
                     :placeholder="mode?.registryToken ? '••••••••  GITHUB_TOKEN (ghcr.io)' : 'Registry password / token'"
                     autocomplete="off"
                   />
-                </div>
-              </details>
-              <details class="opts-sec" id="opts-trivy">
-                <summary>Trivy version<span class="opts-val">{{ opts.trivyImage || trivyPlaceholder }}</span></summary>
-                <div class="opts-sec-body">
-                  <TagInput
-                    id="trivy-image"
-                    v-model="opts.trivyImage"
-                    :tags="trivyTags"
-                    label="Trivy version"
-                    :placeholder="trivyPlaceholder"
-                    title="Empty uses the newest version found. Enter a version such as 0.77.0."
-                    @update:model-value="saveTrivyImage"
-                    @open="ensureTrivyTags"
-                  />
-                </div>
-              </details>
-              <div class="opts-sec opts-row">
-                <span>Vulnerability database</span>
-                <button
-                  type="button"
-                  class="ghost"
-                  id="update-db-btn"
-                  :disabled="scanning || updateBusy"
-                  title="Check for a newer vulnerability database now. Trivy downloads one only if the cached copy is out of date."
-                  @click="updateDB"
-                >
-                  Check now
-                </button>
-              </div>
-              <details class="opts-sec" id="opts-ignore">
-                <summary>Ignore rules<span class="opts-val">{{ ignoreSummary }}</span></summary>
-                <div class="opts-sec-body">
+              <div class="opts-label">Ignore rules <span class="opts-val">{{ ignoreSummary }}</span></div>
+
                   <label class="policy"
                     ><span>Ignore policy (Rego, <code>--ignore-policy</code>)</span>
                     <textarea
@@ -355,16 +338,34 @@ onMounted(() => {
                     title="Load the ignore file from a .trivyignore.yaml file"
                     @change="loadIgnoreFile($event.target.files[0])"
                   />
-                </div>
-              </details>
-              <details class="opts-sec" id="opts-investigate">
-                <summary>Mark all as under investigation<span class="opts-val">{{ opts.markUnderInvestigation ? "on" : "off" }}</span></summary>
-                <div class="opts-sec-body">
-                  <label title="Record an under investigation VEX statement for every finding that has none"
-                    ><input type="checkbox" id="mark-uninvestigated" v-model="opts.markUnderInvestigation" /> Record an under investigation statement for every finding that has none</label
-                  >
-                </div>
-              </details>
+            </div>
+            <div v-show="optsTab === 'scanner'" class="opts-pane" role="tabpanel">
+              <div class="opts-label">Trivy version</div>
+
+                  <TagInput
+                    id="trivy-image"
+                    v-model="opts.trivyImage"
+                    :tags="trivyTags"
+                    label="Trivy version"
+                    :placeholder="trivyPlaceholder"
+                    title="Empty uses the newest version found. Enter a version such as 0.77.0."
+                    @update:model-value="saveTrivyImage"
+                    @open="ensureTrivyTags"
+                  />
+              <div class="opts-label">Vulnerability database</div>
+              <div class="opts-row-plain">
+                <span class="kv">Trivy downloads one only if the cached copy is out of date.</span>
+                <button
+                  type="button"
+                  class="ghost"
+                  id="update-db-btn"
+                  :disabled="scanning || updateBusy"
+                  title="Check for a newer vulnerability database now. Trivy downloads one only if the cached copy is out of date."
+                  @click="updateDB"
+                >
+                  Check now
+                </button>
+              </div>
             </div>
             <div class="opts-update">
               <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>

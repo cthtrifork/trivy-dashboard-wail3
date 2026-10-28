@@ -285,11 +285,6 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 		s.latest = res.Vulnerabilities
 		s.last, s.lastReq = res, req
 		s.mu.Unlock()
-		if req.MarkUnderInvestigation {
-			if _, merr := s.vex.MarkUnassessed(res.Image, res.Vulnerabilities, "", ""); merr != nil {
-				return res, errors.New("scan finished, but marking findings under investigation failed: " + merr.Error())
-			}
-		}
 	}
 	return res, err
 }

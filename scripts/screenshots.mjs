@@ -230,7 +230,7 @@ await shot("13-log");
 // ---- Options ----
 await page.setViewportSize({ width: 1400, height: 1100 }); // the popup is taller than the usual window
 await page.click("#opts summary");
-await page.click("#opts-trivy summary");
+await page.click("#opts-tab-scanner");
 await page.waitForSelector("#trivy-image");
 await shot("14-options");
 
