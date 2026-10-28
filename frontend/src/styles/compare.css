@@ -4,6 +4,22 @@
 }
 #cmp-repo {
   min-width: 280px;
+  opacity: 0.75;
+  cursor: default;
+}
+#cmp-a {
+  width: 160px;
+  opacity: 0.75;
+  cursor: default;
+}
+#cmp-form .tag-wrap {
+  width: 180px;
+}
+#cmp-form .tag-input,
+#cmp-form #cmp-repo,
+#cmp-form #cmp-a {
+  height: 38px;
+  font-size: 14px;
 }
 .sides {
   display: grid;

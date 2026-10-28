@@ -185,3 +185,102 @@ header {
 .opts-update .kv {
   white-space: nowrap;
 }
+
+/* Split view: read-only repository, tag combobox, reset. */
+.image-split {
+  display: flex;
+  gap: 8px;
+}
+#image-repo,
+#cmp-repo,
+#cmp-a,
+.tag-input {
+  box-sizing: border-box;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 17px;
+  font-family: ui-monospace, monospace;
+}
+#image-repo {
+  flex: 1;
+  min-width: 0;
+  opacity: 0.75;
+  cursor: default;
+  text-overflow: ellipsis;
+}
+.tag-wrap {
+  position: relative;
+  width: 220px;
+}
+.tag-input {
+  width: 100%;
+  padding-right: 36px;
+}
+.scan-row .tag-toggle,
+.tag-toggle {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  height: calc(100% - 8px);
+  padding: 0 10px;
+  font-size: 14px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--mute);
+}
+.tag-list {
+  position: absolute;
+  z-index: 6;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px #0008;
+}
+.tag-list > div {
+  display: flex;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.tag-list > div.active,
+.tag-list [role="option"]:hover {
+  background: var(--line);
+}
+.tag-list .recent-head {
+  cursor: default;
+  color: var(--mute);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.scan-row .clear-btn {
+  padding: 0 18px;
+  font-size: 14px;
+}
+
+/* Scan state: an edited tag is marked, and Scan turns into a quieter Rescan when nothing changed. */
+.tag-wrap.changed .tag-input {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.scan-row #scan-btn.rescan {
+  background: transparent;
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+#scan-state {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: var(--mute);
+}
+#scan-state.current::first-letter {
+  color: var(--ok);
+}
+#scan-state.changed {
+  color: var(--accent);
+}

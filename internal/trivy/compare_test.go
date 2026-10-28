@@ -163,6 +163,27 @@ esac
 	if err != nil || strings.Join(tags, ",") != "2.0,1.10,1.9,latest" {
 		t.Fatalf("tags: %v %v", tags, err)
 	}
+	// a base scan passed in is reused, not scanned again
+	base, err := s.Scan(context.Background(), ScanRequest{Image: "ghcr.io/acme/app:1.0"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	logs = nil
+	d, err = s.Compare(context.Background(), CompareRequest{Repo: "ghcr.io/acme/app", TagA: "1.0", TagB: "2.0", Base: base})
+	if err != nil || d.A.Ref != "ghcr.io/acme/app:1.0" {
+		t.Fatalf("%+v %v", d, err)
+	}
+	if all := strings.Join(logs, "\n"); !strings.Contains(all, "reusing the scan") || !strings.Contains(all, "=== Target: ghcr.io/acme/app:2.0 ===") {
+		t.Errorf("logs: %v", logs)
+	}
+	// ...but only for the same image
+	logs = nil
+	if _, err = s.Compare(context.Background(), CompareRequest{Repo: "ghcr.io/acme/app", TagA: "2.0", TagB: "1.0", Base: base}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(strings.Join(logs, "\n"), "reusing") {
+		t.Errorf("reused a scan of another tag: %v", logs)
+	}
 	// the slot must be free again after Compare
 	if _, err := s.Scan(context.Background(), ScanRequest{Image: "ghcr.io/acme/app:1.0"}); err != nil {
 		t.Fatal(err)

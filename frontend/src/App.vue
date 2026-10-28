@@ -7,6 +7,14 @@ import {
   vex,
   image,
   recent,
+  split,
+  imageRepo,
+  imageTag,
+  repoTags,
+  ensureTags,
+  setTag,
+  clearAll,
+  scanState,
   opts,
   saveTrivyImage,
   saveIgnorePolicy,
@@ -29,6 +37,7 @@ import {
   errText,
 } from "./store.js";
 import { ago, bytes } from "./lib/format.js";
+import TagInput from "./components/TagInput.vue";
 import PrioritiesPanel from "./components/PrioritiesPanel.vue";
 import VulnsPanel from "./components/VulnsPanel.vue";
 import DepsPanel from "./components/DepsPanel.vue";
@@ -68,6 +77,10 @@ function pickRecent(e, rescan) {
   image.value = e.image;
   closeHistory();
   if (rescan && !scanning.value) runScan();
+}
+function clearView() {
+  clearAll();
+  nextTick(() => document.getElementById("image")?.focus());
 }
 function imageKey(ev) {
   const n = history.value.length;
@@ -267,7 +280,22 @@ onMounted(() => {
         </details>
       </div>
       <div class="scan-row">
-        <div class="image-wrap">
+        <div v-if="split" class="image-wrap image-split">
+          <input id="image-repo" :value="imageRepo" readonly tabindex="-1" aria-label="Image repository" :title="imageRepo" />
+          <TagInput
+            id="image-tag"
+            :model-value="imageTag"
+            :tags="repoTags"
+            :disabled="scanning"
+            :class="{ changed: scanState === 'changed' }"
+            @update:model-value="setTag"
+            @open="ensureTags(imageRepo)"
+          />
+          <button type="button" class="ghost clear-btn" title="Clear the results and go back to the single image field" :disabled="scanning" @click="clearView">
+            Clear
+          </button>
+        </div>
+        <div v-else class="image-wrap">
           <input
             id="image"
             v-model="image"
@@ -306,7 +334,15 @@ onMounted(() => {
             <div class="recent-hint" aria-hidden="true">↑↓ to choose · Enter to rescan · Tab to fill the field</div>
           </div>
         </div>
-        <button id="scan-btn" type="submit" :disabled="scanning">Scan</button>
+        <button
+          id="scan-btn"
+          type="submit"
+          :class="{ rescan: scanState === 'current' }"
+          :disabled="scanning"
+          :title="scanState === 'current' ? 'Scan this image again, e.g. when a floating tag has moved' : ''"
+        >
+          {{ scanState === "current" ? "Rescan" : "Scan" }}
+        </button>
         <div id="vex-split" :class="{ solo: !vex.size }">
           <button
             v-if="vex.size"
@@ -339,6 +375,10 @@ onMounted(() => {
         </div>
         <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
       </div>
+      <p v-if="split && !scanning && scanState !== 'new'" id="scan-state" :class="scanState" role="status">
+        <template v-if="scanState === 'current'">✓ Showing the scan of {{ result.image }}. Rescan to check it again.</template>
+        <template v-else>● Not scanned yet: the results below are for {{ result.image }}. Press Scan for {{ image }}.</template>
+      </p>
     </form>
     <button id="help-btn" type="button" class="ghost" title="Glossary and app configuration" aria-label="Help" @click="helpDialog.open()">
       ?

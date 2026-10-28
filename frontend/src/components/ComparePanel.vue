@@ -6,6 +6,9 @@ import {
   sevStyle,
   opts,
   cmpForm,
+  cmpBase,
+  repoTags,
+  ensureTags,
   compareData as data,
   scanning,
   comparing,
@@ -17,6 +20,7 @@ import {
   refreshFootprint,
 } from "../store.js";
 import { pct } from "../lib/format.js";
+import TagInput from "./TagInput.vue";
 import Chip from "./Chip.vue";
 import { useVirtualList } from "../lib/virtual.js";
 
@@ -33,23 +37,11 @@ const chgStyle = (c) => ({ "--c": CHG_COLOR[c] });
 const view = ref("vulns");
 const show = reactive(new Set(["added", "removed"]));
 const filter = ref("");
-const tags = ref([]);
-const note = ref("");
-
-async function loadTags() {
-  note.value = "Loading tags…";
-  try {
-    tags.value = await ScanService.ListTags(cmpForm.repo);
-    note.value = `${tags.value.length} tags loaded (newest version first) — type to filter.`;
-  } catch (e) {
-    note.value = "Could not list tags — type them in. " + errText(e);
-  }
-}
 
 async function run() {
   const req = {
-    repo: cmpForm.repo,
-    tagA: cmpForm.a,
+    repo: cmpBase.value.repo,
+    tagA: cmpBase.value.tag,
     tagB: cmpForm.b,
     username: opts.username,
     password: opts.password,
@@ -61,7 +53,7 @@ async function run() {
     ignorePolicy: opts.ignorePolicy,
     ignoreFile: opts.ignoreFile,
   };
-  for (const k of ["repo", "a", "b"]) lsSet("cmp-" + k, cmpForm[k]);
+  lsSet("cmp-b", cmpForm.b);
   logText.value = "";
   comparing.value = scanning.value = true;
   refreshFootprint();
@@ -111,30 +103,21 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
 
 <template>
   <form id="cmp-form" class="toolbar wrap" @submit.prevent="run">
-    <input
-      id="cmp-repo"
-      v-model="cmpForm.repo"
-      placeholder="Image repository, e.g. docker.io/library/nginx"
-      autocomplete="off"
-      spellcheck="false"
-      required
-    />
+    <input id="cmp-repo" :value="cmpBase.repo" readonly tabindex="-1" aria-label="Image repository" :title="cmpBase.repo" placeholder="Scan or enter an image above" />
     <label class="chk"
-      >Base <input id="cmp-a" v-model="cmpForm.a" list="cmp-tags" placeholder="tag, e.g. 1.26" autocomplete="off" required
+      >Base <input id="cmp-a" :value="cmpBase.tag" readonly tabindex="-1" placeholder="tag" title="The tag of the image at the top"
     /></label>
     <span class="kv">→</span>
-    <label class="chk"
-      >Target <input id="cmp-b" v-model="cmpForm.b" list="cmp-tags" placeholder="tag, e.g. 1.27" autocomplete="off" required
-    /></label>
-    <datalist id="cmp-tags"><option v-for="t in tags" :key="t" :value="t"></option></datalist>
-    <button class="ghost" id="cmp-load" type="button" @click="loadTags">Load tags</button>
-    <button id="cmp-go" type="submit" :disabled="comparing">Compare</button>
+    <span class="chk"
+      >Target
+      <TagInput id="cmp-b" v-model="cmpForm.b" :tags="repoTags" label="Target tag" :disabled="comparing" @open="ensureTags(cmpBase.repo)"
+    /></span>
+    <button id="cmp-go" type="submit" :disabled="comparing || !cmpBase.repo || !cmpBase.tag">Compare</button>
     <button id="cmp-cancel" type="button" v-show="comparing" @click="cancel">Cancel</button>
-    <span id="cmp-note" class="kv">{{ note }}</span>
   </form>
   <div id="cmp-out" class="scroll">
     <div v-if="!data" class="empty">
-      Pick two tags of an image to see what changed: vulnerabilities added and removed, and package changes.
+      Pick a target tag to compare the scanned image against and see what changed: vulnerabilities added and removed, and package changes.
     </div>
     <template v-else>
       <div class="sides">

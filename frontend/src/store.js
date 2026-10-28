@@ -228,7 +228,8 @@ function remember(ref, r) {
   recent.value = [entry, ...recent.value.filter((e) => e.image !== ref)].slice(0, RECENT_MAX);
   lsSet(RECENT_KEY, JSON.stringify(recent.value));
 }
-export const cmpForm = reactive({ repo: lsGet("cmp-repo"), a: lsGet("cmp-a"), b: lsGet("cmp-b") });
+// Compare: the base is the image at the top (read only); only the target tag is its own.
+export const cmpForm = reactive({ b: lsGet("cmp-b") });
 
 // The last comparison, kept here so a new scan can clear it.
 export const compareData = shallowRef(null);
@@ -239,10 +240,83 @@ async function fillLatestTag(repo, baseTag) {
   if (!repo) return;
   try {
     const latest = await ScanService.LatestTag(repo, baseTag);
-    if (latest && cmpForm.repo === repo) cmpForm.b = latest;
+    if (latest && imageRepo.value === repo) cmpForm.b = latest;
   } catch {
     /* the user can still type the tag */
   }
+}
+
+// After a scan the image box splits into the repository (read only) and an editable tag with the
+// registry's tags to pick from; Clear goes back to the single box. image stays the one reference a scan uses.
+export const split = ref(false);
+// splitRef splits a reference into repository and tag, or digest when it names one (the digest wins
+// over a tag beside it, since it is what gets scanned). It is SplitImage without a call per keystroke.
+export function splitRef(ref) {
+  const [name, digest] = ref.trim().split("@");
+  const i = name.lastIndexOf(":");
+  const tagged = i > name.lastIndexOf("/");
+  return { repo: tagged ? name.slice(0, i) : name, tag: digest || (tagged ? name.slice(i + 1) : "") };
+}
+// joinRef is the inverse: a "sha256:..." tag is a digest and joins with "@".
+export const joinRef = (repo, tag) => (!tag ? repo : tag.startsWith("sha256:") ? repo + "@" + tag : repo + ":" + tag);
+export const imageRepo = ref("");
+export const imageTag = ref("");
+export const repoTags = ref([]); // newest first, as ListTags returns them
+let tagsFor = "";
+
+// ensureTags loads the registry's tags for repo once; a failed lookup leaves the list empty (tags can still be typed).
+export async function ensureTags(repo) {
+  if (!repo || tagsFor === repo) return;
+  tagsFor = repo;
+  repoTags.value = [];
+  try {
+    const tags = (await ScanService.ListTags(repo)) || [];
+    if (tagsFor === repo) repoTags.value = tags;
+  } catch {
+    tagsFor = ""; // try again on the next open
+  }
+}
+
+export function enterSplit(repo, tag) {
+  if (!repo) return;
+  split.value = true;
+  imageRepo.value = repo;
+  imageTag.value = tag;
+  ensureTags(repo);
+}
+
+// The compare base: the split view's repository and tag, or the single box read the same way.
+export const cmpBase = computed(() => (split.value ? { repo: imageRepo.value, tag: imageTag.value } : splitRef(image.value)));
+
+// setTag edits the tag for the next scan. What is shown stays until a scan replaces it or Clear removes it.
+export function setTag(tag) {
+  imageTag.value = tag;
+  image.value = joinRef(imageRepo.value, tag);
+}
+
+// scanState tells the three situations apart: "new" (nothing scanned), "current" (the shown results are
+// for exactly this input, so Scan is a rescan, e.g. for a floating tag) and "changed" (edited since, not scanned).
+const sameRef = (a, b) => {
+  const x = splitRef(a),
+    y = splitRef(b);
+  return joinRef(x.repo, x.tag) === joinRef(y.repo, y.tag);
+};
+export const scanState = computed(() => (!result.value ? "new" : sameRef(result.value.image, image.value) ? "current" : "changed"));
+
+// clearAll empties the shown findings and goes back to the single image box (which keeps the reference).
+export function clearAll() {
+  split.value = false;
+  result.value = null;
+  compareData.value = null;
+  vex.value = new Map();
+  try {
+    localStorage.removeItem(RESULT_KEY);
+  } catch {
+    /* ignore */
+  }
+  setHashImage("");
+  rerank();
+  setStatus("Cleared.");
 }
 
 // scanning is true while any scan runs (single scan or compare); comparing marks the latter.
@@ -272,10 +346,9 @@ export async function loadVEX() {
 export async function runScan() {
   scanning.value = true;
   compareData.value = null;
-  const { repo, tag } = await ScanService.SplitImage(image.value);
-  cmpForm.repo = repo;
-  cmpForm.a = tag;
+  const { repo, tag } = splitRef(image.value);
   cmpForm.b = "";
+  enterSplit(repo, tag);
   fillLatestTag(repo, tag);
   refreshFootprint(); // recalculate now; it is measured again when the scan ends
   logText.value = "";
@@ -335,6 +408,8 @@ async function restoreScan() {
   const saved = lsJSON(RESULT_KEY, null);
   if (saved?.result && saved.forImage === want) {
     result.value = saved.result;
+    const { repo, tag } = splitRef(want);
+    enterSplit(repo, tag);
     rerank();
     await loadVEX();
     setStatus(`Restored the last scan of ${want}.`);
@@ -357,8 +432,6 @@ export function init() {
       mode.value = m;
       if (!m.fixtures) return;
       if (!image.value) image.value = m.image;
-      if (!cmpForm.repo) cmpForm.repo = m.repo;
-      if (!cmpForm.a) cmpForm.a = m.tagA;
       if (!cmpForm.b) cmpForm.b = m.tagB;
     },
     () => {},
