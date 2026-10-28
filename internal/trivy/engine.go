@@ -25,15 +25,14 @@ import (
 // defaultTrivyRepo is the repository a bare version in the Trivy image setting refers to.
 const defaultTrivyRepo = "docker.io/aquasec/trivy"
 
-// defaultTrivyImage is the fallback Trivy image, used until (or unless) the newest release tag can
-// be looked up through podman (newest.go). The renovate comment on the line above the const makes
-// Renovate keep the tag current (the custom manager in .github/renovate.json5).
+// defaultTrivyImage is the Trivy image scans run with unless the user picks another version or
+// image. The renovate comment on the line above the const makes Renovate keep the tag current (the
+// custom manager in .github/renovate.json5).
 // renovate: datasource=docker depName=docker.io/aquasec/trivy
 const defaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
 
-// DefaultTrivyImage is the Trivy image used when the "Trivy image" setting is empty: the newest
-// release tag found so far, else the pinned fallback. It never touches the network.
-func DefaultTrivyImage() string { return currentDefault() }
+// DefaultTrivyImage is the Trivy image used when the "Trivy image" setting is empty.
+func DefaultTrivyImage() string { return defaultTrivyImage }
 
 var bareVersion = regexp.MustCompile(`^v?[0-9][0-9A-Za-z.+_-]*$`)
 
@@ -126,7 +125,7 @@ type PodmanEngine struct {
 	// Bin is the podman binary; defaults to $PODMAN or "podman".
 	Bin string
 	// Image is the Trivy image to run when a job does not name one (see TrivyJob.TrivyImage):
-	// a reference or a bare version. Empty means the newest release (see DefaultTrivyImage).
+	// a reference or a bare version. Empty means defaultTrivyImage.
 	Image string
 	// Cache is the Trivy cache source mounted into the scanner: a podman volume name or an
 	// absolute directory on the machine running podman. Defaults to $TRIVY_SCANNER_CACHE, then
@@ -311,9 +310,6 @@ func (p *PodmanEngine) Version(ctx context.Context) (string, error) {
 func (p *PodmanEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(string)) ([]byte, error) {
 	// A name we chose lets us stop the container ourselves if the scan is cancelled.
 	name := containerName()
-	if job.TrivyImage == "" && p.Image == "" {
-		refreshNewest(ctx, p)
-	}
 	args, err := p.runArgs(job, name)
 	if err != nil {
 		return nil, err
