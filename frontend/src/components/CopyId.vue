@@ -7,6 +7,37 @@ const done = ref(false);
 let timer;
 
 async function copy() {
+  // The browser clipboard comes first: in headless mode the Wails call resolves
+  // without ever reaching the browser, so it can't be used to detect failure.
+  if (!(await webCopy(props.text))) await Clipboard.SetText(props.text).catch(() => {});
+  done.value = true;
+  clearTimeout(timer);
+  timer = setTimeout(() => (done.value = false), 1500);
+}
+
+async function webCopy(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;opacity:0";
+    document.body.append(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  }
+}
+
+onBeforeUnmount, ref } from "vue";
+
+const props = defineProps({ text: { type: String, required: true } });
+const done = ref(false);
+let timer;
+
+async function copy() {
   try {
     await Clipboard.SetText(props.text);
   } catch {
