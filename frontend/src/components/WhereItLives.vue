@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { result } from "../store.js";
+import { result, showInGraph } from "../store.js";
 import { findingPath, indexNodes } from "../lib/where.js";
 
 const props = defineProps({ v: { type: Object, required: true } });
@@ -20,6 +20,7 @@ const label = (n) => (n.version ? `${n.name} ${n.version}` : n.name);
         <span v-else-if="i === found.chain.length - 1" class="kv">{{ v.fixed ? "vulnerable, fixed in " + v.fixed.split(",")[0] : "vulnerable, no fix yet" }}</span>
       </li>
     </ol>
+    <button type="button" class="link" @click="showInGraph(found.chain[found.chain.length - 1].ref)">Show in Dependencies graph →</button>
     <p v-if="found.others" class="kv">Also reached through {{ found.others }} other direct {{ found.others === 1 ? "dependency" : "dependencies" }} of the image.</p>
   </div>
 </template>

@@ -24,6 +24,7 @@ import {
   runScan,
   cancel,
   init,
+  tab,
 } from "./store.js";
 import { ago, bytes } from "./lib/format.js";
 import OptionsPanel from "./components/OptionsPanel.vue";
@@ -38,7 +39,6 @@ import VexImportDialog from "./components/VexImportDialog.vue";
 import VexDrawer from "./components/VexDrawer.vue";
 import HelpDialog from "./components/HelpDialog.vue";
 
-const tab = ref("prio");
 const prio = ref(null);
 const vexDialog = ref(null);
 const vexImport = ref(null);

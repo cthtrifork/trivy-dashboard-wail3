@@ -48,6 +48,15 @@ const lsRemove = (k) => {
   }
 };
 
+// The visible tab, and a one-shot request for the Dependencies tab to select a component. Both live here
+// so another panel (Priorities) can send the reader to a component in the graph.
+export const tab = ref("prio");
+export const depsTarget = ref(null); // { ref, seq }; seq makes asking for the same component twice fire again
+export function showInGraph(ref) {
+  depsTarget.value = { ref, seq: (depsTarget.value?.seq ?? 0) + 1 };
+  tab.value = "deps";
+}
+
 // The latest scan. Shallow: the dependency graph holds thousands of read-only objects.
 export const result = shallowRef(null);
 // Findings of the latest scan by CVE id, one per VEX key (a finding repeated across image layers counts once),
