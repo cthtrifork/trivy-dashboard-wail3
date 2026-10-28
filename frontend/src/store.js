@@ -288,6 +288,11 @@ export const ensureTrivyTags = () => loadTrivyTags((mode.value?.trivyImage || "d
 // trivyNewest is the newest plain version found in the Trivy repository ("0.76.1": not the floating
 // "latest" tag). The list is sorted newest plain version first. Empty until the lookup succeeds.
 export const trivyNewest = computed(() => trivyTags.value.find((t) => /^\d+(\.\d+)+$/.test(t)) || "");
+// The field is never left empty: once the newest version is known it is filled in, unless the user
+// has chosen one. It is not saved until the user edits it, so the default keeps following the newest.
+watch(trivyNewest, (v) => {
+  if (v && !opts.trivyImage.trim()) opts.trivyImage = v;
+});
 // trivyImageSetting is what scans send: the user's choice, else the newest version found, else
 // empty so the backend falls back to its Renovate-managed default.
 export const trivyImageSetting = () => opts.trivyImage.trim() || trivyNewest.value;
