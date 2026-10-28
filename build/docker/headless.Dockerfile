@@ -32,15 +32,15 @@ RUN case "$TARGETARCH" in \
  && echo "$sha  /tmp/podman.tgz" | sha256sum -c - \
  && tar -xzf /tmp/podman.tgz -C /tmp \
  && install -m 0755 "/tmp/bin/podman-remote-static-linux_${TARGETARCH}" /podman \
- && install -d -m 1777 /data-skel
+ && install -d -m 0777 /data-skel
 
 # Unprivileged user (nonroot, uid 65532). Distroless has no shell to create /data, so it is made in
-# the stage above, world-writable with the sticky bit: the run commands in docs/headless.md use
+# the stage above, world-writable: the run commands in docs/headless.md use
 # `--userns=keep-id`, which runs the process as the host user (the owner of the podman socket),
 # not as 65532, and that user must be able to write to the data volume.
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:18f4cc26c9ffa7f20a359298be7deadac5c607c8e03a02b8119f1a5fc2f82c99
 COPY --from=podman /podman /usr/local/bin/podman
-COPY --from=podman --chown=65532:65532 /data-skel /data
+COPY --from=podman --chown=65532:65532 --chmod=0777 /data-skel /data
 COPY --from=build /out/trivy-scanner /usr/local/bin/trivy-scanner
 # The project's OpenVEX statements. Scanners do not discover this on their own: pass it with
 # `--vex <file>`, or use the attestation on the registry (`--vex oci`). See docs/headless.md.
