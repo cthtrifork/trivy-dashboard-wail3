@@ -34,7 +34,6 @@ import {
   status,
   logText,
   mode,
-  appInfo,
   footprint,
   runScan,
   cancel,
@@ -154,8 +153,7 @@ const footprintTitle = computed(() => {
   return [f.cacheLocation, ...parts].join("\n");
 });
 
-// Updating is three clicks, never automatic: check, then download, then restart.
-const update = ref({ step: "idle", version: "" }); // idle | available | ready
+// Busy while the vulnerability database check runs.
 const updateBusy = ref(false);
 
 async function updateStep(busyMsg, run) {
@@ -181,34 +179,6 @@ const updateDB = () =>
     }
     setStatus(downloaded ? "Downloaded a newer vulnerability database." : "Vulnerability database is up to date (no download reported).");
   });
-
-const checkForUpdates = () =>
-  updateStep("Checking for updates…", async () => {
-    const r = await ScanService.CheckForUpdates();
-    update.value = r.available ? { step: "available", version: r.version } : { step: "idle", version: "" };
-    setStatus(r.available ? `Version ${r.version} is available.` : "You are on the latest version.");
-  });
-
-const installUpdate = () =>
-  updateStep(`Downloading ${update.value.version}…`, async () => {
-    await ScanService.InstallUpdate();
-    update.value = { ...update.value, step: "ready" };
-    setStatus(`Version ${update.value.version} is downloaded and verified. Restart to apply it.`);
-  });
-
-const restartToUpdate = () => updateStep("Restarting…", () => ScanService.RestartToUpdate());
-
-const updateAction = computed(() => {
-  const v = update.value.version;
-  switch (update.value.step) {
-    case "available":
-      return { label: `Download ${v}`, run: installUpdate };
-    case "ready":
-      return { label: "Restart & apply", run: restartToUpdate };
-    default:
-      return { label: "Check for updates…", run: checkForUpdates };
-  }
-});
 
 // Follow the log as it grows.
 watch(logText, async () => {
@@ -367,19 +337,6 @@ onMounted(() => {
                 </button>
               </div>
             </div>
-            <div class="opts-update">
-              <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>
-              <button
-                type="button"
-                class="ghost"
-                id="update-btn"
-                :disabled="!appInfo?.enabled || updateBusy"
-                :title="appInfo?.enabled ? '' : appInfo?.reason"
-                @click="updateAction.run"
-              >
-                {{ updateAction.label }}
-              </button>
-            </div>
           </div>
         </details>
       </div>
@@ -527,5 +484,8 @@ onMounted(() => {
   <VexDrawer />
   <HelpDialog ref="helpDialog" />
   <div id="status" :class="[status.err ? 'err' : '', status.busy ? 'spin' : '']">{{ status.msg }}</div>
-  <footer id="footprint" v-if="footprintNote" :title="footprintTitle">{{ footprintNote }}</footer>
+  <footer id="footprint">
+    <span id="app-version">{{ mode?.version ? "Version " + mode.version : "" }}</span>
+    <span v-if="footprintNote" :title="footprintTitle">{{ footprintNote }}</span>
+  </footer>
 </template>

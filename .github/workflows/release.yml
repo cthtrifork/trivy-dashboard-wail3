@@ -3,7 +3,7 @@ name: Release
 # Publishes a GitHub release (and the headless container image on ghcr.io) with a Linux amd64 binary, a tarball, a .deb and an .rpm (PGP-signed,
 # with the public key published alongside), SHA256SUMS, a CycloneDX SBOM and signed attestations
 # (build provenance for the binary, tarball, packages and SBOM; the SBOM bound to the binary). The
-# in-app updater installs the raw binary and verifies it against SHA256SUMS, so those names are an interface. Three ways to run it:
+# raw binary is verified against SHA256SUMS, so those names are an interface. Three ways to run it:
 #   - the "Tag and release" workflow creates a tag and calls this one (workflow_call). This is the
 #     normal route. It has to call rather than rely on the tag push below, because a tag pushed with
 #     the workflow's own GITHUB_TOKEN does not trigger other workflows.
@@ -143,8 +143,8 @@ jobs:
           if grep -aqF "[fixtures] replaying" "$built"; then
             echo "::error::demo-mode code is present in the release binary"; exit 1
           fi
-          # Raw binary (what the in-app updater installs), tarball (for people) and SHA256SUMS.
-          # The layout matters: see scripts/package-release.sh and internal/selfupdate.
+          # Raw binary, tarball (for people) and SHA256SUMS.
+          # The layout matters: see scripts/package-release.sh.
           scripts/package-release.sh "$built" "${VERSION}" dist
 
       # The .deb and .rpm come from the same binary, via `wails3 tool package` (nfpm) and
@@ -179,8 +179,8 @@ jobs:
           scripts/package-linux.sh "$RUNNER_TEMP/build/${APP}" "$VERSION" dist
 
       # CycloneDX SBOM from the lockfiles (go.mod/go.sum and frontend/package-lock.json), i.e. the Go
-      # modules and the npm packages bundled into the binary. Named without os/arch so the in-app
-      # updater's asset matcher cannot mistake it for the binary. No vulnerability scanner runs here;
+      # modules and the npm packages bundled into the binary. Named without os/arch so it is not
+      # mistaken for the binary. No vulnerability scanner runs here;
       # security.yml already does that.
       - name: Generate SBOM with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0

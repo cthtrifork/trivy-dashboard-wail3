@@ -389,7 +389,6 @@ export const scanning = ref(false);
 export const comparing = ref(false);
 
 export const mode = ref(null);
-export const appInfo = ref(null);
 export const footprint = ref(null);
 
 export const refreshFootprint = () =>
@@ -495,12 +494,6 @@ export function init() {
     checkWhileTyping(() => opts.ignorePolicy, ScanService.CheckIgnorePolicy, ignorePolicyError),
     checkWhileTyping(() => opts.ignoreFile, ScanService.CheckIgnoreFile, ignoreFileError),
   ];
-  // The Go side decides whether this build may update itself (release builds only). Without an answer
-  // the app simply offers no update.
-  ScanService.UpdateInfo().then(
-    (u) => (appInfo.value = u),
-    () => {},
-  );
   // Development builds replay recorded scans: say so, and prefill the inputs with something that works.
   ScanService.Mode().then(
     (m) => {

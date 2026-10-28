@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # Turns a built binary into the assets a release publishes:
 #
-#   <out>/trivy-scanner_linux_amd64                     raw binary: what the in-app updater installs
+#   <out>/trivy-scanner_linux_amd64                     raw binary
 #   <out>/trivy-scanner_<version>_linux_amd64.tar.gz    binary + README + LICENSE, for people
 #   <out>/SHA256SUMS                                    SHA-256 of both
 #
-# Why both files: the updater installs a single file (or an archive with exactly one
-# top-level entry), so it cannot use the tarball; people downloading by hand want the
-# README and LICENSE. SHA256SUMS has a fixed name because the updater looks it up by name.
+# Why both files: the raw binary is the plain download; people downloading by hand also want the
+# README and LICENSE. SHA256SUMS has a fixed name so scripts can find it.
 #
 #   scripts/package-release.sh <binary> <version> <outdir>
 set -euo pipefail

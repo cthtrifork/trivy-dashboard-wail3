@@ -25,6 +25,12 @@ type ConfigEnv struct {
 	Default string `json:"default"`
 }
 
+// version is stamped at release time: -ldflags "-X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=v1.2.3".
+var version = "dev"
+
+// Version is the stamped release version, or "dev" for an unstamped build.
+func Version() string { return version }
+
 // AppConfig is the resolved configuration for the help dialog: the paths and environment as this
 // process sees them, so nothing shown there is a guess.
 type AppConfig struct {

@@ -336,23 +336,6 @@ header {
   color: var(--mute);
   font-size: 12px;
 }
-.opts-update {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border-top: 1px solid var(--line);
-  padding-top: 8px;
-  margin-top: 2px;
-}
-.opts-update button:disabled {
-  cursor: not-allowed;
-}
-.opts-update button,
-.opts-update .kv {
-  white-space: nowrap;
-}
-
 /* Split view: read-only repository, tag combobox, reset. */
 .image-split {
   display: flex;

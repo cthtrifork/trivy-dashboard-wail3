@@ -29,17 +29,6 @@ export function Cancel() {
 }
 
 /**
- * CheckForUpdates asks GitHub Releases whether a newer release exists. It only looks:
- * nothing is downloaded until InstallUpdate is called.
- * @returns {$CancellablePromise<$models.UpdateStatus>}
- */
-export function CheckForUpdates() {
-    return $Call.ByID(1912269192).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType0($result);
-    }));
-}
-
-/**
  * CheckIgnoreFile reports why the text is not a usable .trivyignore.yaml, or "" when it is (or is
  * blank). The UI shows it under the field while the user types.
  * @param {string} text
@@ -88,16 +77,6 @@ export function Footprint() {
     return $Call.ByID(1307495092).then(/** @type {($result: any) => any} */(($result) => {
         return $$createType4($result);
     }));
-}
-
-/**
- * InstallUpdate downloads the release CheckForUpdates found, verifies its SHA-256 and
- * stages it beside the running binary. It blocks until staged or failed, so it must be
- * called from a binding (its own goroutine), never the UI thread.
- * @returns {$CancellablePromise<void>}
- */
-export function InstallUpdate() {
-    return $Call.ByID(3236230593);
 }
 
 /**
@@ -153,14 +132,6 @@ export function Rescore(rules) {
 }
 
 /**
- * RestartToUpdate swaps the staged binary in and relaunches the app.
- * @returns {$CancellablePromise<void>}
- */
-export function RestartToUpdate() {
-    return $Call.ByID(1624260660);
-}
-
-/**
  * RulePresets returns the built-in scoring presets.
  * @returns {$CancellablePromise<trivy$0.Preset[]>}
  */
@@ -202,16 +173,6 @@ export function SplitImage(ref) {
  */
 export function UpdateDB(trivyImage) {
     return $Call.ByID(1972938038, trivyImage);
-}
-
-/**
- * UpdateInfo reports the running version and whether it can update itself.
- * @returns {$CancellablePromise<$models.UpdateInfo>}
- */
-export function UpdateInfo() {
-    return $Call.ByID(2877341576).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType14($result);
-    }));
 }
 
 /**
@@ -306,7 +267,6 @@ export function VEXSet(image, e) {
 }
 
 // Private type creation functions
-const $$createType0 = $models.UpdateStatus.createFrom;
 const $$createType1 = trivy$0.CompareResult.createFrom;
 const $$createType2 = $Create.Nullable($$createType1);
 const $$createType3 = $models.AppConfig.createFrom;
@@ -320,7 +280,6 @@ const $$createType10 = $Create.Array($$createType9);
 const $$createType11 = trivy$0.ScanResult.createFrom;
 const $$createType12 = $Create.Nullable($$createType11);
 const $$createType13 = $models.ImageParts.createFrom;
-const $$createType14 = $models.UpdateInfo.createFrom;
 const $$createType15 = trivy$0.ImportReport.createFrom;
 const $$createType16 = trivy$0.VEXEntry.createFrom;
 const $$createType17 = $Create.Array($$createType16);

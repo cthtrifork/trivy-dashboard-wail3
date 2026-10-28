@@ -26,8 +26,7 @@ The workflow then:
 2. works out the tag (`scripts/next-version.sh`) and stops if a **release** for it already exists;
 3. creates an annotated tag on the head of `main` and pushes it, unless the tag already exists (see *Retrying*);
 4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck`, builds the binary, and publishes the
-   release with its assets (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
-   have the names they do. The same run also pushes the headless container image to
+   release with its assets (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. The same run also pushes the headless container image to
    `ghcr.io/cthtrifork/trivy-dashboard-wail3` (tags `1.2.3`, `v1.2.3`, and `latest` for a final release) with a signed
    provenance attestation; see [headless](headless.md). The image is only pushed for a tagged release, never from a
    branch or a dry run.
@@ -108,4 +107,4 @@ gpg --import trivy-scanner-release-key.asc && gpg --verify payload.sig payload
 ```
 
 The SBOM (`trivy-scanner_<version>.sbom.cdx.json`) lists the Go modules and npm packages the binary is built from (from `go.mod` and `frontend/package-lock.json`), generated with Trivy (`format: cyclonedx`).
-It has no os/arch in its name so the in-app updater never considers it as the binary.
+It has no os/arch in its name so it is not mistaken for the binary.

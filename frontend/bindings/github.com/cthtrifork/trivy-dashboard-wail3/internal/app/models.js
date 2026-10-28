@@ -409,6 +409,14 @@ export class Mode {
              */
             this["registryUser"] = "";
         }
+        if (!("version" in $$source)) {
+            /**
+             * Version is the stamped release version, "dev" for an unstamped build.
+             * @member
+             * @type {string}
+             */
+            this["version"] = "";
+        }
 
         Object.assign(this, $$source);
     }
@@ -421,97 +429,6 @@ export class Mode {
     static createFrom($$source = {}) {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new Mode(/** @type {Partial<Mode>} */($$parsedSource));
-    }
-}
-
-/**
- * UpdateInfo tells the UI what this build can do about updates.
- */
-export class UpdateInfo {
-    /**
-     * Creates a new UpdateInfo instance.
-     * @param {Partial<UpdateInfo>} [$$source = {}] - The source object to create the UpdateInfo.
-     */
-    constructor($$source = {}) {
-        if (!("version" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["version"] = "";
-        }
-        if (!("enabled" in $$source)) {
-            /**
-             * @member
-             * @type {boolean}
-             */
-            this["enabled"] = false;
-        }
-        if (!("reason" in $$source)) {
-            /**
-             * Reason says why updating is unavailable, for a tooltip. Empty when Enabled.
-             * @member
-             * @type {string}
-             */
-            this["reason"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new UpdateInfo instance from a string or object.
-     * @param {any} [$$source = {}]
-     * @returns {UpdateInfo}
-     */
-    static createFrom($$source = {}) {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new UpdateInfo(/** @type {Partial<UpdateInfo>} */($$parsedSource));
-    }
-}
-
-/**
- * UpdateStatus is what a check found.
- */
-export class UpdateStatus {
-    /**
-     * Creates a new UpdateStatus instance.
-     * @param {Partial<UpdateStatus>} [$$source = {}] - The source object to create the UpdateStatus.
-     */
-    constructor($$source = {}) {
-        if (!("available" in $$source)) {
-            /**
-             * @member
-             * @type {boolean}
-             */
-            this["available"] = false;
-        }
-        if (!("version" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["version"] = "";
-        }
-        if (!("notes" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["notes"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new UpdateStatus instance from a string or object.
-     * @param {any} [$$source = {}]
-     * @returns {UpdateStatus}
-     */
-    static createFrom($$source = {}) {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new UpdateStatus(/** @type {Partial<UpdateStatus>} */($$parsedSource));
     }
 }
 
