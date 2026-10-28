@@ -387,7 +387,7 @@ export class Mode {
         }
         if (!("trivyImage" in $$source)) {
             /**
-             * TrivyImage is the default Trivy image, shown as the placeholder of the Options field.
+             * TrivyImage is the default Trivy image, the fallback for the Options field.
              * @member
              * @type {string}
              */

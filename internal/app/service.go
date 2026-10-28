@@ -47,7 +47,7 @@ type Mode struct {
 	Repo     string `json:"repo"`  // example repository for Compare
 	TagA     string `json:"tagA"`
 	TagB     string `json:"tagB"`
-	// TrivyImage is the default Trivy image, shown as the placeholder of the Options field.
+	// TrivyImage is the default Trivy image, the fallback for the Options field.
 	TrivyImage string `json:"trivyImage"`
 	// RegistryToken is true when GITHUB_TOKEN is set; the token itself never leaves Go.
 	// RegistryUser is the login that goes with it. Both only prefill the Options fields (ghcr.io).
@@ -72,7 +72,7 @@ func vexFile() string {
 
 func NewScanService() *ScanService {
 	engine, mode := newEngine()
-	mode.TrivyImage = trivy.DefaultTrivyImage()
+	mode.TrivyImage = trivy.DefaultTrivyImage
 	if user, _, ok := trivy.GithubLogin(); ok {
 		mode.RegistryToken, mode.RegistryUser = true, user
 	}
@@ -292,6 +292,13 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 		}
 	}
 	return res, err
+}
+
+// UpdateDB checks for a newer vulnerability database with the given Trivy version (empty means the
+// default) and reports whether Trivy downloaded one. Trivy only downloads when the cached one is out of
+// date, and a failure keeps the cache.
+func (s *ScanService) UpdateDB(trivyImage string) (bool, error) {
+	return s.scanner.UpdateDB(s.appCtx(), trivyImage)
 }
 
 // RulePresets returns the built-in scoring presets.

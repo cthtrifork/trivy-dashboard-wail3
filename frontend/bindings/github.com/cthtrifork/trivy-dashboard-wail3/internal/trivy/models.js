@@ -1293,7 +1293,7 @@ export class ScanRequest {
         }
         if (!("trivyImage" in $$source)) {
             /**
-             * TrivyImage selects the Trivy image or version to scan with. Empty means the default.
+             * TrivyImage selects the Trivy version to scan with. Empty means the default.
              * @member
              * @type {string}
              */

@@ -29,7 +29,7 @@ type ScanRequest struct {
 	ShowSuppressed  bool `json:"showSuppressed"`
 	ShowWillNotFix  bool `json:"showWillNotFix"`
 	ShowNotAffected bool `json:"showNotAffected"`
-	// TrivyImage selects the Trivy image or version to scan with. Empty means the default.
+	// TrivyImage selects the Trivy version to scan with. Empty means the default.
 	TrivyImage string `json:"trivyImage"`
 	// IgnorePolicy is the source of a Rego policy passed to Trivy's --ignore-policy: findings for
 	// which it defines `ignore` are left out of the report. Empty means none.
@@ -151,10 +151,9 @@ type Scanner struct {
 	// Enricher adds EPSS/KEV data; nil disables enrichment.
 	Enricher *Enricher
 
-	dbMu    sync.Mutex
-	dbFresh time.Time // when the vulnerability DB was last confirmed up to date...
-	dbImage string    // ...by this Trivy image (another version may want another DB schema)
-	dbErr   error     // why the last refresh failed, so a scan that then fails can say so
+	dbMu      sync.Mutex
+	dbChecked bool  // the vulnerability DB was checked this session; UpdateDB checks it again
+	dbErr     error // why the last check failed, so a scan that then fails can say so
 
 	mu     sync.Mutex
 	cancel context.CancelFunc
@@ -259,21 +258,22 @@ func (s *Scanner) begin(parent context.Context) (context.Context, func(), error)
 	}, nil
 }
 
-// dbRefresh is how long a confirmed vulnerability DB is trusted before Trivy is asked to check
-// for a newer one. Trivy itself only downloads when the DB is past its NextUpdate, so a check is
-// cheap, but each one costs a container start and (when stale) a download.
-const dbRefresh = time.Hour
-
-// ensureDB makes sure the cached vulnerability DB is current, once per dbRefresh, so that the scans
-// themselves can run with --skip-db-update. That means the DB is checked once per session instead
-// of once per scan (a comparison is four scans), and a scan with an existing cache still works
-// offline: a failed refresh only logs a warning. It returns an error only if ctx was cancelled.
+// ensureDB checks the cached vulnerability DB once per session, so that the scans themselves can
+// run with --skip-db-update. Trivy only downloads when the DB is past its NextUpdate, so a stale
+// cache is refreshed on the first scan after startup, and a comparison (four scans) checks once.
+// A scan with an existing cache still works offline: a failed check only logs a warning and is
+// retried on the next scan. It returns an error only if ctx was cancelled. UpdateDB checks again on demand.
 func (s *Scanner) ensureDB(ctx context.Context, trivyImage string, log func(string)) error {
 	s.dbMu.Lock()
 	defer s.dbMu.Unlock()
-	if s.dbImage == trivyImage && !s.dbFresh.IsZero() && time.Since(s.dbFresh) < dbRefresh {
+	if s.dbChecked {
 		return nil
 	}
+	return s.checkDB(ctx, trivyImage, log)
+}
+
+// checkDB runs `trivy --download-db-only`; the caller holds dbMu.
+func (s *Scanner) checkDB(ctx context.Context, trivyImage string, log func(string)) error {
 	s.logf("Checking the vulnerability database (cached between scans)…")
 	if _, err := s.engine().RunTrivy(ctx, TrivyJob{TrivyImage: trivyImage, Flags: []string{"--download-db-only"}}, log); err != nil {
 		if ctx.Err() != nil {
@@ -283,9 +283,33 @@ func (s *Scanner) ensureDB(ctx context.Context, trivyImage string, log func(stri
 		s.dbErr = err
 		return nil
 	}
-	s.dbErr = nil
-	s.dbFresh, s.dbImage = time.Now(), trivyImage
+	s.dbErr, s.dbChecked = nil, true
 	return nil
+}
+
+// UpdateDB checks for a newer vulnerability DB now instead of waiting for the next session. It is the
+// same check as before a scan, so Trivy skips the download while the cached DB is still current, and
+// a failed download keeps the cached copy. downloaded is true when Trivy's output said it downloaded
+// one; the error says why the check failed, if it did.
+func (s *Scanner) UpdateDB(parent context.Context, trivyImage string) (downloaded bool, err error) {
+	if _, err := ResolveTrivyImage(trivyImage); err != nil {
+		return false, err
+	}
+	ctx, release, err := s.begin(parent)
+	if err != nil {
+		return false, err
+	}
+	defer release()
+	s.dbMu.Lock()
+	defer s.dbMu.Unlock()
+	log := func(l string) {
+		downloaded = downloaded || strings.Contains(l, "Downloading")
+		s.logf("%s", l)
+	}
+	if err := s.checkDB(ctx, trivyImage, log); err != nil {
+		return false, err
+	}
+	return downloaded && s.dbErr == nil, s.dbErr
 }
 
 func (s *Scanner) lastDBError() error {
@@ -325,10 +349,10 @@ func (s *Scanner) scanImage(ctx context.Context, req ScanRequest) (*ScanResult, 
 		return nil, err
 	}
 	username, password := withDefaultCredentials(image, req.Username, req.Password)
-	job := TrivyJob{Image: image, Username: username, Password: password, TrivyImage: trivyImage}
+	job := TrivyJob{Image: image, Username: username, Password: password, TrivyImage: strings.TrimSpace(req.TrivyImage)}
 	logLine := func(l string) { s.logf("%s", l) }
 
-	if err := s.ensureDB(ctx, trivyImage, logLine); err != nil {
+	if err := s.ensureDB(ctx, job.TrivyImage, logLine); err != nil {
 		return nil, err
 	}
 	s.logf("Scanning %s for vulnerabilities with %s…", image, trivyImage)

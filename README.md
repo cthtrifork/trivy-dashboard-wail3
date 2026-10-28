@@ -1,7 +1,7 @@
 # Trivy Scanner (Wails v3)
 
 Desktop app: enter a container image reference, and Trivy runs inside a local
-Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/image/Dockerfile`](internal/trivy/image/Dockerfile); choose another version or image under **Options → Trivy version or image**).
+Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/engine.go`](internal/trivy/engine.go); choose another version under **Options → Trivy version**).
 
 - **Priorities** – the landing view: a ranked shortlist instead of 150 CVEs, filterable by CVSS severity and by tier. An explainable 0–100 score combines CISA **KEV**, **EPSS**, CVSS severity, attack vector and fix availability. Tiers: Act now / Fix soon / Plan / Monitor. Tuning: [`docs/scoring.md`](docs/scoring.md).
 - **VEX editor** – assess a finding as `affected`, `not_affected`, `fixed` or `under_investigation`, export or import OpenVEX (v0.2.0). Assessments are stored per image repository in `<user config dir>/trivy-scanner/vex.json`; resolved findings are hidden from the shortlist.
@@ -37,6 +37,7 @@ Screenshots: [`docs/screenshots`](docs/screenshots).
 ## More
 - Headless server over an SSH tunnel: [`docs/headless.md`](docs/headless.md)
 - Wails MCP server (development only): [`docs/mcp.md`](docs/mcp.md)
+- Network activity and offline behaviour: [`docs/network.md`](docs/network.md)
 - Window lifecycle: [`docs/lifecycle.md`](docs/lifecycle.md)
 - UI conventions: [`docs/ux-design-sheet.md`](docs/ux-design-sheet.md)
 - CI, screenshots and releases: [`docs/ci.md`](docs/ci.md), [`docs/releasing.md`](docs/releasing.md)

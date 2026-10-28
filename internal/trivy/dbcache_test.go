@@ -17,6 +17,7 @@ type recEngine struct {
 	mu     sync.Mutex
 	jobs   []TrivyJob
 	dbFail bool
+	dbLine string // logged by a DB check, like Trivy 0.76.1 ("[vulndb] Downloading vulnerability DB...")
 }
 
 func (r *recEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(string)) ([]byte, error) {
@@ -25,6 +26,9 @@ func (r *recEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(string)
 	r.mu.Unlock()
 	if r.dbFail && slices.Contains(job.Flags, "--download-db-only") {
 		return nil, errors.New("offline")
+	}
+	if r.dbLine != "" && slices.Contains(job.Flags, "--download-db-only") {
+		log(r.dbLine)
 	}
 	return r.FixtureEngine.RunTrivy(ctx, job, log)
 }
@@ -132,28 +136,22 @@ func TestRunArgsDBOnlyJobAndMirrorEnv(t *testing.T) {
 	}
 }
 
-func TestChangingTrivyImageRechecksDBAndIsUsedByEveryJob(t *testing.T) {
+func TestChangingTrivyVersionDoesNotRecheckDBAndIsUsedByEveryJob(t *testing.T) {
 	r, s := newRec(t)
 	for _, v := range []string{"", "", "0.99.0"} {
 		if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13", TrivyImage: v}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if n := r.dbJobs(); n != 2 {
-		t.Errorf("db checks = %d, want 2 (default once, then the new version)", n)
-	}
-	for _, j := range r.jobs {
-		want := DefaultTrivyImage()
-		if len(r.jobs) > 0 && strings.HasSuffix(j.TrivyImage, ":0.99.0") {
-			want = j.TrivyImage
-		}
-		if j.TrivyImage != want || j.TrivyImage == "" {
-			t.Errorf("job %v has TrivyImage %q", j.Flags, j.TrivyImage)
-		}
+	if n := r.dbJobs(); n != 1 {
+		t.Errorf("db checks = %d, want 1 (a new version does not check again)", n)
 	}
 	last := r.jobs[len(r.jobs)-1]
-	if last.TrivyImage != "docker.io/aquasec/trivy:0.99.0" {
+	if last.TrivyImage != "0.99.0" {
 		t.Errorf("last job used %q", last.TrivyImage)
+	}
+	if first := r.jobs[0]; first.TrivyImage != "" {
+		t.Errorf("default jobs must leave the version empty, got %q", first.TrivyImage)
 	}
 }
 
@@ -163,7 +161,7 @@ func TestCompareForwardsTrivyImage(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, j := range r.jobs {
-		if j.TrivyImage != "docker.io/aquasec/trivy:0.99.0" {
+		if j.TrivyImage != "v0.99.0" {
 			t.Errorf("job %v used %q", j.Flags, j.TrivyImage)
 		}
 	}
@@ -258,5 +256,46 @@ func TestScanRejectsInvalidIgnoreTextBeforeRunningTrivy(t *testing.T) {
 	}
 	if len(r.jobs) != 0 {
 		t.Errorf("trivy ran %d jobs for invalid input", len(r.jobs))
+	}
+}
+
+func TestUpdateDBChecksOnDemandReportsDownloadsAndKeepsTheCacheOnFailure(t *testing.T) {
+	r, s := newRec(t)
+	if _, err := s.Scan(context.Background(), ScanRequest{Image: "traefik:3.7.13"}); err != nil {
+		t.Fatal(err)
+	}
+	if downloaded, err := s.UpdateDB(context.Background(), ""); err != nil || downloaded {
+		t.Fatalf("a current DB: downloaded = %v, err = %v", downloaded, err)
+	}
+	if n := r.dbJobs(); n != 2 {
+		t.Errorf("db checks = %d, want 2 (the scan's, then the requested one)", n)
+	}
+	r.dbLine = "INFO\t[vulndb] Downloading vulnerability DB..."
+	if downloaded, err := s.UpdateDB(context.Background(), ""); err != nil || !downloaded {
+		t.Errorf("a download must be reported: downloaded = %v, err = %v", downloaded, err)
+	}
+	r.dbFail = true
+	if downloaded, err := s.UpdateDB(context.Background(), ""); err == nil || downloaded {
+		t.Errorf("a failed check must be reported as an error: downloaded = %v, err = %v", downloaded, err)
+	}
+	if _, err := s.UpdateDB(context.Background(), "--privileged"); err == nil {
+		t.Error("an invalid version must be refused")
+	}
+}
+
+func TestRunArgsPassTheDBRepository(t *testing.T) {
+	line := func() string {
+		args, err := (&PodmanEngine{Cache: "c"}).runArgs(TrivyJob{Image: "x"}, "n")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Join(args, " ")
+	}
+	if got := line(); !strings.Contains(got, "-e TRIVY_DB_REPOSITORY="+DefaultDBRepository) {
+		t.Errorf("default DB repository missing: %s", got)
+	}
+	t.Setenv("TRIVY_DB_REPOSITORY", "mirror.example/db:2")
+	if got := line(); strings.Contains(got, DefaultDBRepository) || !strings.Contains(got, "-e TRIVY_DB_REPOSITORY ") {
+		t.Errorf("the user's mirror must be forwarded from the environment: %s", got)
 	}
 }

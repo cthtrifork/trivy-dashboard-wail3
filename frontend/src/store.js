@@ -262,20 +262,45 @@ export const joinRef = (repo, tag) => (!tag ? repo : tag.startsWith("sha256:") ?
 export const imageRepo = ref("");
 export const imageTag = ref("");
 export const repoTags = ref([]); // newest first, as ListTags returns them
-let tagsFor = "";
+export const trivyTags = ref([]); // the same for the Trivy version option
 
-// ensureTags loads the registry's tags for repo once; a failed lookup leaves the list empty (tags can still be typed).
-export async function ensureTags(repo) {
-  if (!repo || tagsFor === repo) return;
-  tagsFor = repo;
-  repoTags.value = [];
-  try {
-    const tags = (await ScanService.ListTags(repo)) || [];
-    if (tagsFor === repo) repoTags.value = tags;
-  } catch {
-    tagsFor = ""; // try again on the next open
-  }
+// tagLoader returns a function that loads the registry's tags for a repository into target once;
+// a failed lookup leaves the list empty (tags can still be typed).
+function tagLoader(target) {
+  let loadedFor = "";
+  return async (repo) => {
+    if (!repo || loadedFor === repo) return;
+    loadedFor = repo;
+    target.value = [];
+    try {
+      const tags = (await ScanService.ListTags(repo)) || [];
+      if (loadedFor === repo) target.value = tags;
+    } catch {
+      loadedFor = ""; // try again on the next open
+    }
+  };
 }
+export const ensureTags = tagLoader(repoTags);
+const loadTrivyTags = tagLoader(trivyTags);
+// ensureTrivyTags loads the tags of the default Trivy repository for the version picker.
+export const ensureTrivyTags = () => loadTrivyTags((mode.value?.trivyImage || "docker.io/aquasec/trivy").split(":")[0]);
+// trivyNewest is the first tag: ListTags sorts plain versions first, newest first, so it is the newest
+// release ("0.76.1") and not the floating "latest". Empty until the lookup succeeds.
+export const trivyNewest = computed(() => trivyTags.value[0] || "");
+// The field is never left empty: it starts with the pinned default version and switches to the newest
+// one once that is known, as long as the user has not chosen a version. Neither is saved until the user
+// edits the field, so the default keeps following.
+let trivyAuto = "";
+function setTrivyDefault(v) {
+  if (v && (!opts.trivyImage.trim() || opts.trivyImage === trivyAuto)) opts.trivyImage = trivyAuto = v;
+}
+watch(trivyNewest, setTrivyDefault);
+// trivyImageSetting is what scans send: the user's choice, else the newest version found, else
+// empty so the backend falls back to its Renovate-managed default.
+export const trivyImageSetting = () => opts.trivyImage.trim() || trivyNewest.value;
+// The version of the last successful scan or comparison. When the newest version cannot be looked up
+// (offline), this is the default instead of the pinned one: podman is known to have its image.
+export const rememberTrivyVersion = (v) => v && lsSet("trivy-last-used", v);
 
 export function enterSplit(repo, tag) {
   if (!repo) return;
@@ -356,6 +381,7 @@ export async function runScan() {
   result.value = null; // don't show the previous image's findings while the new scan runs
   rerank();
   setStatus("Starting scan…", { busy: true });
+  const trivyVersion = trivyImageSetting();
   try {
     const r = await ScanService.Scan({
       image: image.value,
@@ -365,12 +391,13 @@ export async function runScan() {
       showSuppressed: opts.showSuppressed,
       showWillNotFix: !opts.ignoreWillNotFix,
       showNotAffected: !opts.ignoreNotAffected,
-      trivyImage: opts.trivyImage.trim(),
+      trivyImage: trivyVersion,
       ignorePolicy: opts.ignorePolicy,
       ignoreFile: opts.ignoreFile,
       markUnderInvestigation: opts.markUnderInvestigation,
     });
     result.value = r;
+    rememberTrivyVersion(trivyVersion);
     rememberScan(r);
     remember(image.value.trim(), r);
     rerank();
@@ -430,6 +457,8 @@ export function init() {
   ScanService.Mode().then(
     (m) => {
       mode.value = m;
+      setTrivyDefault(lsGet("trivy-last-used") || m.trivyImage.split(":").pop());
+      ensureTrivyTags(); // so the default can be the newest version
       if (!m.fixtures) return;
       if (!image.value) image.value = m.image;
       if (!cmpForm.b) cmpForm.b = m.tagB;

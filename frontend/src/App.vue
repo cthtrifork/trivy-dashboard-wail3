@@ -12,6 +12,11 @@ import {
   imageTag,
   repoTags,
   ensureTags,
+  ensureTrivyTags,
+  trivyTags,
+  trivyImageSetting,
+  refreshFootprint,
+  trivyNewest,
   setTag,
   clearAll,
   scanState,
@@ -98,11 +103,7 @@ function imageKey(ev) {
 }
 const sevTag = (n, sev) => ({ n, sev, style: sevStyle(sev) });
 
-const trivyPlaceholder = computed(() =>
-  mode.value?.trivyImage
-    ? "Trivy version or image (default " + mode.value.trivyImage.split("/").pop() + ")"
-    : "Trivy version or image (default)",
-);
+const trivyPlaceholder = computed(() => trivyNewest.value || mode.value?.trivyImage?.split(":").pop() || "Trivy version");
 const meta = computed(() => (result.value ? `${result.value.image}${result.value.os ? " · " + result.value.os : ""}` : ""));
 const counts = computed(() => ({
   vulns: result.value?.vulnerabilities.length ?? 0,
@@ -140,6 +141,18 @@ async function updateStep(busyMsg, run) {
     updateBusy.value = false;
   }
 }
+
+// The DB is checked once per session; this checks again now. Trivy downloads only if the cached one is out of date.
+const updateDB = () =>
+  updateStep("Checking the vulnerability database…", async () => {
+    let downloaded;
+    try {
+      downloaded = await ScanService.UpdateDB(trivyImageSetting());
+    } finally {
+      refreshFootprint(); // a download changes the cache size shown in the footer
+    }
+    setStatus(downloaded ? "Downloaded a newer vulnerability database." : "Vulnerability database is up to date (no download reported).");
+  });
 
 const checkForUpdates = () =>
   updateStep("Checking for updates…", async () => {
@@ -212,14 +225,15 @@ onMounted(() => {
             :placeholder="mode?.registryToken ? '••••••••  GITHUB_TOKEN (ghcr.io)' : 'Registry password / token'"
             autocomplete="off"
           />
-          <input
+          <TagInput
             id="trivy-image"
             v-model="opts.trivyImage"
+            :tags="trivyTags"
+            label="Trivy version"
             :placeholder="trivyPlaceholder"
-            autocomplete="off"
-            spellcheck="false"
-            title="Empty uses the default version. Enter a version such as 0.77.0, or a full image reference."
-            @change="saveTrivyImage"
+            title="Empty uses the newest version found. Enter a version such as 0.77.0."
+            @update:model-value="saveTrivyImage"
+            @open="ensureTrivyTags"
           />
           <label class="policy"
             >Ignore policy (Rego, <code>--ignore-policy</code>)
@@ -263,6 +277,16 @@ onMounted(() => {
             title="Load the ignore file from a .trivyignore.yaml file"
             @change="loadIgnoreFile($event.target.files[0])"
           />
+          <button
+            type="button"
+            class="ghost"
+            id="update-db-btn"
+            :disabled="scanning || updateBusy"
+            title="Check for a newer vulnerability database now. Trivy downloads one only if the cached copy is out of date."
+            @click="updateDB"
+          >
+            Check vulnerability database
+          </button>
           <div class="opts-update">
             <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>
             <button

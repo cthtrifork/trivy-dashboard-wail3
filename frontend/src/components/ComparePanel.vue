@@ -9,6 +9,8 @@ import {
   cmpBase,
   repoTags,
   ensureTags,
+  trivyImageSetting,
+  rememberTrivyVersion,
   compareData as data,
   scanning,
   comparing,
@@ -49,7 +51,7 @@ async function run() {
     showSuppressed: opts.showSuppressed,
     showWillNotFix: !opts.ignoreWillNotFix,
     showNotAffected: !opts.ignoreNotAffected,
-    trivyImage: opts.trivyImage.trim(),
+    trivyImage: trivyImageSetting(),
     ignorePolicy: opts.ignorePolicy,
     ignoreFile: opts.ignoreFile,
   };
@@ -60,6 +62,7 @@ async function run() {
   setStatus("Scanning both images…", { busy: true });
   try {
     data.value = await ScanService.Compare(req);
+    rememberTrivyVersion(req.trivyImage);
     setStatus("Comparison complete.");
   } catch (err) {
     setStatus(errText(err), { err: true });
