@@ -137,7 +137,7 @@
   text-align: right;
   color: var(--mute);
   font-size: 12px;
-  line-height: 1;
+  line-height: 1.4; /* room for descenders: overflow is hidden for the ellipsis */
 }
 .opts-pane .tag-wrap {
   width: 100%;
