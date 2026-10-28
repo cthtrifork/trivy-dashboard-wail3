@@ -37,6 +37,7 @@ Screenshots: [`docs/screenshots`](docs/screenshots).
 ## More
 - Headless server over an SSH tunnel: [`docs/headless.md`](docs/headless.md)
 - Wails MCP server (development only): [`docs/mcp.md`](docs/mcp.md)
+- Network activity and offline behaviour: [`docs/network.md`](docs/network.md)
 - Window lifecycle: [`docs/lifecycle.md`](docs/lifecycle.md)
 - UI conventions: [`docs/ux-design-sheet.md`](docs/ux-design-sheet.md)
 - CI, screenshots and releases: [`docs/ci.md`](docs/ci.md), [`docs/releasing.md`](docs/releasing.md)
