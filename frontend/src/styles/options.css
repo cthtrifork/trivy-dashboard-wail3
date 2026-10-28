@@ -183,3 +183,10 @@
   border-radius: 6px;
   overflow: hidden;
 }
+/* A heading starts a new group: more room above it than between the controls inside a group. */
+.opts-pane .opts-label:not(:first-child) {
+  margin-top: 10px;
+}
+.opts-pane .file-btn + .policy {
+  margin-top: 10px;
+}
