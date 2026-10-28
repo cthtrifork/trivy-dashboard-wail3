@@ -161,7 +161,7 @@ defineExpose({ count: computed(() => pool.value.length) });
             ><span class="sev sevpill tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }} {{ v.priority }}</span
             ><Chip v-if="v.kev" kind="hot" :title="`Added to CISA KEV on ${v.kevAdded}; due ${v.kevDue}. ${v.kevAction}`">KEV</Chip></span
           >
-          <span class="pfix">{{ v.fixed || "None" }}</span>
+          <span class="pfix" :title="v.fixed || undefined">{{ v.fixed || "None" }}</span>
         </div>
         <div v-if="expanded.has(cardKey(v))" class="pdetail">
           <div class="chips">
