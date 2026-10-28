@@ -79,30 +79,11 @@ jobs:
       - name: Fail on unpinned or outdated actions
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }}
+          CHANGED_FILES: ${{ steps.changed.outputs.all_changed_files }} # empty outside pull requests: check everything
         run: |
-          if [ "$EVENT_NAME" = pull_request ]; then
-            read -r -a files <<< "$CHANGED_FILES"
-          else
-            files=(.github/workflows/*.yml)
-          fi
-          printf 'Checking %s\n' "${files[@]}"
-          # For immutable releases the tool writes the tag instead of the SHA. That is the same
-          # version, so show `action@<sha> # vX` as `action@vX` on both sides before comparing.
-          normalize() { sed -E 's/(uses: [^@ ]+)@[0-9a-f]{40} +# *([^ ]+).*/\1@\2/'; }
-          failed=false
-          for f in "${files[@]}"; do
-            if ! diff -u <(git show "HEAD:$f" | normalize) <(normalize < "$f"); then
-              failed=true
-            fi
+          # For immutable releases the tool writes the tag instead of the SHA: same version, so
+          # compare `action@<sha> # vX` as `action@vX`. Any other difference fails (bash -e).
+          norm='s/(uses: [^@ ]+)@[0-9a-f]{40} +# *([^ ]+).*/\1@\2/'
+          for f in ${CHANGED_FILES:-.github/workflows/*.yml}; do
+            diff <(git show "HEAD:$f" | sed -E "$norm") <(sed -E "$norm" "$f")
           done
-          if [ "$failed" = true ]; then
-            echo "::error::Unpinned or outdated actions found (diff above). Run 'gh pin-actions workflows --latest --overwrite' and commit the result."
-            exit 1
-          fi
-          if [ -n "$(git ls-files --others --exclude-standard -- .github/workflows)" ]; then
-            git ls-files --others --exclude-standard -- .github/workflows
-            echo "::error::gh pin-actions left unexpected files in .github/workflows."
-            exit 1
-          fi
