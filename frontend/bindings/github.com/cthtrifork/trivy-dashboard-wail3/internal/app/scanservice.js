@@ -194,6 +194,17 @@ export function SplitImage(ref) {
 }
 
 /**
+ * UpdateDB deletes the cached vulnerability database and downloads the latest one with the given
+ * Trivy version (empty means the default). It needs network access: if the download fails the cache
+ * stays empty until the next successful scan check.
+ * @param {string} trivyImage
+ * @returns {$CancellablePromise<void>}
+ */
+export function UpdateDB(trivyImage) {
+    return $Call.ByID(1972938038, trivyImage);
+}
+
+/**
  * UpdateInfo reports the running version and whether it can update itself.
  * @returns {$CancellablePromise<$models.UpdateInfo>}
  */
