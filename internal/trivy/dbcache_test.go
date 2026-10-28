@@ -17,7 +17,7 @@ type recEngine struct {
 	mu     sync.Mutex
 	jobs   []TrivyJob
 	dbFail bool
-	dbLine string // logged by a DB check, like Trivy's "Downloading vulnerability DB..."
+	dbLine string // logged by a DB check, like Trivy 0.76.1 ("[vulndb] Downloading vulnerability DB...")
 }
 
 func (r *recEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(string)) ([]byte, error) {
@@ -270,7 +270,7 @@ func TestUpdateDBChecksOnDemandReportsDownloadsAndKeepsTheCacheOnFailure(t *test
 	if n := r.dbJobs(); n != 2 {
 		t.Errorf("db checks = %d, want 2 (the scan's, then the requested one)", n)
 	}
-	r.dbLine = "INFO\t[db] Downloading vulnerability DB..."
+	r.dbLine = "INFO\t[vulndb] Downloading vulnerability DB..."
 	if downloaded, err := s.UpdateDB(context.Background(), ""); err != nil || !downloaded {
 		t.Errorf("a download must be reported: downloaded = %v, err = %v", downloaded, err)
 	}
