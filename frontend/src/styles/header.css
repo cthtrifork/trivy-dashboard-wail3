@@ -170,6 +170,9 @@ header {
   color: var(--mute);
   font-size: 12px;
 }
+.opts-sublabel {
+  font-size: 11px;
+}
 .opts-secs {
   display: flex;
   flex-direction: column;

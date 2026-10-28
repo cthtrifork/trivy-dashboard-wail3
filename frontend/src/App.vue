@@ -212,16 +212,19 @@ onMounted(() => {
           <summary>Options<span v-if="activeCount" class="opts-count"> · {{ activeCount }} active</span
           ><span v-if="settingsChanged" class="opts-count"> · rescan to apply</span></summary>
           <div class="opts-body">
-            <div class="opts-label">Findings to show</div>
-            <label><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed" /> Ignore unfixed</label>
-            <label title="Include findings suppressed by VEX or ignore files"
-              ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Show suppressed</label
-            >
+            <div class="opts-label">Findings (<code>--ignore-status</code>, <code>--ignore-unfixed</code>, <code>--show-suppressed</code>)</div>
+            <div class="opts-label opts-sublabel">Ignore status</div>
             <label title="Hide findings the vendor will not fix"
-              ><input type="checkbox" id="ignore-will-not-fix" v-model="opts.ignoreWillNotFix" /> Ignore will_not_fix</label
+              ><input type="checkbox" id="ignore-will-not-fix" v-model="opts.ignoreWillNotFix" /> will_not_fix</label
             >
             <label title="Hide findings the vendor says do not affect the package"
-              ><input type="checkbox" id="ignore-not-affected" v-model="opts.ignoreNotAffected" /> Ignore not_affected</label
+              ><input type="checkbox" id="ignore-not-affected" v-model="opts.ignoreNotAffected" /> not_affected</label
+            >
+            <label title="--ignore-unfixed: hide findings without a fix"
+              ><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed" /> Ignore unfixed</label
+            >
+            <label title="--show-suppressed: include findings suppressed by VEX or ignore files"
+              ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Show suppressed</label
             >
             <div class="opts-secs">
               <details class="opts-sec" id="opts-registry">

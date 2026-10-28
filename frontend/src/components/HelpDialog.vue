@@ -89,7 +89,7 @@ const trivyFlags = [
   ["--disable-telemetry", "Trivy sends no usage data."],
   ["--offline-scan", "No API requests to identify dependencies; only the DB download uses the network."],
   ["--vuln-severity-source redhat,auto", "Prefer Red Hat's severity, then the vendor default."],
-  ["--ignore-status will_not_fix,not_affected", "On by default. Untick Ignore will_not_fix / Ignore not_affected in Options to show them."],
+  ["--ignore-status will_not_fix,not_affected", "On by default. Untick will_not_fix / not_affected under Ignore status in Options to show them."],
   ["--show-suppressed", "Off by default. Tick Show suppressed in Options to list findings hidden by VEX or ignore files."],
   ["--ignore-unfixed", "Off by default. Tick Ignore unfixed in Options to hide findings without a fix."],
 ];
