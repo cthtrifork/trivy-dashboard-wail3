@@ -58,7 +58,7 @@ Relative paths and `:` are rejected, because podman would silently treat `./cach
 
 ### Trivy version
 
-The default image is pinned in [`internal/trivy/image/Dockerfile`](../internal/trivy/image/Dockerfile) (`FROM docker.io/aquasec/trivy:<version>`), embedded into the binary and read by `DefaultTrivyImage()`. Renovate's `dockerfile` manager (`.github/renovate.json5`) opens a PR when a newer tag exists, so the version is bumped like any dependency. It is a Dockerfile only because that is what Renovate understands; it is never built.
+The default image is the `defaultTrivyImage` constant in [`internal/trivy/engine.go`](../internal/trivy/engine.go), returned by `DefaultTrivyImage()`. A regex custom manager in `.github/renovate.json5` opens a PR when a newer tag exists, so the version is bumped like any dependency.
 
 Override it per run in the UI: **Options → Trivy version or image** (empty = the default; the field is remembered by the browser/webview). It takes a full reference (`registry.local/mirror/trivy:0.77.0`, `...@sha256:...`) or just a version (`0.77.0` / `v0.77.0`, meaning `docker.io/aquasec/trivy:0.77.0`), and is sent with every scan and comparison as `trivyImage`. Values that look like flags or contain whitespace are refused before anything runs. Changing it makes the next scan re-check the vulnerability DB for that version.
 

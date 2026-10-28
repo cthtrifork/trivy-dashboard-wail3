@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	_ "embed"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -26,20 +25,12 @@ import (
 // defaultTrivyRepo is the repository a bare version in the Trivy image setting refers to.
 const defaultTrivyRepo = "docker.io/aquasec/trivy"
 
-// trivyDockerfile pins the default Trivy version where Renovate can update it.
-//
-//go:embed image/Dockerfile
-var trivyDockerfile string
+// defaultTrivyImage is the Trivy image scans run with unless the user overrides it. Renovate keeps
+// the tag current (the custom manager in .github/renovate.json5 matches this line).
+const defaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
 
-// DefaultTrivyImage is the image from image/Dockerfile (its first FROM line).
-func DefaultTrivyImage() string {
-	for _, line := range strings.Split(trivyDockerfile, "\n") {
-		if f := strings.Fields(line); len(f) >= 2 && strings.EqualFold(f[0], "FROM") {
-			return f[1]
-		}
-	}
-	panic("internal/trivy/image/Dockerfile has no FROM line")
-}
+// DefaultTrivyImage is the Trivy image used when the "Trivy image" setting is empty.
+func DefaultTrivyImage() string { return defaultTrivyImage }
 
 var bareVersion = regexp.MustCompile(`^v?[0-9][0-9A-Za-z.+_-]*$`)
 
@@ -132,7 +123,7 @@ type PodmanEngine struct {
 	// Bin is the podman binary; defaults to $PODMAN or "podman".
 	Bin string
 	// Image is the Trivy image to run when a job does not name one (see TrivyJob.TrivyImage):
-	// a reference or a bare version. Empty means the version pinned in image/Dockerfile.
+	// a reference or a bare version. Empty means the version pinned in defaultTrivyImage.
 	Image string
 	// Cache is the Trivy cache source mounted into the scanner: a podman volume name or an
 	// absolute directory on the machine running podman. Defaults to $TRIVY_SCANNER_CACHE, then

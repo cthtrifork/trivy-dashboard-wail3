@@ -95,5 +95,12 @@
         "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+(?:ARG\\s+)?\\S+\\s*(?::=|=|:)\\s*['\"]?(?<currentValue>[^\\s'\"]+)",
       ],
     },
+    {
+      // The default Trivy image in internal/trivy/engine.go (`const defaultTrivyImage = "repo:tag"`).
+      customType: "regex",
+      datasourceTemplate: "docker",
+      managerFilePatterns: ["/^internal/trivy/engine\\.go$/"],
+      matchStrings: ["const defaultTrivyImage = \"(?<depName>[^:\"]+):(?<currentValue>[^\"]+)\""],
+    },
   ],
 }
