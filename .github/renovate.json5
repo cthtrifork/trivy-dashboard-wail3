@@ -87,12 +87,12 @@
     {
       // Versions with no manager of their own: a `# renovate: datasource=<ds> depName=<name>` comment on
       // the line above a `KEY := value`, `KEY=value` or `KEY: value` line. Used for the Go dev tools in
-      // the Makefile, and zizmor and the gh-pin-actions extension in actions-lint.yml. Container files
-      // need none: the dockerfile manager reads every FROM line, and nothing else in them has a version.
+      // the Makefile, zizmor and the gh-pin-actions extension in actions-lint.yml, and the podman-remote
+      // release in headless.Dockerfile (`ARG`). The dockerfile manager reads every FROM line by itself.
       customType: "regex",
-      managerFilePatterns: ["/(^|/)Makefile$/", "/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      managerFilePatterns: ["/(^|/)Makefile$/", "/^\\.github/workflows/[^/]+\\.ya?ml$/", "/^build/docker/[^/]+\\.Dockerfile$/"],
       matchStrings: [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+\\S+\\s*(?::=|=|:)\\s*['\"]?(?<currentValue>[^\\s'\"]+)",
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+(?:ARG\\s+)?\\S+\\s*(?::=|=|:)\\s*['\"]?(?<currentValue>[^\\s'\"]+)",
       ],
     },
   ],

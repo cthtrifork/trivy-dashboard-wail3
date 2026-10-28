@@ -26,7 +26,7 @@ sudo loginctl enable-linger "$USER"
 
 # 2. Run it (pin a version such as :1.2.3 instead of :latest for reproducible deployments).
 podman run -d --name trivy-scanner --restart unless-stopped \
-  --network host --security-opt label=disable \
+  --network host --security-opt label=disable --userns=keep-id \
   -v "$XDG_RUNTIME_DIR/podman/podman.sock:/run/podman/podman.sock" \
   -v trivy-scanner-data:/data \
   ghcr.io/cthtrifork/trivy-dashboard-wail3:latest
@@ -51,7 +51,7 @@ podman build -t trivy-scanner --build-arg VERSION="$(git describe --tags --alway
 
 # 3. Run it.
 podman run -d --name trivy-scanner --restart unless-stopped \
-  --network host --security-opt label=disable \
+  --network host --security-opt label=disable --userns=keep-id \
   -v "$XDG_RUNTIME_DIR/podman/podman.sock:/run/podman/podman.sock" \
   -v trivy-scanner-data:/data \
   localhost/trivy-scanner
@@ -99,7 +99,7 @@ VEX assessments (`/data/vex.json`) and the EPSS/KEV cache live in the `trivy-sca
 
 - **`--network host` + `WAILS_SERVER_HOST=127.0.0.1`** (the image default): the app listens only on the server's loopback, so it is reachable through the SSH tunnel and nowhere else. Wails also rejects requests whose `Host` header is not a loopback name on loopback binds (DNS-rebinding protection), so `localhost:<any port>` through the tunnel works.
 - **No authentication.** Do not bind the app to `0.0.0.0` or publish the port (`-p`) unless something in front of it authenticates users. Anyone who can reach it can start scans and, through the mounted socket, run containers as your user.
-- **The podman socket is mounted into the container.** That grants the app control of your (rootless) podman. Run it as an unprivileged user, not root.
+- **The podman socket is mounted into the container.** That grants the app control of your (rootless) podman. The image runs as the distroless `nonroot` user (uid 65532), and `--userns=keep-id` makes rootless podman run it as your own uid instead, which is what lets it open the socket and write `/data`. Without `--userns=keep-id` the process cannot read the socket. With a rootful podman socket, pass `--user` with a uid/gid (e.g. `--group-add`) that may open it.
 - **`--security-opt label=disable`** is needed on SELinux hosts (Fedora, RHEL) so the container may use the socket.
 - **Self-update is disabled** in server mode; update by rebuilding as above.
 - **OpenVEX export** has no native save dialog on a server, so the browser downloads the file instead.
@@ -135,4 +135,4 @@ Checked in a sandbox with podman 4.9.3 (root, no Go on the "server" side of the 
 - Through the mounted API socket, the in-container podman client runs containers on the host's podman, finds them by `--name`, and removes them with `rm --force --ignore --time 0` (the scan cancel path).
 - Data in `/data` survives removing and recreating the container.
 
-**Not verified** (no way to test in the sandbox): the final `apk add podman-remote` layer (the sandbox cannot reach the Alpine mirrors), rootless podman, SELinux, `loginctl enable-linger`/reboot behaviour, and a full scan end to end (Trivy's database registry was unreachable). The sandbox test used the host's podman client in place of Alpine's `podman-remote`; if your podman server is much newer or older than Alpine's client, update the base image tag or pin matching versions.
+**Not verified** (no way to test in the sandbox): rootless podman, SELinux, `loginctl enable-linger`/reboot behaviour, and a full scan end to end (Trivy's database registry was unreachable). The final image is distroless (`gcr.io/distroless/static-debian13`) with upstream's static `podman-remote` (version pinned by `PODMAN_VERSION` in the Dockerfile, bumped by Renovate; it is downloaded over HTTPS from the GitHub release without a checksum) installed as `podman`; if your podman server is much newer or older than that client, change `PODMAN_VERSION`. There is no shell in the image; for debugging use `podman logs`, or temporarily swap the base for its `:debug` tag.

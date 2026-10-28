@@ -130,7 +130,7 @@ headless-up: headless-image ## (Re)create and start the container, listening on 
 	-$(PODMAN) rm -f $(NAME)
 	mkdir -p $(CACHE)
 	$(PODMAN) run -d --name $(NAME) --restart unless-stopped \
-		--network host --security-opt label=disable \
+		--network host --security-opt label=disable --userns=keep-id \
 		-e WAILS_SERVER_PORT=$(PORT) \
 		-e TRIVY_SCANNER_CACHE=$(CACHE) \
 		$(if $(GITHUB_TOKEN),-e GITHUB_TOKEN -e GITHUB_ACTOR -e GITHUB_USER) \
