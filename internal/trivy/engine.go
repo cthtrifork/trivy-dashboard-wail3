@@ -26,8 +26,9 @@ import (
 const defaultTrivyRepo = "docker.io/aquasec/trivy"
 
 // defaultTrivyImage is the fallback Trivy image, used until (or unless) the newest release tag can
-// be looked up through podman (newest.go). Renovate keeps it current (the custom manager in
-// .github/renovate.json5 matches this line).
+// be looked up through podman (newest.go). The renovate comment on the line above the const makes
+// Renovate keep the tag current (the custom manager in .github/renovate.json5).
+// renovate: datasource=docker depName=docker.io/aquasec/trivy
 const defaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
 
 // DefaultTrivyImage is the Trivy image used when the "Trivy image" setting is empty: the newest
