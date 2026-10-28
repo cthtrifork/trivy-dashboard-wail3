@@ -2,9 +2,6 @@ package trivy
 
 import (
 	"context"
-	"regexp"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -16,9 +13,6 @@ const (
 	newestLookup = 15 * time.Second
 )
 
-// releaseTag matches a plain release tag such as 0.76.1 (no -amd64, -rc or latest).
-var releaseTag = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)$`)
-
 // newest caches the newest Trivy release tag. defaultTrivyImage stays the fallback when the
 // registry cannot be reached, so scans keep working offline.
 var newest struct {
@@ -27,16 +21,13 @@ var newest struct {
 	expires time.Time
 }
 
-// fetchNewestTag lists the tags of the default repository through the engine (podman search
-// --list-tags, like the tag picker) and returns the newest release. Tests replace it.
+// fetchNewestTag asks Scanner.LatestTag (the tag picker's semver logic over the engine's
+// `podman search --list-tags`) for the newest plain version of the default repository. Tests
+// replace it.
 var fetchNewestTag = func(ctx context.Context, e Engine) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, newestLookup)
 	defer cancel()
-	tags, err := e.ListTags(ctx, defaultTrivyRepo)
-	if err != nil {
-		return "", err
-	}
-	return newestRelease(tags), nil
+	return (&Scanner{Engine: e}).LatestTag(ctx, defaultTrivyRepo, "")
 }
 
 // currentDefault returns the default image from the cache, or the pinned fallback.
@@ -66,23 +57,4 @@ func refreshNewest(ctx context.Context, e Engine) {
 		return
 	}
 	newest.tag, newest.expires = tag, time.Now().Add(newestTTL)
-}
-
-// newestRelease returns the highest X.Y.Z tag in names, or "" if there is none.
-func newestRelease(names []string) string {
-	best, bestV := "", [3]int{}
-	for _, n := range names {
-		m := releaseTag.FindStringSubmatch(strings.TrimSpace(n))
-		if m == nil {
-			continue
-		}
-		var v [3]int
-		for i := range v {
-			v[i], _ = strconv.Atoi(m[i+1])
-		}
-		if best == "" || v[0] > bestV[0] || v[0] == bestV[0] && (v[1] > bestV[1] || v[1] == bestV[1] && v[2] > bestV[2]) {
-			best, bestV = n, v
-		}
-	}
-	return best
 }

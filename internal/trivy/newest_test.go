@@ -22,16 +22,6 @@ func resetNewest(t *testing.T) {
 	newest.Unlock()
 }
 
-func TestNewestRelease(t *testing.T) {
-	got := newestRelease([]string{"latest", "0.9.0", "0.76.1-amd64", "0.76.1", "0.100.2", "0.76.10", "0.77.0-rc1"})
-	if got != "0.100.2" {
-		t.Errorf("newest = %q", got)
-	}
-	if newestRelease([]string{"latest", "0.1.0-arm64"}) != "" {
-		t.Error("no release tag should give an empty result")
-	}
-}
-
 func TestDefaultImageFollowsLatestAndFallsBack(t *testing.T) {
 	resetNewest(t)
 	fetchNewestTag = func(context.Context, Engine) (string, error) { return "", errors.New("offline") }
