@@ -13,7 +13,7 @@ Short records of decisions. Add new entries at the bottom; supersede rather than
 | 7 | CI follows Wails v3's own workflow for tests; v2 build-action ideas only where they apply (see `ci.md`) | The cross-platform guide has no test step and targets v2 |
 | 8 | Linux amd64 only | Maintainer: "only need to build a Linux binary" |
 | 9 | **Fedora/GTK3 variant dropped** | Maintainer cancelled it |
-| 10 | No in-app self-update (removed; it was user-initiated, SHA-256 verified, release builds only) | Removed on request: updates come from the package or a new download, and the version shows in the footer |
+| 10 | Self-update via GitHub releases, SHA-256 verified, user-initiated, off in dev/headless | Wails self-update tutorial; see `self-update.md` |
 | 11 | Releases cut by the *Tag and release* workflow (tag or patch/minor/major) | Tags cannot be pushed from the agent sandbox; one-click for the maintainer |
 | 12 | Headless use is an SSH tunnel to a loopback listener; no auth layer | Wails server mode has none; exposing it is out of scope (principle 10) |
 | 13 | Podman-only servers run the app in a container with `podman-remote` and the host socket, `--network host` | Server has no Go; host network keeps the loopback Host guard |

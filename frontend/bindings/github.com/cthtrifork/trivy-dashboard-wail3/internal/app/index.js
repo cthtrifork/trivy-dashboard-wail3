@@ -14,5 +14,7 @@ export {
     Footprint,
     FootprintPart,
     ImageParts,
-    Mode
+    Mode,
+    UpdateInfo,
+    UpdateStatus
 } from "./models.js";

@@ -27,8 +27,8 @@ Long lists never put every row in the DOM. `src/lib/virtual.js` (`useVirtualList
 | Build | Command | Notes |
 |---|---|---|
 | Desktop dev | `go run .` / `wails3 dev` | Real podman; fixtures available with `TRIVY_SCANNER_FAKE_PODMAN=1` |
-| Desktop release | `go build -tags production` | GTK4 + WebKitGTK 6; no fixtures |
-| Server (headless) | `-tags server` (+ `production`) | No window, HTTP on `WAILS_SERVER_HOST:PORT` (default `localhost:8080`); `headless=true`; OpenVEX save falls back to a browser download |
+| Desktop release | `go build -tags production` | GTK4 + WebKitGTK 6; updater on; no fixtures |
+| Server (headless) | `-tags server` (+ `production`) | No window, HTTP on `WAILS_SERVER_HOST:PORT` (default `localhost:8080`); `headless=true` disables the updater; OpenVEX save falls back to a browser download |
 
 Linux desktop builds add a tray icon (`internal/app/tray_linux.go`, art in `internal/app/tray_icon.png`, same as `frontend/public/favicon.svg`; StatusNotifier; GNOME needs the AppIndicator extension). Click or "Show Trivy Scanner" raises the window, "Quit" quits. Closing the window still quits, so a scan is never left running unseen. Other platforms and server mode compile `tray_other.go`, a no-op. The window icon is set through Wails' documented `Icon` options (`app.WindowIcon` in `main.go`).
 
@@ -88,7 +88,7 @@ Wails rejects requests with a non-loopback `Host` header when bound to loopback 
 
 ## Release and CI
 
-`ci.yml` (PRs and main), `security.yml` (govulncheck + Trivy fs), `tag-release.yml` (pick tag or patch/minor/major, tags `main`), `release.yml` (build, checksums, attestation, GitHub release). See [ci.md](ci.md), [releasing.md](releasing.md).
+`ci.yml` (PRs and main), `security.yml` (govulncheck + Trivy fs), `tag-release.yml` (pick tag or patch/minor/major, tags `main`), `release.yml` (build, checksums, attestation, GitHub release). See [ci.md](ci.md), [releasing.md](releasing.md), [self-update.md](self-update.md).
 
 ## Deployment without Go
 

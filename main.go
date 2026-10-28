@@ -29,6 +29,9 @@ func main() {
 		// trivy-scanner.desktop (StartupWMClass) matches for the launcher icon and grouping.
 		Linux: application.LinuxOptions{ProgramName: "trivy-scanner"},
 	})
+	// After New (an update restart re-launches this binary and New diverts it into the swap
+	// helper) and before Run, as the Wails self-update tutorial prescribes.
+	app.InitUpdater(svc, wails)
 
 	window := wails.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:     "Trivy Scanner",

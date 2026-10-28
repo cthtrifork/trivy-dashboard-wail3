@@ -101,6 +101,7 @@ VEX assessments (`/data/vex.json`) and the EPSS/KEV cache live in the `trivy-sca
 - **No authentication.** Do not bind the app to `0.0.0.0` or publish the port (`-p`) unless something in front of it authenticates users. Anyone who can reach it can start scans and, through the mounted socket, run containers as your user.
 - **The podman socket is mounted into the container.** That grants the app control of your (rootless) podman. The image runs as the distroless `nonroot` user (uid 65532), and `--userns=keep-id` makes rootless podman run it as your own uid instead, which is what lets it open the socket and write `/data`. Without `--userns=keep-id` the process cannot read the socket. With a rootful podman socket, pass `--user` with a uid/gid (e.g. `--group-add`) that may open it.
 - **`--security-opt label=disable`** is needed on SELinux hosts (Fedora, RHEL) so the container may use the socket.
+- **Self-update is disabled** in server mode; update by rebuilding as above.
 - **OpenVEX export** has no native save dialog on a server, so the browser downloads the file instead.
 
 ## Without containers

@@ -6,7 +6,7 @@
 #   <out>/trivy-scanner_<version>_x86_64.rpm
 #
 # Signed when PKG_SIGNING_KEY_FILE names an armored PGP private key (passphrase in NFPM_PASSPHRASE),
-# unsigned otherwise. 
+# unsigned otherwise. The names have no "linux_amd64" so the in-app updater never matches them.
 #
 #   scripts/package-linux.sh <binary> <version> <outdir>
 set -euo pipefail

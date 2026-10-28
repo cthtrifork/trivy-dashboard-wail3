@@ -21,6 +21,7 @@ import (
 // from JavaScript as main.ScanService.<Method>.
 type ScanService struct {
 	mode    Mode
+	update  UpdateInfo
 	app     *application.App
 	scanner *trivy.Scanner
 	vex     *trivy.VEXStore
@@ -52,8 +53,6 @@ type Mode struct {
 	// RegistryUser is the login that goes with it. Both only prefill the Options fields (ghcr.io).
 	RegistryToken bool   `json:"registryToken"`
 	RegistryUser  string `json:"registryUser"`
-	// Version is the stamped release version, "dev" for an unstamped build.
-	Version string `json:"version"`
 }
 
 // enrichCacheDir holds the downloaded EPSS and KEV data.
@@ -156,11 +155,7 @@ func (s *ScanService) logInfo(msg string, args ...any) {
 }
 
 // Mode reports whether scans are real or replayed demo data.
-func (s *ScanService) Mode() Mode {
-	m := s.mode
-	m.Version = version
-	return m
-}
+func (s *ScanService) Mode() Mode { return s.mode }
 
 // Footprint is what the app keeps on disk, for the footer note.
 type Footprint struct {

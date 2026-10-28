@@ -34,6 +34,7 @@ import {
   status,
   logText,
   mode,
+  appInfo,
   footprint,
   runScan,
   cancel,
@@ -112,6 +113,7 @@ const OPT_TABS = [
   { id: "findings", label: "Findings" },
   { id: "sources", label: "Sources" },
   { id: "scanner", label: "Scanner" },
+  { id: "updates", label: "App updates" },
 ];
 const optsTab = ref("findings");
 const VENDOR_STATUSES = [
@@ -153,7 +155,8 @@ const footprintTitle = computed(() => {
   return [f.cacheLocation, ...parts].join("\n");
 });
 
-// Busy while the vulnerability database check runs.
+// Updating is three clicks, never automatic: check, then download, then restart.
+const update = ref({ step: "idle", version: "" }); // idle | available | ready
 const updateBusy = ref(false);
 
 async function updateStep(busyMsg, run) {
@@ -179,6 +182,34 @@ const updateDB = () =>
     }
     setStatus(downloaded ? "Downloaded a newer vulnerability database." : "Vulnerability database is up to date (no download reported).");
   });
+
+const checkForUpdates = () =>
+  updateStep("Checking for updates…", async () => {
+    const r = await ScanService.CheckForUpdates();
+    update.value = r.available ? { step: "available", version: r.version } : { step: "idle", version: "" };
+    setStatus(r.available ? `Version ${r.version} is available.` : "You are on the latest version.");
+  });
+
+const installUpdate = () =>
+  updateStep(`Downloading ${update.value.version}…`, async () => {
+    await ScanService.InstallUpdate();
+    update.value = { ...update.value, step: "ready" };
+    setStatus(`Version ${update.value.version} is downloaded and verified. Restart to apply it.`);
+  });
+
+const restartToUpdate = () => updateStep("Restarting…", () => ScanService.RestartToUpdate());
+
+const updateAction = computed(() => {
+  const v = update.value.version;
+  switch (update.value.step) {
+    case "available":
+      return { label: `Download ${v}`, run: installUpdate };
+    case "ready":
+      return { label: "Restart & apply", run: restartToUpdate };
+    default:
+      return { label: "Check for updates…", run: checkForUpdates };
+  }
+});
 
 // Follow the log as it grows.
 watch(logText, async () => {
@@ -337,6 +368,22 @@ onMounted(() => {
                 </button>
               </div>
             </div>
+            <div v-show="optsTab === 'updates'" class="opts-pane" role="tabpanel">
+              <div class="opts-label">Installed version</div>
+              <div class="opts-row-plain">
+                <strong id="app-version-opts">{{ appInfo ? appInfo.version : "" }}</strong>
+                <button
+                  type="button"
+                  class="ghost"
+                  id="update-btn"
+                  :disabled="!appInfo?.enabled || updateBusy"
+                  @click="updateAction.run"
+                >
+                  {{ updateAction.label }}
+                </button>
+              </div>
+              <span class="kv">{{ appInfo?.enabled ? "Updates download from GitHub releases and are verified with SHA-256 before they are installed." : appInfo?.reason }}</span>
+            </div>
           </div>
         </details>
       </div>
@@ -485,7 +532,7 @@ onMounted(() => {
   <HelpDialog ref="helpDialog" />
   <div id="status" :class="[status.err ? 'err' : '', status.busy ? 'spin' : '']">{{ status.msg }}</div>
   <footer id="footprint">
-    <span id="app-version">{{ mode?.version ? "Version " + mode.version : "" }}</span>
+    <span id="app-version">{{ appInfo?.version ? "Version " + appInfo.version : "" }}</span>
     <span v-if="footprintNote" :title="footprintTitle">{{ footprintNote }}</span>
   </footer>
 </template>
