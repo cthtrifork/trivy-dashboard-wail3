@@ -55,7 +55,7 @@ export function CheckIgnorePolicy(text) {
  */
 export function Compare(req) {
     return $Call.ByID(1048582356, req).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType2($result);
+        return $$createType1($result);
     }));
 }
 
@@ -65,7 +65,7 @@ export function Compare(req) {
  */
 export function Config() {
     return $Call.ByID(4070025319).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType3($result);
+        return $$createType2($result);
     }));
 }
 
@@ -75,7 +75,7 @@ export function Config() {
  */
 export function Footprint() {
     return $Call.ByID(1307495092).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType4($result);
+        return $$createType3($result);
     }));
 }
 
@@ -97,7 +97,7 @@ export function LatestTag(repo, baseTag) {
  */
 export function ListTags(repo) {
     return $Call.ByID(2748210604, repo).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType5($result);
+        return $$createType4($result);
     }));
 }
 
@@ -107,7 +107,7 @@ export function ListTags(repo) {
  */
 export function Mode() {
     return $Call.ByID(401150642).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType6($result);
+        return $$createType5($result);
     }));
 }
 
@@ -127,7 +127,7 @@ export function PodmanVersion() {
  */
 export function Rescore(rules) {
     return $Call.ByID(117990306, rules).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType8($result);
+        return $$createType7($result);
     }));
 }
 
@@ -137,7 +137,7 @@ export function Rescore(rules) {
  */
 export function RulePresets() {
     return $Call.ByID(2795329317).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType10($result);
+        return $$createType9($result);
     }));
 }
 
@@ -149,7 +149,7 @@ export function RulePresets() {
  */
 export function Scan(req) {
     return $Call.ByID(833560712, req).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType12($result);
+        return $$createType11($result);
     }));
 }
 
@@ -160,7 +160,7 @@ export function Scan(req) {
  */
 export function SplitImage(ref) {
     return $Call.ByID(1978002968, ref).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType13($result);
+        return $$createType12($result);
     }));
 }
 
@@ -214,7 +214,7 @@ export function VEXExport(image, author, role, onlyCurrent) {
  */
 export function VEXImport(image, doc, markRest, minSeverity) {
     return $Call.ByID(1138230009, image, doc, markRest, minSeverity).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType15($result);
+        return $$createType13($result);
     }));
 }
 
@@ -225,7 +225,7 @@ export function VEXImport(image, doc, markRest, minSeverity) {
  */
 export function VEXList(image) {
     return $Call.ByID(1476021980, image).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType17($result);
+        return $$createType15($result);
     }));
 }
 
@@ -262,24 +262,24 @@ export function VEXSave(image, author, role, onlyCurrent) {
  */
 export function VEXSet(image, e) {
     return $Call.ByID(537230204, image, e).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType16($result);
+        return $$createType14($result);
     }));
 }
 
 // Private type creation functions
-const $$createType1 = trivy$0.CompareResult.createFrom;
-const $$createType2 = $Create.Nullable($$createType1);
-const $$createType3 = $models.AppConfig.createFrom;
-const $$createType4 = $models.Footprint.createFrom;
-const $$createType5 = $Create.Array($Create.Any);
-const $$createType6 = $models.Mode.createFrom;
-const $$createType7 = trivy$0.Rescored.createFrom;
-const $$createType8 = $Create.Array($$createType7);
-const $$createType9 = trivy$0.Preset.createFrom;
-const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = trivy$0.ScanResult.createFrom;
-const $$createType12 = $Create.Nullable($$createType11);
-const $$createType13 = $models.ImageParts.createFrom;
-const $$createType15 = trivy$0.ImportReport.createFrom;
-const $$createType16 = trivy$0.VEXEntry.createFrom;
-const $$createType17 = $Create.Array($$createType16);
+const $$createType0 = trivy$0.CompareResult.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $models.AppConfig.createFrom;
+const $$createType3 = $models.Footprint.createFrom;
+const $$createType4 = $Create.Array($Create.Any);
+const $$createType5 = $models.Mode.createFrom;
+const $$createType6 = trivy$0.Rescored.createFrom;
+const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = trivy$0.Preset.createFrom;
+const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = trivy$0.ScanResult.createFrom;
+const $$createType11 = $Create.Nullable($$createType10);
+const $$createType12 = $models.ImageParts.createFrom;
+const $$createType13 = trivy$0.ImportReport.createFrom;
+const $$createType14 = trivy$0.VEXEntry.createFrom;
+const $$createType15 = $Create.Array($$createType14);
