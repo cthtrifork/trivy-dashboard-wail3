@@ -27,7 +27,10 @@ The workflow then:
 3. creates an annotated tag on the head of `main` and pushes it, unless the tag already exists (see *Retrying*);
 4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck`, builds the binary, and publishes the
    release with its assets (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
-   have the names they do.
+   have the names they do. The same run also pushes the headless container image to
+   `ghcr.io/cthtrifork/trivy-dashboard-wail3` (tags `1.2.3`, `v1.2.3`, and `latest` for a final release) with a signed
+   provenance attestation; see [headless](headless.md). The image is only pushed for a tagged release, never from a
+   branch or a dry run.
 
 ## One-time setup: the package signing key
 

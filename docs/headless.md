@@ -15,7 +15,28 @@ your machine                          server (podman only)
                                     └───────────────────────────────────────────┘
 ```
 
-## One-time setup
+## Quick start: the published image
+
+Every release publishes the image to `ghcr.io/cthtrifork/trivy-dashboard-wail3` (tags `latest`, `1.2.3`, `v1.2.3`). No clone or build needed:
+
+```sh
+# 1. Let the app talk to the server's podman through its API socket (rootless).
+systemctl --user enable --now podman.socket
+sudo loginctl enable-linger "$USER"
+
+# 2. Run it (pin a version such as :1.2.3 instead of :latest for reproducible deployments).
+podman run -d --name trivy-scanner --restart unless-stopped \
+  --network host --security-opt label=disable \
+  -v "$XDG_RUNTIME_DIR/podman/podman.sock:/run/podman/podman.sock" \
+  -v trivy-scanner-data:/data \
+  ghcr.io/cthtrifork/trivy-dashboard-wail3:latest
+```
+
+The release also attests the project's OpenVEX document (`vex/openvex.json`) to the image, so Trivy can use it: `trivy image --vex oci ghcr.io/cthtrifork/trivy-dashboard-wail3:latest`. The same document is also in the image at `/usr/share/doc/trivy-scanner/trivy-scanner.vex.json` and attached to each GitHub release as `trivy-scanner_<version>.vex.json`, for scanners that take a file (`grype <image> --vex trivy-scanner_<version>.vex.json`, `trivy image --vex <file>`). Scanners do not find the copy inside the image by themselves, and Docker Scout ignores an embedded VEX file when the image has any attestation (this image has provenance and SBOM attestations); for Scout use `docker scout cves <image> --vex-location <dir with the release's .vex.json>`. Product IDs in statements: `pkg:oci/...` for Trivy's `--vex oci`, `pkg:docker/...` for Scout. Verify the attestation with `gh attestation verify oci://ghcr.io/cthtrifork/trivy-dashboard-wail3:latest --repo cthtrifork/trivy-dashboard-wail3 --predicate-type https://openvex.dev/ns/v0.2.0`.
+
+Then open the SSH tunnel as described below. To update: `podman pull ghcr.io/cthtrifork/trivy-dashboard-wail3:latest`, `podman rm -f trivy-scanner`, and repeat the `podman run`. If the package is private, `podman login ghcr.io` first with a token that has `read:packages`.
+
+## One-time setup (build from source)
 
 ```sh
 # 1. Let the app talk to the server's podman through its API socket (rootless).
