@@ -195,9 +195,10 @@ export function SplitImage(ref) {
 
 /**
  * UpdateDB checks for a newer vulnerability database with the given Trivy version (empty means the
- * default). Trivy only downloads when the cached one is out of date, and a failure keeps the cache.
+ * default) and reports whether Trivy downloaded one. Trivy only downloads when the cached one is out of
+ * date, and a failure keeps the cache.
  * @param {string} trivyImage
- * @returns {$CancellablePromise<void>}
+ * @returns {$CancellablePromise<boolean>}
  */
 export function UpdateDB(trivyImage) {
     return $Call.ByID(1972938038, trivyImage);
