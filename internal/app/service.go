@@ -444,6 +444,19 @@ func (s *ScanService) VEXSave(image, author, role string, onlyCurrent bool) (str
 	return path, nil
 }
 
+// CopyText puts text on the system clipboard. Server mode has no system
+// clipboard of its own (it would be the server's, not the browser's), so it
+// returns an error and the UI falls back to the browser clipboard.
+func (s *ScanService) CopyText(text string) error {
+	if headless || s.app == nil {
+		return errors.New("no system clipboard in server mode")
+	}
+	if !s.app.Clipboard.SetText(text) {
+		return errors.New("copying to the clipboard failed")
+	}
+	return nil
+}
+
 // Compare scans two tags of an image and returns what changed between them.
 // The base is not scanned again when it is the image of the last scan, made with the same options.
 func (s *ScanService) Compare(req trivy.CompareRequest) (*trivy.CompareResult, error) {
