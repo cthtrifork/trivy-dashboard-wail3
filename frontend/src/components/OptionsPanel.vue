@@ -152,7 +152,7 @@ const updateAction = computed(() => {
         </button>
       </div>
       <label class="opts-switch" title="Show findings that your ignore policy or ignore file would otherwise hide"
-        ><span>Include vendor suppressed <code>--show-suppressed</code></span><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed"
+        ><span>Show suppressed findings <code>--show-suppressed</code></span><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed"
       /></label>
       <div class="opts-label">Hide vendor statuses <code>--ignore-status</code></div>
 
