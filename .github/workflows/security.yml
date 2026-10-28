@@ -62,7 +62,7 @@ jobs:
       - name: Run govulncheck
         run: |
           go version
-          make vulncheck
+          make govulncheck
 
   trivy-fs:
     name: trivy (filesystem)

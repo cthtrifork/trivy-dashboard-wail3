@@ -19,7 +19,7 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend vulncheck tools format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots \
+.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend govulncheck tools format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -51,7 +51,7 @@ lint: lint-go lint-frontend ## golangci-lint plus the frontend's Biome lint and 
 lint-go: ## golangci-lint on the server-tag build (CGO off, no GTK needed)
 	CGO_ENABLED=0 $(GO_TOOL) golangci-lint run --build-tags server ./...
 
-vulncheck: ## govulncheck on the whole module (the GUI package needs the GTK headers to type-check)
+govulncheck: ## govulncheck on the whole module (the GUI package needs the GTK headers to type-check)
 	$(GO_TOOL) govulncheck ./...
 
 tools: ## Install goimports, golangci-lint and govulncheck into GOBIN (for editors)

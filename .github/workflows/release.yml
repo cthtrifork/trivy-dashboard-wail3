@@ -128,7 +128,7 @@ jobs:
         run: make vet test
 
       - name: govulncheck
-        run: make vulncheck
+        run: make govulncheck
 
       - name: Build
         env:
