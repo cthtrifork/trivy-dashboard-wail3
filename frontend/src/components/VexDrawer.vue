@@ -210,7 +210,7 @@ async function clear() {
 
         <fieldset class="drawer-group">
           <legend>Status</legend>
-          <div class="seg">
+          <div class="drawer-seg">
             <label v-for="s in STATUSES" :key="s" :class="{ on: form.status === s }">
               <input v-model="form.status" type="radio" name="vex-status" :value="s" />
               {{ STATUS_LABEL[s] }}

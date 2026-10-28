@@ -94,7 +94,7 @@ const first = page.locator(".prow").first();
 await first.locator(".prow-main").click();
 await first.locator(".vexbtn").click();
 const drawer = page.locator("dialog.drawer");
-await drawer.locator('.seg label:has-text("Not affected")').click();
+await drawer.locator('.drawer-seg label:has-text("Not affected")').click();
 await drawer.locator('.radio:has-text("never run")').click();
 await drawer.locator("#vex-impact").fill("The vulnerable HTTP/2 path is not reachable: the entrypoint only serves HTTP/1.1.");
 await shot("02-priorities-vex-editor");

@@ -122,7 +122,7 @@ Interactions checked by running them:
 - **VEX drawer**: modal docked to the right; header with CVE, severity chip, tier chip and "Full advisory"; plain-language summary with four facts (Attack from, Needs, Impact, Fix); "Applies to" list with Select all; four status buttons; Cancel (ghost) and Save assessment (disabled until a status is chosen).
 - **Help**: centered modal with Glossary and App config tabs.
 
-Options popover contents: tabs Findings (All / Fixable only, Include suppressed, eight vendor-status chips), Sources (registry username and password/token, then the Rego policy and ignore file in highlighted editors that underline the line a check error names) Scanner (Trivy version, an Update database button) and App updates (installed version, Check for updates). The footer shows the version bottom left and the disk usage bottom right. Marking findings under investigation is a one-off action in the VEX dialog and the VEX import dialog, not a scan option.
+Options popover contents: tabs Findings (All / Fixable only, Include vendor suppressed, eight vendor-status chips), Sources (registry username and password/token, then the Rego policy and ignore file in highlighted editors that underline the line a check error names) Scanner (Trivy version, an Update database button) and App updates (installed version, Check for updates). The footer shows the version bottom left and the disk usage bottom right. Marking findings under investigation is a one-off action in the VEX dialog and the VEX import dialog, not a scan option.
 
 ## Known inconsistencies
 

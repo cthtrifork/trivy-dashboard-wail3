@@ -90,7 +90,7 @@ const trivyFlags = [
   ["--offline-scan", "No API requests to identify dependencies; only the DB download uses the network."],
   ["--vuln-severity-source redhat,auto", "Prefer Red Hat's severity, then the vendor default."],
   ["--ignore-status will_not_fix,not_affected", "On by default. Open Hide vendor statuses in Options to choose which of the eight statuses to hide."],
-  ["--show-suppressed", "Off by default. Tick Include suppressed in Options to list findings hidden by your ignore policy or ignore file (Sources tab). VEX statements are not sent to Trivy."],
+  ["--show-suppressed", "Off by default. Tick Include vendor suppressed in Options to list findings hidden by your ignore policy or ignore file (Sources tab). VEX statements are not sent to Trivy."],
   ["--ignore-unfixed", "Off by default. Choose Fixable only in Options to hide findings without a fix."],
 ];
 

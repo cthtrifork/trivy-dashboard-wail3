@@ -144,8 +144,11 @@
 }
 .opts-switch span {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  flex-direction: column;
+  gap: 2px;
+}
+.opts-switch span code {
+  margin-left: 0;
 }
 .opts-row-plain button {
   flex: none;
