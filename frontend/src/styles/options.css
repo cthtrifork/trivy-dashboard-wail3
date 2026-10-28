@@ -139,6 +139,8 @@
   background: var(--accent);
 }
 .opts-val {
+  text-transform: none;
+  letter-spacing: 0;
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -160,4 +162,27 @@
 .opts-row-plain button {
   flex: none;
   white-space: nowrap;
+}
+.file-btn {
+  position: relative;
+  align-self: flex-start;
+  padding: 5px 12px;
+  color: var(--accent);
+  font-size: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.file-btn:hover {
+  border-color: var(--accent);
+}
+.file-btn input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.file-btn:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

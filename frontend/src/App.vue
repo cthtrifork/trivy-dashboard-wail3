@@ -158,6 +158,7 @@ const footprintTitle = computed(() => {
 // Updating is three clicks, never automatic: check, then download, then restart.
 const update = ref({ step: "idle", version: "" }); // idle | available | ready
 const updateBusy = ref(false);
+const dbBusy = ref(false);
 
 async function updateStep(busyMsg, run) {
   updateBusy.value = true;
@@ -173,14 +174,16 @@ async function updateStep(busyMsg, run) {
 
 // The DB is checked once per session; this checks again now. Trivy downloads only if the cached one is out of date.
 const updateDB = () =>
-  updateStep("Checking the vulnerability database…", async () => {
+  updateStep("Updating the vulnerability database…", async () => {
+    dbBusy.value = true;
     let downloaded;
     try {
       downloaded = await ScanService.UpdateDB(trivyImageSetting.value);
     } finally {
+      dbBusy.value = false;
       refreshFootprint(); // a download changes the cache size shown in the footer
     }
-    setStatus(downloaded ? "Downloaded a newer vulnerability database." : "Vulnerability database is up to date (no download reported).");
+    setStatus(downloaded ? "Downloaded a newer vulnerability database." : "No new database was downloaded: the local copy is current.");
   });
 
 const checkForUpdates = () =>
@@ -311,13 +314,10 @@ onMounted(() => {
                     ></textarea>
                     <span v-if="ignorePolicyError" class="field-err" id="ignore-policy-err">{{ ignorePolicyError }}</span>
                   </label>
-                  <input
-                    id="ignore-policy-file"
-                    type="file"
-                    accept=".rego,text/plain"
-                    title="Load the policy from a .rego file"
-                    @change="loadIgnorePolicyFile($event.target.files[0])"
-                  />
+                  <label class="file-btn"
+                    >Load policy from a .rego file…
+                    <input id="ignore-policy-file" type="file" accept=".rego,text/plain" @change="loadIgnorePolicyFile($event.target.files[0])"
+                  /></label>
                   <label class="policy"
                     ><span>Ignore file (<code>.trivyignore.yaml</code>, <code>--ignorefile</code>)</span>
                     <textarea
@@ -332,13 +332,10 @@ onMounted(() => {
                     ></textarea>
                     <span v-if="ignoreFileError" class="field-err" id="ignore-file-err">{{ ignoreFileError }}</span>
                   </label>
-                  <input
-                    id="ignore-file-file"
-                    type="file"
-                    accept=".yaml,.yml,text/yaml,text/plain"
-                    title="Load the ignore file from a .trivyignore.yaml file"
-                    @change="loadIgnoreFile($event.target.files[0])"
-                  />
+                  <label class="file-btn"
+                    >Load ignore file from a .yaml file…
+                    <input id="ignore-file-file" type="file" accept=".yaml,.yml,text/yaml,text/plain" @change="loadIgnoreFile($event.target.files[0])"
+                  /></label>
             </div>
             <div v-show="optsTab === 'scanner'" class="opts-pane" role="tabpanel">
               <div class="opts-label">Trivy version</div>
@@ -355,16 +352,16 @@ onMounted(() => {
                   />
               <div class="opts-label">Vulnerability database</div>
               <div class="opts-row-plain">
-                <span class="kv">Only downloads a new database when the cached one is outdated.</span>
+                <span class="kv">Checked automatically before the first scan of a session. Update it here to get the latest data right away.</span>
                 <button
                   type="button"
                   class="ghost"
                   id="update-db-btn"
                   :disabled="scanning || updateBusy"
-                  title="Check for a newer vulnerability database. Nothing is downloaded if the cached one is current."
+                  title="Download the latest vulnerability database if the local copy is out of date."
                   @click="updateDB"
                 >
-                  Check now
+                  {{ dbBusy ? "Updating…" : "Update database" }}
                 </button>
               </div>
             </div>
