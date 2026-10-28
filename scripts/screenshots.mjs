@@ -228,11 +228,39 @@ await tab("log");
 await shot("13-log");
 
 // ---- Options ----
-await page.setViewportSize({ width: 1400, height: 1100 }); // the popup is taller than the usual window
-await page.click("#opts summary");
-await page.click("#opts-tab-scanner");
-await page.waitForSelector("#trivy-image");
-await shot("14-options");
+// One image with the four tabs side by side: each tab's popover is captured on its own, then the
+// pictures are laid out on a blank page and photographed again.
+if (views !== "deps") {
+  await page.setViewportSize({ width: 1400, height: 1100 }); // the popup is taller than the usual window
+  await page.click("#opts summary");
+  await page.waitForTimeout(700);
+  await page.evaluate(() => {
+    // Pin sample ignore rules so the editors show highlighting instead of their placeholders.
+    const put = (id, text) => {
+      const v = document.getElementById(id).__cm;
+      v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: text } });
+    };
+    put("ignore-policy", '# Ignore kernel headers\npackage trivy\n\ndefault ignore := false\n\nignore if {\n  input.PkgName == "linux-libc-dev"\n}\n');
+    put("ignore-file", "vulnerabilities:\n  - id: CVE-2024-12345\n    statement: Not reachable in our setup\n");
+  });
+  const panes = [];
+  for (const t of ["findings", "sources", "scanner", "updates"]) {
+    await page.click(`#opts-tab-${t}`);
+    if (t === "scanner") await page.waitForSelector("#trivy-image");
+    await page.waitForTimeout(700);
+    panes.push((await page.locator(".opts-body").screenshot({ animations: "disabled", caret: "hide" })).toString("base64"));
+  }
+  const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const sheet = await browser.newPage({ viewport: { width: 1500, height: 100 } });
+  await sheet.setContent(
+    `<body style="margin:0;padding:24px;background:${background};display:flex;gap:24px;align-items:flex-start">` +
+      panes.map((b) => `<img src="data:image/png;base64,${b}">`).join("") +
+      "</body>",
+  );
+  await sheet.screenshot({ path: path.join(outDir, "14-options.png"), fullPage: true });
+  console.log("  14-options.png");
+  await sheet.close();
+}
 
 await browser.close();
 
