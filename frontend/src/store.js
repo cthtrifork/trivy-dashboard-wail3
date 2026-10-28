@@ -240,13 +240,12 @@ function splitImage(ref) {
   return m ? { repo: m[1], tag: m[2] } : { repo: base, tag: "" };
 }
 
-// fillLatestTag lists the repository's tags (a registry lookup, not a scan) and puts the newest
-// plain version in the Target box. A failed lookup leaves it as is.
+// fillLatestTag looks up the repository's newest semver tag (a registry lookup, not a scan) and
+// puts it in the Target box. A failed lookup leaves it as is.
 async function fillLatestTag(repo) {
   if (!repo) return;
   try {
-    const tags = (await ScanService.ListTags(repo)) || [];
-    const latest = tags.find((t) => /^v?\d+(\.\d+)*$/.test(t)) || tags.find((t) => t !== "latest");
+    const latest = await ScanService.LatestTag(repo);
     if (latest && cmpForm.repo === repo) cmpForm.b = latest;
   } catch {
     /* the user can still type the tag */

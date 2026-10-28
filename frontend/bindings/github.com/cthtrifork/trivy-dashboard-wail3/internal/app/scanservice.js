@@ -100,6 +100,15 @@ export function InstallUpdate() {
 }
 
 /**
+ * LatestTag returns the highest semantic-version tag a registry offers for an image repository.
+ * @param {string} repo
+ * @returns {$CancellablePromise<string>}
+ */
+export function LatestTag(repo) {
+    return $Call.ByID(2547070678, repo);
+}
+
+/**
  * ListTags returns the tags a registry offers for an image repository.
  * @param {string} repo
  * @returns {$CancellablePromise<string[]>}

@@ -242,3 +242,18 @@ func TestInvalidImageRefs(t *testing.T) {
 		t.Error("tag with a slash accepted")
 	}
 }
+
+type tagsEngine struct {
+	Engine
+	tags []string
+}
+
+func (e tagsEngine) ListTags(context.Context, string) ([]string, error) { return e.tags, nil }
+
+func TestLatestTagPicksHighestSemver(t *testing.T) {
+	s := &Scanner{Engine: tagsEngine{tags: []string{"latest", "1.9", "1.27-alpine", "1.10.2", "2.0.0-rc1", "1.27"}}}
+	got, err := s.LatestTag(context.Background(), "nginx")
+	if err != nil || got != "1.27" {
+		t.Fatalf("LatestTag = %q, %v; want 1.27", got, err)
+	}
+}

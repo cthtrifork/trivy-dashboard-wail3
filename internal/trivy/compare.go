@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/aquasecurity/go-version/pkg/version"
 	"github.com/distribution/reference"
 )
 
@@ -143,6 +144,27 @@ func (s *Scanner) ListTags(ctx context.Context, repo string) ([]string, error) {
 	}
 	sort.Slice(tags, func(i, j int) bool { return compareVersions("", tags[i], tags[j]) > 0 })
 	return tags, nil
+}
+
+// LatestTag returns the highest semantic version among repo's tags, or "" when none is one.
+// Tags that do not parse as versions ("latest") and variants such as "1.27-alpine" are skipped.
+func (s *Scanner) LatestTag(ctx context.Context, repo string) (string, error) {
+	tags, err := s.ListTags(ctx, repo)
+	if err != nil {
+		return "", err
+	}
+	latest := ""
+	var best version.Version
+	for _, t := range tags {
+		v, err := version.Parse(t)
+		if err != nil || strings.ContainsAny(t, "-+") {
+			continue
+		}
+		if latest == "" || v.GreaterThan(best) {
+			latest, best = t, v
+		}
+	}
+	return latest, nil
 }
 
 // qualifyRepo makes the registry explicit, defaulting to Docker Hub. `podman search`

@@ -442,6 +442,13 @@ func (s *ScanService) Compare(req trivy.CompareRequest) (*trivy.CompareResult, e
 	return s.scanner.Compare(s.appCtx(), req)
 }
 
+// LatestTag returns the highest semantic-version tag a registry offers for an image repository.
+func (s *ScanService) LatestTag(repo string) (string, error) {
+	ctx, cancel := context.WithTimeout(s.appCtx(), time.Minute)
+	defer cancel()
+	return s.scanner.LatestTag(ctx, repo)
+}
+
 // ListTags returns the tags a registry offers for an image repository.
 func (s *ScanService) ListTags(repo string) ([]string, error) {
 	ctx, cancel := context.WithTimeout(s.appCtx(), time.Minute)
