@@ -102,24 +102,17 @@
   background: var(--accent);
   border-color: var(--accent);
 }
-.seg-field {
-  margin: 0;
-  padding: 0;
-  min-width: 0;
-  border: 0;
-}
-.seg-field legend {
-  padding: 0 0 6px;
-}
-.seg {
+.opts-seg {
   display: flex;
   padding: 2px;
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
-.opts-body .seg button {
+.opts-body .opts-seg button {
   flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
   white-space: nowrap;
   padding: 6px 8px;
   color: var(--mute);
@@ -129,7 +122,7 @@
   box-shadow: none;
   cursor: pointer;
 }
-.opts-body .seg button.on {
+.opts-body .opts-seg button.on {
   color: #fff;
   background: var(--accent);
 }

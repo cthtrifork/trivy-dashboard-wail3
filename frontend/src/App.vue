@@ -255,7 +255,7 @@ onMounted(() => {
             </div>
             <div v-show="optsTab === 'findings'" class="opts-pane" role="tabpanel">
               <div class="opts-label">Fix availability <code>--ignore-unfixed</code></div>
-              <div class="seg">
+              <div class="opts-seg">
                 <button type="button" id="ignore-unfixed-off" :class="{ on: !opts.ignoreUnfixed }" :aria-pressed="!opts.ignoreUnfixed" @click="opts.ignoreUnfixed = false">All</button>
                 <button
                   type="button"
