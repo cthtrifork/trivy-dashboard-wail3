@@ -139,7 +139,10 @@ header {
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  width: 260px;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -159,6 +162,63 @@ header {
   font-family: ui-monospace, monospace;
   font-size: 12px;
   resize: vertical;
+}
+.opts-count {
+  color: var(--accent);
+}
+.opts-label {
+  color: var(--mute);
+  font-size: 12px;
+}
+.opts-secs {
+  display: flex;
+  flex-direction: column;
+}
+.opts-sec {
+  border-top: 1px solid var(--line);
+}
+.opts-sec > summary,
+.opts-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 0 4px;
+  color: var(--text);
+  list-style: none;
+}
+.opts-sec > summary::-webkit-details-marker {
+  display: none;
+}
+.opts-sec > summary::after {
+  content: "▸";
+  color: var(--mute);
+}
+.opts-sec[open] > summary::after {
+  content: "▾";
+}
+.opts-row {
+  justify-content: space-between;
+}
+.opts-val {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--mute);
+  font-size: 12px;
+}
+.opts-sec-body .tag-wrap {
+  width: 100%;
+}
+.opts-sec-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 4px 12px;
 }
 #meta {
   flex: 1;

@@ -104,6 +104,12 @@ function imageKey(ev) {
 const sevTag = (n, sev) => ({ n, sev, style: sevStyle(sev) });
 
 const trivyPlaceholder = computed(() => trivyNewest.value || mode.value?.trivyImage?.split(":").pop() || "Trivy version");
+// What the Options popover shows without opening a section.
+const activeCount = computed(
+  () => [opts.ignoreUnfixed, opts.showSuppressed, opts.ignoreWillNotFix, opts.ignoreNotAffected, opts.markUnderInvestigation].filter(Boolean).length,
+);
+const registrySummary = computed(() => opts.username.trim() || (mode.value?.registryToken ? mode.value.registryUser + " (token)" : "not set"));
+const ignoreSummary = computed(() => [opts.ignorePolicy.trim() && "Rego", opts.ignoreFile.trim() && "ignore file"].filter(Boolean).join(" + ") || "none");
 const meta = computed(() => (result.value ? `${result.value.image}${result.value.os ? " · " + result.value.os : ""}` : ""));
 const counts = computed(() => ({
   vulns: result.value?.vulnerabilities.length ?? 0,
@@ -202,104 +208,130 @@ onMounted(() => {
         <strong class="brand">Trivy Scanner</strong>
         <div id="meta">{{ meta }}</div>
         <details id="opts">
-          <summary>Options</summary>
+          <summary>Options<span v-if="activeCount" class="opts-count"> · {{ activeCount }} active</span></summary>
           <div class="opts-body">
-          <label><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed" /> Ignore unfixed</label>
-          <label title="Include findings suppressed by VEX or ignore files"
-            ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Show suppressed</label
-          >
-          <label title="Hide findings the vendor will not fix"
-            ><input type="checkbox" id="ignore-will-not-fix" v-model="opts.ignoreWillNotFix" /> Ignore will_not_fix</label
-          >
-          <label title="Hide findings the vendor says do not affect the package"
-            ><input type="checkbox" id="ignore-not-affected" v-model="opts.ignoreNotAffected" /> Ignore not_affected</label
-          >
-          <label title="Record an under investigation VEX statement for every finding that has none"
-            ><input type="checkbox" id="mark-uninvestigated" v-model="opts.markUnderInvestigation" /> Mark all as under investigation</label
-          >
-          <input id="username" v-model="opts.username" :placeholder="mode?.registryToken ? mode.registryUser + ' (GITHUB_TOKEN, ghcr.io)' : 'Registry username'" autocomplete="off" />
-          <input
-            id="password"
-            v-model="opts.password"
-            type="password"
-            :placeholder="mode?.registryToken ? '••••••••  GITHUB_TOKEN (ghcr.io)' : 'Registry password / token'"
-            autocomplete="off"
-          />
-          <TagInput
-            id="trivy-image"
-            v-model="opts.trivyImage"
-            :tags="trivyTags"
-            label="Trivy version"
-            :placeholder="trivyPlaceholder"
-            title="Empty uses the newest version found. Enter a version such as 0.77.0."
-            @update:model-value="saveTrivyImage"
-            @open="ensureTrivyTags"
-          />
-          <label class="policy"
-            >Ignore policy (Rego, <code>--ignore-policy</code>)
-            <textarea
-              id="ignore-policy"
-              v-model="opts.ignorePolicy"
-              rows="6"
-              placeholder="package trivy&#10;&#10;ignore if input.PkgName == &quot;linux-libc-dev&quot;"
-              autocomplete="off"
-              spellcheck="false"
-              title="Findings for which the policy defines ignore are left out of the scan. Empty means none."
-              @change="saveIgnorePolicy"
-            ></textarea>
-            <span v-if="ignorePolicyError" class="field-err" id="ignore-policy-err">{{ ignorePolicyError }}</span>
-          </label>
-          <input
-            id="ignore-policy-file"
-            type="file"
-            accept=".rego,text/plain"
-            title="Load the policy from a .rego file"
-            @change="loadIgnorePolicyFile($event.target.files[0])"
-          />
-          <label class="policy"
-            >Ignore file (<code>.trivyignore.yaml</code>, <code>--ignorefile</code>)
-            <textarea
-              id="ignore-file"
-              v-model="opts.ignoreFile"
-              rows="6"
-              placeholder="vulnerabilities:&#10;  - id: CVE-2024-12345&#10;    statement: Not reachable in our setup"
-              autocomplete="off"
-              spellcheck="false"
-              title="Vulnerabilities listed here are left out of the scan. Empty means none."
-              @change="saveIgnoreFile"
-            ></textarea>
-            <span v-if="ignoreFileError" class="field-err" id="ignore-file-err">{{ ignoreFileError }}</span>
-          </label>
-          <input
-            id="ignore-file-file"
-            type="file"
-            accept=".yaml,.yml,text/yaml,text/plain"
-            title="Load the ignore file from a .trivyignore.yaml file"
-            @change="loadIgnoreFile($event.target.files[0])"
-          />
-          <button
-            type="button"
-            class="ghost"
-            id="update-db-btn"
-            :disabled="scanning || updateBusy"
-            title="Check for a newer vulnerability database now. Trivy downloads one only if the cached copy is out of date."
-            @click="updateDB"
-          >
-            Check vulnerability database
-          </button>
-          <div class="opts-update">
-            <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>
-            <button
-              type="button"
-              class="ghost"
-              id="update-btn"
-              :disabled="!appInfo?.enabled || updateBusy"
-              :title="appInfo?.enabled ? '' : appInfo?.reason"
-              @click="updateAction.run"
+            <div class="opts-label">Findings to show</div>
+            <label><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed" /> Ignore unfixed</label>
+            <label title="Include findings suppressed by VEX or ignore files"
+              ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Show suppressed</label
             >
-              {{ updateAction.label }}
-            </button>
-          </div>
+            <label title="Hide findings the vendor will not fix"
+              ><input type="checkbox" id="ignore-will-not-fix" v-model="opts.ignoreWillNotFix" /> Ignore will_not_fix</label
+            >
+            <label title="Hide findings the vendor says do not affect the package"
+              ><input type="checkbox" id="ignore-not-affected" v-model="opts.ignoreNotAffected" /> Ignore not_affected</label
+            >
+            <div class="opts-secs">
+              <details class="opts-sec" id="opts-registry">
+                <summary>Registry login<span class="opts-val">{{ registrySummary }}</span></summary>
+                <div class="opts-sec-body">
+                  <input id="username" v-model="opts.username" :placeholder="mode?.registryToken ? mode.registryUser + ' (GITHUB_TOKEN, ghcr.io)' : 'Registry username'" autocomplete="off" />
+                  <input
+                    id="password"
+                    v-model="opts.password"
+                    type="password"
+                    :placeholder="mode?.registryToken ? '••••••••  GITHUB_TOKEN (ghcr.io)' : 'Registry password / token'"
+                    autocomplete="off"
+                  />
+                </div>
+              </details>
+              <details class="opts-sec" id="opts-trivy">
+                <summary>Trivy version<span class="opts-val">{{ opts.trivyImage || trivyPlaceholder }}</span></summary>
+                <div class="opts-sec-body">
+                  <TagInput
+                    id="trivy-image"
+                    v-model="opts.trivyImage"
+                    :tags="trivyTags"
+                    label="Trivy version"
+                    :placeholder="trivyPlaceholder"
+                    title="Empty uses the newest version found. Enter a version such as 0.77.0."
+                    @update:model-value="saveTrivyImage"
+                    @open="ensureTrivyTags"
+                  />
+                </div>
+              </details>
+              <div class="opts-sec opts-row">
+                <span>Vulnerability database</span>
+                <button
+                  type="button"
+                  class="ghost"
+                  id="update-db-btn"
+                  :disabled="scanning || updateBusy"
+                  title="Check for a newer vulnerability database now. Trivy downloads one only if the cached copy is out of date."
+                  @click="updateDB"
+                >
+                  Check now
+                </button>
+              </div>
+              <details class="opts-sec" id="opts-ignore">
+                <summary>Ignore rules<span class="opts-val">{{ ignoreSummary }}</span></summary>
+                <div class="opts-sec-body">
+                  <label class="policy"
+                    ><span>Ignore policy (Rego, <code>--ignore-policy</code>)</span>
+                    <textarea
+                      id="ignore-policy"
+                      v-model="opts.ignorePolicy"
+                      rows="6"
+                      placeholder="package trivy&#10;&#10;ignore if input.PkgName == &quot;linux-libc-dev&quot;"
+                      autocomplete="off"
+                      spellcheck="false"
+                      title="Findings for which the policy defines ignore are left out of the scan. Empty means none."
+                      @change="saveIgnorePolicy"
+                    ></textarea>
+                    <span v-if="ignorePolicyError" class="field-err" id="ignore-policy-err">{{ ignorePolicyError }}</span>
+                  </label>
+                  <input
+                    id="ignore-policy-file"
+                    type="file"
+                    accept=".rego,text/plain"
+                    title="Load the policy from a .rego file"
+                    @change="loadIgnorePolicyFile($event.target.files[0])"
+                  />
+                  <label class="policy"
+                    ><span>Ignore file (<code>.trivyignore.yaml</code>, <code>--ignorefile</code>)</span>
+                    <textarea
+                      id="ignore-file"
+                      v-model="opts.ignoreFile"
+                      rows="6"
+                      placeholder="vulnerabilities:&#10;  - id: CVE-2024-12345&#10;    statement: Not reachable in our setup"
+                      autocomplete="off"
+                      spellcheck="false"
+                      title="Vulnerabilities listed here are left out of the scan. Empty means none."
+                      @change="saveIgnoreFile"
+                    ></textarea>
+                    <span v-if="ignoreFileError" class="field-err" id="ignore-file-err">{{ ignoreFileError }}</span>
+                  </label>
+                  <input
+                    id="ignore-file-file"
+                    type="file"
+                    accept=".yaml,.yml,text/yaml,text/plain"
+                    title="Load the ignore file from a .trivyignore.yaml file"
+                    @change="loadIgnoreFile($event.target.files[0])"
+                  />
+                </div>
+              </details>
+              <details class="opts-sec" id="opts-investigate">
+                <summary>Mark all as under investigation<span class="opts-val">{{ opts.markUnderInvestigation ? "on" : "off" }}</span></summary>
+                <div class="opts-sec-body">
+                  <label title="Record an under investigation VEX statement for every finding that has none"
+                    ><input type="checkbox" id="mark-uninvestigated" v-model="opts.markUnderInvestigation" /> Record an under investigation statement for every finding that has none</label
+                  >
+                </div>
+              </details>
+            </div>
+            <div class="opts-update">
+              <span class="kv">{{ appInfo ? "Version " + appInfo.version : "" }}</span>
+              <button
+                type="button"
+                class="ghost"
+                id="update-btn"
+                :disabled="!appInfo?.enabled || updateBusy"
+                :title="appInfo?.enabled ? '' : appInfo?.reason"
+                @click="updateAction.run"
+              >
+                {{ updateAction.label }}
+              </button>
+            </div>
           </div>
         </details>
       </div>
