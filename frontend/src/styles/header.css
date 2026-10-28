@@ -173,6 +173,9 @@ header {
 .opts-sublabel {
   font-size: 11px;
 }
+.opts-indent {
+  margin-left: 14px;
+}
 .opts-secs {
   display: flex;
   flex-direction: column;
