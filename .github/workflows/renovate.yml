@@ -45,8 +45,7 @@ jobs:
         with:
           configurationFile: .github/renovate.json5
           token: ${{ github.token }}
-          # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
-          renovate-version: '44'
+          renovate-version: '44' # Renovate's github-actions manager updates this itself
         env:
           LOG_LEVEL: debug
           RENOVATE_DRY_RUN: full
@@ -76,8 +75,7 @@ jobs:
         with:
           configurationFile: .github/renovate.json5
           token: ${{ secrets.RENOVATE_TOKEN || github.token }}
-          # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
-          renovate-version: '44'
+          renovate-version: '44' # Renovate's github-actions manager updates this itself
         env:
           LOG_LEVEL: info
           RENOVATE_REPOSITORIES: ${{ github.repository }}

@@ -45,7 +45,7 @@
     {
       // Versions with no manager of their own: a `# renovate: datasource=<ds> depName=<name>` comment on
       // the line above a `KEY := value`, `KEY=value` or `KEY: value` line. Used for the Go dev tools in
-      // the Makefile, the gh-pin-actions extension and the Renovate image in the workflows.
+      // the Makefile and the gh-pin-actions extension in the workflows.
       customType: "regex",
       managerFilePatterns: ["/(^|/)Makefile$/", "/^\\.github/workflows/[^/]+\\.ya?ml$/"],
       matchStrings: [

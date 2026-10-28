@@ -35,7 +35,7 @@ Sources:
 
 ## Dependency updates (Renovate)
 
-Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces Dependabot. It runs weekly and on demand, with the config in `.github/renovate.json5`, and updates Go modules, the frontend npm packages, Docker base images, pip (`.github/requirements.txt`, zizmor), the SHA-pinned Actions (`helpers:pinGitHubActionDigests` keeps the `# vX.Y.Z` comment) and anything marked with a `# renovate: datasource=<ds> depName=<name>` comment on the line above its version: the Go dev tools in the `Makefile`, the `gh-pin-actions` extension and the Renovate image itself. New releases wait 2 days (`minimumReleaseAge`).
+Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces Dependabot. It runs weekly and on demand, with the config in `.github/renovate.json5`, and updates Go modules, the frontend npm packages, Docker base images, pip (`.github/requirements.txt`, zizmor), the SHA-pinned Actions (`helpers:pinGitHubActionDigests` keeps the `# vX.Y.Z` comment) and anything marked with a `# renovate: datasource=<ds> depName=<name>` comment on the line above its version: the Go dev tools in the `Makefile`, and the `gh-pin-actions` extension. New releases wait 2 days (`minimumReleaseAge`).
 
 A pull request that changes `renovate.json5` or `renovate.yml` runs a **dry run** on its own branch (`RENOVATE_DRY_RUN=full`, debug log): it writes nothing, and the log lists the updates and branches Renovate would create. PRs opened with the default `GITHUB_TOKEN` do not start CI; add a `RENOVATE_TOKEN` secret (a fine-grained PAT or GitHub App token) and the workflow uses it.
 
