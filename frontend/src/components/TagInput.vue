@@ -8,6 +8,7 @@ const props = defineProps({
   disabled: Boolean,
   id: { type: String, default: "tag" },
   label: { type: String, default: "Tag" },
+  placeholder: { type: String, default: "tag or digest" },
 });
 const emit = defineEmits(["update:modelValue", "open"]);
 
@@ -65,13 +66,14 @@ function onKey(ev) {
       :id="id"
       class="tag-input"
       :value="modelValue"
+      :title="modelValue"
       role="combobox"
       aria-autocomplete="list"
       :aria-controls="id + '-list'"
       :aria-label="label"
       :aria-expanded="shown"
       :aria-activedescendant="idx >= 0 ? id + '-opt-' + idx : undefined"
-      placeholder="tag"
+      :placeholder="placeholder"
       autocomplete="off"
       spellcheck="false"
       :disabled="disabled"

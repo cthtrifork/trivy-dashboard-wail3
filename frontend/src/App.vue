@@ -13,7 +13,7 @@ import {
   repoTags,
   ensureTags,
   setTag,
-  resetImage,
+  clearAll,
   opts,
   saveTrivyImage,
   saveIgnorePolicy,
@@ -77,8 +77,8 @@ function pickRecent(e, rescan) {
   closeHistory();
   if (rescan && !scanning.value) runScan();
 }
-function resetView() {
-  resetImage();
+function clearView() {
+  clearAll();
   nextTick(() => document.getElementById("image")?.focus());
 }
 function imageKey(ev) {
@@ -289,8 +289,8 @@ onMounted(() => {
             @update:model-value="setTag"
             @open="ensureTags(imageRepo)"
           />
-          <button type="button" class="ghost reset-btn" title="Back to the single image field" :disabled="scanning" @click="resetView">
-            Reset
+          <button type="button" class="ghost clear-btn" title="Clear the results and go back to the single image field" :disabled="scanning" @click="clearView">
+            Clear
           </button>
         </div>
         <div v-else class="image-wrap">

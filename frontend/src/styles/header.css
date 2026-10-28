@@ -259,7 +259,7 @@ header {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-.scan-row .reset-btn {
+.scan-row .clear-btn {
   padding: 0 18px;
   font-size: 14px;
 }
