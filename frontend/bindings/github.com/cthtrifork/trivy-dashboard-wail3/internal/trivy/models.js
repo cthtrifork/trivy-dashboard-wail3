@@ -1267,7 +1267,8 @@ export class ScanRequest {
         }
         if (!("showSuppressed" in $$source)) {
             /**
-             * ShowSuppressed includes findings suppressed by VEX or ignore files, which Trivy hides by default.
+             * ShowSuppressed includes findings left out by the ignore policy or ignore file, which Trivy hides by default.
+             * VEX assessments are kept in the app and not sent to Trivy, so they do not affect this.
              * @member
              * @type {boolean}
              */
