@@ -191,12 +191,19 @@ header {
 .opts-sec > summary::-webkit-details-marker {
   display: none;
 }
+/* A drawn chevron instead of a glyph: text glyphs sit on the baseline and drift from the centred value. */
 .opts-sec > summary::after {
-  content: "▸";
-  color: var(--mute);
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin: 0 3px 0 2px;
+  border-right: 1.5px solid var(--mute);
+  border-bottom: 1.5px solid var(--mute);
+  transform: rotate(-45deg);
 }
 .opts-sec[open] > summary::after {
-  content: "▾";
+  transform: rotate(45deg);
 }
 .opts-row {
   justify-content: space-between;
@@ -210,6 +217,7 @@ header {
   text-align: right;
   color: var(--mute);
   font-size: 12px;
+  line-height: 1;
 }
 .opts-sec-body .tag-wrap {
   width: 100%;
