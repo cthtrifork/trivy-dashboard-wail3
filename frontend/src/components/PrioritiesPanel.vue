@@ -8,17 +8,20 @@ import CvssMeter from "./CvssMeter.vue";
 import Ratings from "./Ratings.vue";
 import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
+import WhereItLives from "./WhereItLives.vue";
 import SuppressedRow from "./SuppressedRow.vue";
 import { cvssText } from "../lib/glance.js";
 import { useVirtualList } from "../lib/virtual.js";
+import { findingPath, indexNodes } from "../lib/where.js";
 
-const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false });
+const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false, groupBy: "none" });
 const TIERS = Object.keys(TIER_COLOR);
 const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
 // Empty set = no filter. Both are view filters that run after ranking, like the toolbar ones.
 const sevFilter = reactive(new Set());
 const tierFilter = reactive(new Set());
 const expanded = reactive(new Set());
+const collapsedGroups = reactive(new Set());
 const flip = (set, x) => (set.has(x) ? set.delete(x) : set.add(x));
 const sevStyle = (v) => ({ "--c": `var(--${SEVERITIES.includes(v.severity) ? v.severity : "UNKNOWN"})` });
 const label = (s) => s[0] + s.slice(1).toLowerCase();
@@ -78,8 +81,30 @@ const signals = computed(() => {
 // "all" can be thousands of rows: render only the ones in view. Rows sit flush (no flex gap), so a
 // spacer stands in for its rows with no correction; GAP stays so the spacer maths is the same as elsewhere.
 const GAP = 0;
-const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(list, { key: (v) => cardKey(v), estimate: 46, gap: GAP });
 const cardKey = (v) => v.key + "|" + v.target;
+// What the virtual list renders: findings with their rank, or, grouped by binary, a header row before each
+// binary's findings. Rank is the position in the ranked list, so it survives grouping. Groups appear in the
+// order of their best-ranked finding. Grouping runs after the top-N cut, so a group only counts what is shown.
+const NO_BINARY = "Not in a binary (OS packages)";
+const nodeIndex = computed(() => indexNodes(result.value?.depNodes));
+const binaryOf = (v) => findingPath(result.value, nodeIndex.value, v)?.chain[0]?.name ?? NO_BINARY;
+const displayed = computed(() => {
+  if (prio.groupBy !== "binary") return list.value.map((v, i) => ({ v, rank: i + 1 }));
+  const groups = new Map();
+  list.value.forEach((v, i) => {
+    const name = binaryOf(v);
+    (groups.get(name) ?? groups.set(name, []).get(name)).push({ v, rank: i + 1 });
+  });
+  const out = [];
+  for (const [name, items] of groups) {
+    const worst = TIERS.find((t) => items.some((r) => r.v.tier === t));
+    out.push({ head: { name, count: items.length, worst, off: collapsedGroups.has(name) } });
+    if (!collapsedGroups.has(name)) out.push(...items);
+  }
+  return out;
+});
+const itemKey = (it) => (it.head ? "group|" + it.head.name : cardKey(it.v));
+const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(displayed, { key: itemKey, estimate: 46, gap: GAP });
 const toggleRow = (v) => flip(expanded, cardKey(v));
 const attackVector = (v) => /AV:([NALP])/.exec(v.vector)?.[1];
 
@@ -130,6 +155,13 @@ defineExpose({ count: computed(() => pool.value.length) });
     </label>
     <label class="chk"><input type="checkbox" id="prio-hide" v-model="prio.hideResolved" /> Hide resolved by VEX</label>
     <label class="chk"><input type="checkbox" id="prio-fixable" v-model="prio.fixableOnly" /> Only with a fix</label>
+    <label class="chk"
+      >Group by
+      <select id="prio-group" v-model="prio.groupBy" title="Binary: the program in the image that bundles the vulnerable package">
+        <option value="none">none</option>
+        <option value="binary">binary</option>
+      </select>
+    </label>
     <span id="prio-note">{{ note }}</span>
   </div>
   <div id="prio-list" class="scroll" ref="scroller">
@@ -142,7 +174,21 @@ defineExpose({ count: computed(() => pool.value.length) });
         <span :title="COLUMN_HELP.severity">Severity</span><span :title="COLUMN_HELP.score">CVSS</span><span title="Title, CVE id, and the affected package and installed version">Finding</span
         ><span :title="COLUMN_HELP.priority">Priority</span><span :title="COLUMN_HELP.fixed">Fix</span>
       </div>
-      <div v-for="{ item: v, index } in visible" :key="cardKey(v)" v-measure="cardKey(v)" class="prow" :class="{ open: expanded.has(cardKey(v)) }" :style="sevStyle(v)">
+      <template v-for="{ item: { head, v, rank } } in visible" :key="head ? 'group|' + head.name : cardKey(v)">
+      <button
+        v-if="head"
+        v-measure="'group|' + head.name"
+        type="button"
+        class="pgroup"
+        :aria-expanded="!head.off"
+        @click="flip(collapsedGroups, head.name)"
+      >
+        <span class="pgroup-caret" aria-hidden="true">{{ head.off ? "▶" : "▼" }}</span>
+        <span class="mono pgroup-name">{{ head.name }}</span>
+        <span class="kv">{{ head.count }} {{ head.count === 1 ? "finding" : "findings" }}</span>
+        <span class="sev sevpill tier" :style="tierStyle(head.worst)" title="Highest priority tier in this group">{{ head.worst }}</span>
+      </button>
+      <div v-else v-measure="cardKey(v)" class="prow" :class="{ open: expanded.has(cardKey(v)) }" :style="sevStyle(v)">
         <div class="prow-main">
           <span class="sev sevpill" :class="v.severity">{{ v.severity }}</span>
           <CvssMeter :score="v.score" :severity="v.severity" />
@@ -151,7 +197,7 @@ defineExpose({ count: computed(() => pool.value.length) });
               ><button type="button" class="pexpand" :aria-expanded="expanded.has(cardKey(v))" @click.stop="toggleRow(v)">{{ v.title || v.id }}</button></span
             >
             <span class="psub">
-              <span class="rank">#{{ index + 1 }}</span>
+              <span class="rank">#{{ rank }}</span>
               <a v-if="detailUrl(v)" class="id" :href="detailUrl(v)" title="Open CVE details" @click.prevent.stop="openUrl(detailUrl(v))">{{ v.id }}</a>
               <span v-else class="id">{{ v.id }}</span>
               <span class="mono">{{ v.package }} {{ v.installed }}</span>
@@ -182,6 +228,7 @@ defineExpose({ count: computed(() => pool.value.length) });
             >
           </div>
           <Ratings :v="v" />
+          <WhereItLives :v="v" />
           <div class="pmeans">
             <small>What it means</small>
             <p class="attack">
@@ -208,6 +255,7 @@ defineExpose({ count: computed(() => pool.value.length) });
           </div>
         </div>
       </div>
+      </template>
       <div v-if="after > 0" class="pad" :style="{ height: after - GAP + 'px' }"></div>
       <div v-if="!list.length" class="empty">Nothing left to show with these filters.</div>
       <div v-else-if="pool.length > list.length" class="kv">{{ pool.length - list.length }} more findings not shown — they rank lower.</div>

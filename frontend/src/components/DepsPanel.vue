@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
-import { result, SEVERITIES, SEV_COLOR, sevStyle } from "../store.js";
+import { depsTarget, result, SEVERITIES, SEV_COLOR, sevStyle } from "../store.js";
 import { Graph } from "../lib/graph.js";
 import SevBadges from "./SevBadges.vue";
 
@@ -204,6 +204,14 @@ watch(result, () => {
   renderGraph();
 });
 onMounted(renderGraph);
+// "post": the tab has been switched to by then, so the canvas has a size to centre in.
+watch(
+  depsTarget,
+  (t) => {
+    if (t && nodes.value[t.ref]) select(t.ref, true);
+  },
+  { flush: "post" },
+);
 
 const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
 </script>

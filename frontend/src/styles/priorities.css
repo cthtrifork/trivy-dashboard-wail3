@@ -405,3 +405,57 @@
 .cvss-break dd {
   margin: 0;
 }
+.pwhere .chain {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+.pwhere .chain li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: baseline;
+  padding-left: calc(var(--depth, 0) * 16px);
+  overflow-wrap: anywhere;
+}
+.pwhere .chain li:not(.chain-image)::before {
+  content: "└";
+  color: var(--mute);
+}
+.pwhere .chain .vulnerable .mono {
+  color: var(--c);
+  font-weight: 600;
+}
+.pwhere > p {
+  margin: 6px 0 0;
+}
+.pgroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  background: var(--bg);
+  color: var(--text);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 8px 12px;
+}
+.pgroup-caret {
+  color: var(--mute);
+  font-size: 10px;
+}
+.pgroup-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pwhere .link {
+  margin-top: 6px;
+  font-size: 12px;
+}

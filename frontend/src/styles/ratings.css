@@ -23,3 +23,7 @@
 .ratings tr.used td:first-child {
   font-weight: 600;
 }
+.ratings .link {
+  margin-top: 2px;
+  font-size: 12px;
+}
