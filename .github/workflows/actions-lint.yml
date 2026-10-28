@@ -3,7 +3,8 @@ name: Actions lint
 # Static checks on the workflows themselves:
 #   - zizmor finds security problems in workflows and composite actions (injection, excessive
 #     permissions, cache poisoning, unpinned or impostor action refs, ...).
-#   - gh-pin-actions checks that every `uses:` is pinned to a commit SHA with a version comment.
+#   - gh-pin-actions checks that every `uses:` is pinned to a commit SHA with a version comment, and that it is the
+#     latest release.
 # They run when workflow, action or Dependabot files change, and weekly, because new zizmor audits
 # and advisories appear without any change here. They use a paths filter, so do not mark them as
 # required checks.
@@ -55,19 +56,20 @@ jobs:
         with:
           persist-credentials: false
 
-      # Rewrites every unpinned `uses:` in .github/workflows in place (already pinned ones are left
-      # alone), so any diff means a workflow references a tag or branch instead of a SHA.
+      # --latest re-pins every `uses:` in .github/workflows to the newest release (SHA plus version
+      # comment), so any diff means a workflow references a tag or branch instead of a SHA, or
+      # pins an action that has a newer release.
       - name: Pin actions
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh extension install amenocal/gh-pin-actions --pin v0.1.0
-          gh pin-actions workflows --overwrite
+          gh pin-actions workflows --latest --overwrite
 
       - name: Fail on unpinned actions
         run: |
           if ! git diff --exit-code -- .github/workflows; then
-            echo "::error::Unpinned actions found. Run 'gh pin-actions workflows --overwrite' and commit the result."
+            echo "::error::Unpinned or outdated actions found. Run 'gh pin-actions workflows --latest --overwrite' and commit the result."
             exit 1
           fi
           if [ -n "$(git ls-files --others --exclude-standard -- .github/workflows)" ]; then
