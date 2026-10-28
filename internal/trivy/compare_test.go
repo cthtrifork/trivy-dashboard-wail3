@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -270,5 +271,14 @@ func TestImageTag(t *testing.T) {
 		if got := ImageTag(ref); got != want {
 			t.Errorf("ImageTag(%q) = %q, want %q", ref, got, want)
 		}
+	}
+}
+
+func TestListTagsSortsBySemver(t *testing.T) {
+	s := &Scanner{Engine: tagsEngine{tags: []string{"latest", "1.9", "1.27-alpine", "1.10.2", "1.27.1", "1.27", "stable", "v1.5", "1.28.0-rc1"}}}
+	got, err := s.ListTags(context.Background(), "nginx")
+	want := []string{"1.27.1", "1.27", "1.10.2", "1.9", "v1.5", "1.28.0-rc1", "1.27-alpine", "stable", "latest"}
+	if err != nil || !slices.Equal(got, want) {
+		t.Fatalf("ListTags = %v, %v; want %v", got, err, want)
 	}
 }

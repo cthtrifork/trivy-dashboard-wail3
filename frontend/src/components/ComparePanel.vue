@@ -40,7 +40,7 @@ async function loadTags() {
   note.value = "Loading tags…";
   try {
     tags.value = await ScanService.ListTags(cmpForm.repo);
-    note.value = `${tags.value.length} tags loaded (newest first, by name) — type to filter.`;
+    note.value = `${tags.value.length} tags loaded (newest version first) — type to filter.`;
   } catch (e) {
     note.value = "Could not list tags — type them in. " + errText(e);
   }
