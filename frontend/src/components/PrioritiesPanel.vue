@@ -8,6 +8,7 @@ import CvssMeter from "./CvssMeter.vue";
 import Ratings from "./Ratings.vue";
 import RulesEditor from "./RulesEditor.vue";
 import VexBox from "./VexBox.vue";
+import WhereItLives from "./WhereItLives.vue";
 import SuppressedRow from "./SuppressedRow.vue";
 import { cvssText } from "../lib/glance.js";
 import { useVirtualList } from "../lib/virtual.js";
@@ -182,6 +183,7 @@ defineExpose({ count: computed(() => pool.value.length) });
             >
           </div>
           <Ratings :v="v" />
+          <WhereItLives :v="v" />
           <div class="pmeans">
             <small>What it means</small>
             <p class="attack">
