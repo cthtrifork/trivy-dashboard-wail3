@@ -341,6 +341,7 @@ header {
 #scan-state.current::first-letter {
   color: var(--ok);
 }
-#scan-state.changed {
+#scan-state.changed,
+#scan-state.settings {
   color: var(--accent);
 }

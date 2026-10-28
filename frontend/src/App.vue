@@ -20,6 +20,7 @@ import {
   setTag,
   clearAll,
   scanState,
+  settingsChanged,
   opts,
   saveTrivyImage,
   saveIgnorePolicy,
@@ -208,7 +209,8 @@ onMounted(() => {
         <strong class="brand">Trivy Scanner</strong>
         <div id="meta">{{ meta }}</div>
         <details id="opts">
-          <summary>Options<span v-if="activeCount" class="opts-count"> · {{ activeCount }} active</span></summary>
+          <summary>Options<span v-if="activeCount" class="opts-count"> · {{ activeCount }} active</span
+          ><span v-if="settingsChanged" class="opts-count"> · rescan to apply</span></summary>
           <div class="opts-body">
             <div class="opts-label">Findings to show</div>
             <label><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed" /> Ignore unfixed</label>
@@ -433,6 +435,7 @@ onMounted(() => {
       </div>
       <p v-if="split && !scanning && scanState !== 'new'" id="scan-state" :class="scanState" role="status">
         <template v-if="scanState === 'current'">✓ Showing the scan of {{ result.image }}. Rescan to check it again.</template>
+        <template v-else-if="scanState === 'settings'">● Options changed since this scan. Press Scan to apply them.</template>
         <template v-else>● Not scanned yet: the results below are for {{ result.image }}. Press Scan for {{ image }}.</template>
       </p>
     </form>
