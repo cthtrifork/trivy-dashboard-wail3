@@ -5,6 +5,7 @@ name: Actions lint
 #     permissions, cache poisoning, unpinned or impostor action refs, ...).
 #   - gh-pin-actions checks that every `uses:` is pinned to a commit SHA with a version comment, and
 #     that it is the latest release. On pull requests only the workflows the PR adds or changes.
+#   - renovate-config validates .github/renovate.json5 with renovate-config-validator.
 # They run when workflow, action or Renovate files change, and weekly, because new zizmor audits
 # and advisories appear without any change here. They use a paths filter, so do not mark them as
 # required checks.
@@ -90,3 +91,20 @@ jobs:
           for f in ${CHANGED_FILES:-.github/workflows/*.yml}; do
             diff <(git show "HEAD:$f" | sed -E "$norm") <(sed -E "$norm" "$f")
           done
+
+  renovate-config:
+    name: renovate config
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Validates .github/renovate.json5 against Renovate's own schema and rules (unknown options,
+      # bad regexes, invalid package rules). --strict also fails on a config that needs migrating.
+      - name: Validate the Renovate config
+        env:
+          # renovate: datasource=npm depName=renovate
+          RENOVATE_VERSION: 44.190.2
+        run: npx --yes --package "renovate@${RENOVATE_VERSION}" -- renovate-config-validator --strict .github/renovate.json5

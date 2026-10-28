@@ -23,6 +23,12 @@ on:
   schedule:
     - cron: '12 4 * * 1-5' # weekdays 04:12 UTC
   workflow_dispatch:
+    inputs:
+      log_level:
+        description: Renovate log level (use debug to see why a run aborts)
+        type: choice
+        options: [info, debug]
+        default: info
 
 permissions: {}
 
@@ -138,7 +144,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           renovate-version: '44' # Renovate's github-actions manager updates this itself
         env:
-          LOG_LEVEL: info
+          LOG_LEVEL: ${{ inputs.log_level || 'info' }}
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_ONBOARDING: 'false'
           RENOVATE_REQUIRE_CONFIG: ignored
