@@ -93,7 +93,7 @@
 .ptable-head {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 2; /* above the row links and tier pills, which sit at 1 */
   flex: none;
   padding-top: 8px;
   padding-bottom: 8px;
