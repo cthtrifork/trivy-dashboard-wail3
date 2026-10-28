@@ -31,7 +31,7 @@ Sources:
 
 ## Lint and format checks
 
-`ci.yml` also runs, in the `test` job: `make lint-frontend` (Biome lint and format check, config in `frontend/biome.json`) and `make lint-go` (golangci-lint with the config in `.golangci.yml`: default linters; staticcheck's tagged-switch quick fixes and unchecked `Close`/test-helper writes are excluded). golangci-lint and `govulncheck` run through `go run <module>@<version>` (`make lint-go`, `make govulncheck`), with the versions pinned in the `Makefile`, rather than through a third-party action. `make tools` installs them and `goimports` into `GOBIN` for editors. `make lint` runs both locally; `make fmt` and `make format-frontend` fix formatting.
+`ci.yml` also runs, in the `test` job: `make lint-frontend` (Biome lint and format check, config in `frontend/biome.json`, plus knip for unused exports and dependencies, config in `frontend/knip.json`) and `make lint-go` (golangci-lint with the config in `.golangci.yml`: default linters; staticcheck's tagged-switch quick fixes and unchecked `Close`/test-helper writes are excluded). golangci-lint and `govulncheck` run through `go run <module>@<version>` (`make lint-go`, `make govulncheck`), with the versions pinned in the `Makefile`, rather than through a third-party action. `make tools` installs them and `goimports` into `GOBIN` for editors. `make lint` runs both locally; `make fmt` and `make format-frontend` fix formatting.
 
 ## Dependency updates (Renovate)
 

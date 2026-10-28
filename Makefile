@@ -62,8 +62,8 @@ tools: ## Install goimports, golangci-lint and govulncheck into GOBIN (for edito
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 
-lint-frontend: ## Biome lint and format check for the Vue app (needs `make frontend` once for node_modules)
-	cd frontend && npm run lint && npm run format:check
+lint-frontend: ## Biome lint, format check and knip (unused exports and dependencies) for the Vue app (needs `make frontend` once for node_modules)
+	cd frontend && npm run lint && npm run format:check && npm run knip
 
 format-frontend: ## Reformat the Vue app with Biome
 	cd frontend && npm run format

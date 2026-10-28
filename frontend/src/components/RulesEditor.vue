@@ -3,10 +3,10 @@ import { computed, ref } from "vue";
 import { rules, setRules, builtinPresets, userPresets, allPresets, activePreset, savePreset, deletePreset } from "../store.js";
 
 const name = ref("");
-const active = computed(() => activePreset());
+const active = activePreset;
 const isUser = computed(() => userPresets.value.some((p) => p.name === active.value));
 const description = computed(
-  () => allPresets().find((p) => p.name === active.value)?.description ?? "You changed a rule: save it as a preset to keep it.",
+  () => allPresets.value.find((p) => p.name === active.value)?.description ?? "You changed a rule: save it as a preset to keep it.",
 );
 
 const set = (patch) => setRules(patch);
@@ -20,7 +20,7 @@ const intInput = (key) => (e) => {
   if (!Number.isNaN(n)) set({ [key]: Math.min(Math.max(n, 0), 100) });
 };
 const pick = (e) => {
-  const p = allPresets().find((x) => x.name === e.target.value);
+  const p = allPresets.value.find((x) => x.name === e.target.value);
   if (p) set(p.rules);
 };
 function save() {

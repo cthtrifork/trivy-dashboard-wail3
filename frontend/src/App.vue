@@ -154,7 +154,7 @@ const updateDB = () =>
   updateStep("Checking the vulnerability database…", async () => {
     let downloaded;
     try {
-      downloaded = await ScanService.UpdateDB(trivyImageSetting());
+      downloaded = await ScanService.UpdateDB(trivyImageSetting.value);
     } finally {
       refreshFootprint(); // a download changes the cache size shown in the footer
     }

@@ -11,6 +11,21 @@ export const SEV_COLOR = { CRITICAL: "--CRITICAL", HIGH: "--HIGH", MEDIUM: "--ME
 export const sevStyle = (sev) => ({ "--c": `var(${SEV_COLOR[sev]})`, "--on": `var(--on${SEV_COLOR[sev]})` });
 export const errText = (e) => String(e?.message || e);
 
+// Every localStorage key in one place, so a typo cannot fork a setting in two.
+export const KEYS = {
+  rules: "score-rules",
+  presets: "score-presets",
+  trivyImage: "trivy-image",
+  trivyLastUsed: "trivy-last-used",
+  ignorePolicy: "ignore-policy",
+  ignoreFile: "ignore-file",
+  image: "image",
+  lastResult: "last-result",
+  recentImages: "recent-images",
+  cmpTarget: "cmp-b",
+  vexAuthor: "vex-author",
+};
+
 export const lsGet = (k) => {
   try {
     return localStorage.getItem(k) || "";
@@ -21,6 +36,13 @@ export const lsGet = (k) => {
 export const lsSet = (k, v) => {
   try {
     localStorage.setItem(k, v);
+  } catch {
+    /* ignore */
+  }
+};
+const lsRemove = (k) => {
+  try {
+    localStorage.removeItem(k);
   } catch {
     /* ignore */
   }
@@ -54,8 +76,6 @@ export const assessing = shallowRef(null);
 export const rules = reactive({});
 export const builtinPresets = ref([]);
 export const userPresets = ref([]);
-const RULES_KEY = "score-rules",
-  PRESETS_KEY = "score-presets";
 const lsJSON = (k, fallback) => {
   try {
     return JSON.parse(lsGet(k)) ?? fallback;
@@ -69,14 +89,14 @@ const rulesJSON = (r) =>
       .sort()
       .map((k) => [k, r[k]]),
   );
-export const allPresets = () => [...builtinPresets.value, ...userPresets.value];
+export const allPresets = computed(() => [...builtinPresets.value, ...userPresets.value]);
 // The preset the live rules equal exactly, or null once the user has changed anything.
-export const activePreset = () => allPresets().find((p) => rulesJSON(p.rules) === rulesJSON(rules))?.name ?? null;
+export const activePreset = computed(() => allPresets.value.find((p) => rulesJSON(p.rules) === rulesJSON(rules))?.name ?? null);
 
 let rankToken = 0;
 // rerank asks Go to rank the latest scan under the live rules. Calls that are superseded (the user
 // kept dragging a threshold, or rescanned) are dropped.
-export async function rerank() {
+async function rerank() {
   const r = result.value,
     token = ++rankToken;
   if (!r) return void (vulns.value = []);
@@ -102,7 +122,7 @@ export async function rerank() {
 let rerankTimer;
 export function setRules(next) {
   Object.assign(rules, next);
-  lsSet(RULES_KEY, JSON.stringify(rules));
+  lsSet(KEYS.rules, JSON.stringify(rules));
   clearTimeout(rerankTimer);
   rerankTimer = setTimeout(rerank, 120); // typing a threshold fires once per pause, not per keystroke
 }
@@ -112,12 +132,12 @@ export function savePreset(name, description = "") {
   if (!name || builtinPresets.value.some((p) => p.name === name)) return false;
   const entry = { name, description, rules: { ...rules } };
   userPresets.value = [...userPresets.value.filter((p) => p.name !== name), entry];
-  lsSet(PRESETS_KEY, JSON.stringify(userPresets.value));
+  lsSet(KEYS.presets, JSON.stringify(userPresets.value));
   return true;
 }
 export function deletePreset(name) {
   userPresets.value = userPresets.value.filter((p) => p.name !== name);
-  lsSet(PRESETS_KEY, JSON.stringify(userPresets.value));
+  lsSet(KEYS.presets, JSON.stringify(userPresets.value));
 }
 
 async function initRules() {
@@ -126,9 +146,9 @@ async function initRules() {
   } catch (err) {
     return setStatus("Could not load scoring presets: " + errText(err), { err: true });
   }
-  userPresets.value = lsJSON(PRESETS_KEY, []).filter((p) => p?.name && p.rules);
+  userPresets.value = lsJSON(KEYS.presets, []).filter((p) => p?.name && p.rules);
   // Merge over the defaults so a rule added in a later version still has a value.
-  Object.assign(rules, builtinPresets.value[0].rules, lsJSON(RULES_KEY, {}));
+  Object.assign(rules, builtinPresets.value[0].rules, lsJSON(KEYS.rules, {}));
   rerank();
 }
 
@@ -141,13 +161,13 @@ export const logText = ref("");
 // Trivy can be chatty on big images: keep the tail only, so the log <pre> stays bounded.
 const LOG_MAX = 400_000,
   LOG_KEEP = 300_000;
-Events.On("scan:log", (ev) => {
+function onScanLog(ev) {
   const line = Array.isArray(ev.data) ? ev.data[0] : ev.data;
   let text = logText.value + line + "\n";
   if (text.length > LOG_MAX) text = text.slice(text.indexOf("\n", text.length - LOG_KEEP) + 1);
   logText.value = text;
   if (scanning.value) setStatus(String(line).slice(0, 200), { busy: true });
-});
+}
 
 // Options shared by Scan and Compare.
 export const opts = reactive({
@@ -160,39 +180,46 @@ export const opts = reactive({
   username: "",
   password: "",
   // The Trivy version is a preference, not a secret: remember it between runs.
-  trivyImage: lsGet("trivy-image"),
+  trivyImage: lsGet(KEYS.trivyImage),
   // Rego source for Trivy's --ignore-policy; also a preference, kept between runs.
-  ignorePolicy: lsGet("ignore-policy"),
+  ignorePolicy: lsGet(KEYS.ignorePolicy),
   // YAML for Trivy's --ignorefile (.trivyignore.yaml); likewise remembered.
-  ignoreFile: lsGet("ignore-file"),
+  ignoreFile: lsGet(KEYS.ignoreFile),
 });
-export const saveTrivyImage = () => lsSet("trivy-image", opts.trivyImage.trim());
+export const saveTrivyImage = () => lsSet(KEYS.trivyImage, opts.trivyImage.trim());
 // Quick sanity checks of the two texts, run by Go as the user types (empty means fine). Trivy
 // stays the authority: these only catch the usual mistakes before a scan starts.
 export const ignorePolicyError = ref("");
 export const ignoreFileError = ref("");
+// Advisory only: when the check itself fails, the message is cleared rather than shown as if the text were wrong.
 function checkWhileTyping(source, check, error) {
-  let timer;
-  watch(
+  let timer,
+    seq = 0;
+  const stop = watch(
     source,
     (text) => {
       clearTimeout(timer);
       timer = setTimeout(async () => {
+        const mine = ++seq;
+        let msg = "";
         try {
-          error.value = await check(text);
+          msg = await check(text);
         } catch {
-          error.value = "";
+          /* leave it to Trivy */
         }
+        if (mine === seq) error.value = msg; // a slower, older answer must not overwrite a newer one
       }, 300);
     },
     { immediate: true },
   );
+  return () => {
+    clearTimeout(timer);
+    stop();
+  };
 }
-checkWhileTyping(() => opts.ignorePolicy, ScanService.CheckIgnorePolicy, ignorePolicyError);
-checkWhileTyping(() => opts.ignoreFile, ScanService.CheckIgnoreFile, ignoreFileError);
 
-export const saveIgnorePolicy = () => lsSet("ignore-policy", opts.ignorePolicy);
-export const saveIgnoreFile = () => lsSet("ignore-file", opts.ignoreFile);
+export const saveIgnorePolicy = () => lsSet(KEYS.ignorePolicy, opts.ignorePolicy);
+export const saveIgnoreFile = () => lsSet(KEYS.ignoreFile, opts.ignoreFile);
 // loadIgnorePolicyFile and loadIgnoreFile fill the text from a file the user picked.
 export async function loadIgnorePolicyFile(file) {
   if (!file) return;
@@ -207,8 +234,6 @@ export async function loadIgnoreFile(file) {
 
 // The scanned image survives a reload: the last scan's input and result are kept in localStorage,
 // and the URL hash (#image=...) names the image so a reload or shared link shows or reruns it.
-const IMAGE_KEY = "image",
-  RESULT_KEY = "last-result";
 const hashImage = () => new URLSearchParams(location.hash.slice(1)).get("image") || "";
 const setHashImage = (img) => {
   try {
@@ -217,19 +242,18 @@ const setHashImage = (img) => {
     /* ignore */
   }
 };
-export const image = ref(hashImage() || lsGet(IMAGE_KEY));
+export const image = ref(hashImage() || lsGet(KEYS.image));
 
 // Images scanned before, newest first, so a rescan is one pick instead of retyping the reference.
-const RECENT_KEY = "recent-images",
-  RECENT_MAX = 8;
-export const recent = ref(lsJSON(RECENT_KEY, []).filter((e) => e?.image));
-function remember(ref, r) {
-  const entry = { image: ref, at: Date.now(), crit: r.severityCounts?.CRITICAL || 0, high: r.severityCounts?.HIGH || 0 };
-  recent.value = [entry, ...recent.value.filter((e) => e.image !== ref)].slice(0, RECENT_MAX);
-  lsSet(RECENT_KEY, JSON.stringify(recent.value));
+const RECENT_MAX = 8;
+export const recent = ref(lsJSON(KEYS.recentImages, []).filter((e) => e?.image));
+function addRecent(imageRef, r) {
+  const entry = { image: imageRef, at: Date.now(), crit: r.severityCounts?.CRITICAL || 0, high: r.severityCounts?.HIGH || 0 };
+  recent.value = [entry, ...recent.value.filter((e) => e.image !== imageRef)].slice(0, RECENT_MAX);
+  lsSet(KEYS.recentImages, JSON.stringify(recent.value));
 }
 // Compare: the base is the image at the top (read only); only the target tag is its own.
-export const cmpForm = reactive({ b: lsGet("cmp-b") });
+export const cmpForm = reactive({ b: lsGet(KEYS.cmpTarget) });
 
 // The last comparison, kept here so a new scan can clear it.
 export const compareData = shallowRef(null);
@@ -240,7 +264,7 @@ async function fillLatestTag(repo, baseTag) {
   if (!repo) return;
   try {
     const latest = await ScanService.LatestTag(repo, baseTag);
-    if (latest && imageRepo.value === repo) cmpForm.b = latest;
+    if (latest && imageRepo.value === repo && !cmpForm.b) cmpForm.b = latest; // never over what the user typed meanwhile
   } catch {
     /* the user can still type the tag */
   }
@@ -251,14 +275,14 @@ async function fillLatestTag(repo, baseTag) {
 export const split = ref(false);
 // splitRef splits a reference into repository and tag, or digest when it names one (the digest wins
 // over a tag beside it, since it is what gets scanned). It is SplitImage without a call per keystroke.
-export function splitRef(ref) {
-  const [name, digest] = ref.trim().split("@");
+function splitRef(imageRef) {
+  const [name, digest] = imageRef.trim().split("@");
   const i = name.lastIndexOf(":");
   const tagged = i > name.lastIndexOf("/");
   return { repo: tagged ? name.slice(0, i) : name, tag: digest || (tagged ? name.slice(i + 1) : "") };
 }
 // joinRef is the inverse: a "sha256:..." tag is a digest and joins with "@".
-export const joinRef = (repo, tag) => (!tag ? repo : tag.startsWith("sha256:") ? repo + "@" + tag : repo + ":" + tag);
+const joinRef = (repo, tag) => (!tag ? repo : tag.startsWith("sha256:") ? repo + "@" + tag : repo + ":" + tag);
 export const imageRepo = ref("");
 export const imageTag = ref("");
 export const repoTags = ref([]); // newest first, as ListTags returns them
@@ -297,12 +321,12 @@ function setTrivyDefault(v) {
 watch(trivyNewest, setTrivyDefault);
 // trivyImageSetting is what scans send: the user's choice, else the newest version found, else
 // empty so the backend falls back to its Renovate-managed default.
-export const trivyImageSetting = () => opts.trivyImage.trim() || trivyNewest.value;
+export const trivyImageSetting = computed(() => opts.trivyImage.trim() || trivyNewest.value);
 // The version of the last successful scan or comparison. When the newest version cannot be looked up
 // (offline), this is the default instead of the pinned one: podman is known to have its image.
-export const rememberTrivyVersion = (v) => v && lsSet("trivy-last-used", v);
+export const rememberTrivyVersion = (v) => v && lsSet(KEYS.trivyLastUsed, v);
 
-export function enterSplit(repo, tag) {
+function enterSplit(repo, tag) {
   if (!repo) return;
   split.value = true;
   imageRepo.value = repo;
@@ -358,11 +382,7 @@ export function clearAll() {
   result.value = null;
   compareData.value = null;
   vex.value = new Map();
-  try {
-    localStorage.removeItem(RESULT_KEY);
-  } catch {
-    /* ignore */
-  }
+  lsRemove(KEYS.lastResult);
   setHashImage("");
   rerank();
   setStatus("Cleared.");
@@ -393,6 +413,7 @@ export async function loadVEX() {
 }
 
 export async function runScan() {
+  if (scanning.value) return; // a scan or compare is already running; its result and log must not interleave
   scanning.value = true;
   compareData.value = null;
   const { repo, tag } = splitRef(image.value);
@@ -405,7 +426,7 @@ export async function runScan() {
   result.value = null; // don't show the previous image's findings while the new scan runs
   rerank();
   setStatus("Starting scan…", { busy: true });
-  const trivyVersion = trivyImageSetting();
+  const trivyVersion = trivyImageSetting.value;
   const settings = scanSettings();
   try {
     const r = await ScanService.Scan({
@@ -424,8 +445,8 @@ export async function runScan() {
     result.value = r;
     scannedSettings.value = settings;
     rememberTrivyVersion(trivyVersion);
-    rememberScan(r);
-    remember(image.value.trim(), r);
+    persistScan(r);
+    addRecent(image.value.trim(), r);
     rerank();
     await loadVEX();
     setStatus(`Scan complete: ${r.vulnerabilities.length} vulnerabilities, ${r.components.length} components.`);
@@ -437,19 +458,15 @@ export async function runScan() {
   }
 }
 
-// rememberScan keeps the scan for the next reload. A result too big for the quota is dropped, not left stale.
-function rememberScan(r) {
+// persistScan keeps the scan for the next reload. A result too big for the quota is dropped, not left stale.
+function persistScan(r) {
   const img = image.value.trim();
-  lsSet(IMAGE_KEY, img);
+  lsSet(KEYS.image, img);
   setHashImage(img);
   try {
-    localStorage.setItem(RESULT_KEY, JSON.stringify({ forImage: img, result: r }));
+    localStorage.setItem(KEYS.lastResult, JSON.stringify({ forImage: img, result: r }));
   } catch {
-    try {
-      localStorage.removeItem(RESULT_KEY);
-    } catch {
-      /* ignore */
-    }
+    lsRemove(KEYS.lastResult);
   }
 }
 
@@ -458,7 +475,7 @@ function rememberScan(r) {
 async function restoreScan() {
   const want = image.value.trim();
   if (!want) return;
-  const saved = lsJSON(RESULT_KEY, null);
+  const saved = lsJSON(KEYS.lastResult, null);
   if (saved?.result && saved.forImage === want) {
     result.value = saved.result;
     scannedSettings.value = scanSettings(); // the options are not saved with the result: assume they match
@@ -474,8 +491,18 @@ async function restoreScan() {
 
 export const cancel = () => ScanService.Cancel();
 
+let stopInit = [];
+// init wires up the listeners and watchers and loads the initial state. Calling it again (hot reload)
+// tears the previous wiring down first, so nothing fires twice.
 export function init() {
-  // The Go side decides whether this build may update itself (release builds only).
+  stopInit.forEach((stop) => stop());
+  stopInit = [
+    Events.On("scan:log", onScanLog),
+    checkWhileTyping(() => opts.ignorePolicy, ScanService.CheckIgnorePolicy, ignorePolicyError),
+    checkWhileTyping(() => opts.ignoreFile, ScanService.CheckIgnoreFile, ignoreFileError),
+  ];
+  // The Go side decides whether this build may update itself (release builds only). Without an answer
+  // the app simply offers no update.
   ScanService.UpdateInfo().then(
     (u) => (appInfo.value = u),
     () => {},
@@ -484,13 +511,18 @@ export function init() {
   ScanService.Mode().then(
     (m) => {
       mode.value = m;
-      setTrivyDefault(lsGet("trivy-last-used") || m.trivyImage.split(":").pop());
+      setTrivyDefault(lsGet(KEYS.trivyLastUsed) || m.trivyImage.split(":").pop());
       ensureTrivyTags(); // so the default can be the newest version
       if (!m.fixtures) return;
       if (!image.value) image.value = m.image;
       if (!cmpForm.b) cmpForm.b = m.tagB;
     },
-    () => {},
+    (err) => {
+      // Scans still work (the backend falls back to its pinned Trivy), but say why the defaults are missing.
+      setTrivyDefault(lsGet(KEYS.trivyLastUsed));
+      ensureTrivyTags();
+      setStatus("Could not read the app mode: " + errText(err), { err: true });
+    },
   );
   refreshFootprint();
   initRules();
