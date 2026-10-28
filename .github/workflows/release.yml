@@ -318,6 +318,9 @@ jobs:
           build-args: VERSION=${{ needs.build.outputs.version }}
           platforms: linux/amd64
           push: true
+          # BuildKit attaches a SLSA provenance and an SBOM attestation to the image in the registry.
+          provenance: mode=max
+          sbom: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
