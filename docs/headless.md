@@ -32,6 +32,8 @@ podman run -d --name trivy-scanner --restart unless-stopped \
   ghcr.io/cthtrifork/trivy-dashboard-wail3:latest
 ```
 
+The release also attests the project's OpenVEX document (`vex/openvex.json`) to the image, so Trivy can use it: `trivy image --vex oci ghcr.io/cthtrifork/trivy-dashboard-wail3:latest`. Verify it with `gh attestation verify oci://ghcr.io/cthtrifork/trivy-dashboard-wail3:latest --repo cthtrifork/trivy-dashboard-wail3 --predicate-type https://openvex.dev/ns/v0.2.0`.
+
 Then open the SSH tunnel as described below. To update: `podman pull ghcr.io/cthtrifork/trivy-dashboard-wail3:latest`, `podman rm -f trivy-scanner`, and repeat the `podman run`. If the package is private, `podman login ghcr.io` first with a token that has `read:packages`.
 
 ## One-time setup (build from source)
