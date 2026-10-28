@@ -230,6 +230,16 @@ function remember(ref, r) {
 }
 export const cmpForm = reactive({ repo: lsGet("cmp-repo"), a: lsGet("cmp-a"), b: lsGet("cmp-b") });
 
+// The last comparison, kept here so a new scan can clear it.
+export const compareData = shallowRef(null);
+
+// splitImage splits an image reference into its repository and tag ("" when it has none).
+function splitImage(ref) {
+  const base = ref.trim().replace(/@.*$/, "");
+  const m = base.match(/^(.*):([^/:]*)$/);
+  return m ? { repo: m[1], tag: m[2] } : { repo: base, tag: "" };
+}
+
 // scanning is true while any scan runs (single scan or compare); comparing marks the latter.
 export const scanning = ref(false);
 export const comparing = ref(false);
@@ -256,6 +266,10 @@ export async function loadVEX() {
 
 export async function runScan() {
   scanning.value = true;
+  compareData.value = null;
+  const { repo, tag } = splitImage(image.value);
+  cmpForm.repo = repo;
+  cmpForm.a = tag;
   refreshFootprint(); // recalculate now; it is measured again when the scan ends
   logText.value = "";
   vex.value = new Map(); // the backend drops the saved VEX file when a scan starts
@@ -276,7 +290,6 @@ export async function runScan() {
       ignoreFile: opts.ignoreFile,
       markUnderInvestigation: opts.markUnderInvestigation,
     });
-    if (!cmpForm.repo) cmpForm.repo = r.image.replace(/@.*$/, "").replace(/:[^/:]*$/, "");
     result.value = r;
     rememberScan(r);
     remember(image.value.trim(), r);
