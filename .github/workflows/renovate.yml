@@ -3,19 +3,22 @@ name: Renovate
 # Self-hosted Renovate (renovatebot/github-action) keeps dependencies current: Go modules, the
 # frontend npm packages, Docker base images, the SHA-pinned Actions and the versions
 # marked `# renovate:` (Makefile, workflows). It replaces Dependabot. Config: .github/renovate.json5.
-#   - weekly and by hand: opens or updates the update PRs.
-#   - on a pull request that changes the config or this workflow: a dry run, which logs what Renovate
-#     would do on the PR's branch and writes nothing. Read the log to check a config change.
-# PRs opened with the default GITHUB_TOKEN do not start other workflows. Add a RENOVATE_TOKEN secret
-# (a fine-grained PAT or a GitHub App token with contents, pull requests and issues write) so CI runs
-# on them; the workflow uses it when it exists.
+#   - on a schedule (weekdays) and by hand, on the default branch only: opens or updates the update
+#     PRs and the "Dependency Dashboard" issue. Patch and digest updates automerge (renovate.json5).
+#   - on a pull request that changes the config or this workflow: a dry run, which writes nothing and
+#     shows what Renovate would do on the PR's branch in the job summary (the full debug log is in
+#     the step output). Read it to check a config change.
+# PRs opened with the default GITHUB_TOKEN do not start other workflows, so CI would not run on them
+# and an automerge would have no checks to wait for. Add a RENOVATE_TOKEN secret (a fine-grained PAT
+# or a GitHub App token with contents, pull requests and issues write), and require the CI checks in
+# branch protection. The workflow uses the secret when it exists.
 on:
   pull_request:
     paths:
       - .github/renovate.json5
       - .github/workflows/renovate.yml
   schedule:
-    - cron: '12 4 * * 1' # Mondays 04:12 UTC
+    - cron: '12 4 * * 1-5' # weekdays 04:12 UTC
   workflow_dispatch:
 
 permissions: {}
@@ -55,10 +58,38 @@ jobs:
           # The config comes from the file above, not from a renovate.json on the default branch.
           RENOVATE_ONBOARDING: 'false'
           RENOVATE_REQUIRE_CONFIG: ignored
+          # A JSON report of the branches and updates, summarised below. /tmp is mounted into the
+          # Renovate container by the action.
+          RENOVATE_REPORT_TYPE: file
+          RENOVATE_REPORT_PATH: /tmp/renovate-report.json
+
+      - name: Summarise the dry run
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        run: |
+          report=/tmp/renovate-report.json
+          if [ ! -f "$report" ]; then
+            echo "No Renovate report was written; see the Renovate step's log." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "### Renovate dry run"
+            echo
+            echo "Branches and PRs Renovate would create on this PR's branch. Nothing was written."
+            echo
+            echo "| Branch | PR title | Status | Automerge | Updates |"
+            echo "|---|---|---|---|---|"
+            jq -r '.repositories[]?.branches[]? | "| `\(.branchName)` | \(.prTitle // "") | \(.result // "") | \(if ([.upgrades[]?.automerge] | any) then "yes" else "no" end) | \([.upgrades[]? | "\(.depName) \(.currentVersion // .currentValue // "") → \(.newVersion // .newValue // "")"] | unique | join("<br>")) |"' "$report"
+            echo
+            echo "Problems reported:"
+            jq -r '.repositories[]?.problems[]? | "- \(.message // .)"' "$report"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   renovate:
     name: renovate
-    if: github.event_name != 'pull_request'
+    # Scheduled runs are always on the default branch. A manual run from another branch would read
+    # that branch's config but update the default branch, so it is not allowed.
+    if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -69,6 +100,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Warn when CI cannot run on the update PRs
+        env:
+          HAS_RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN != '' }}
+        run: |
+          if [ "$HAS_RENOVATE_TOKEN" != true ]; then
+            echo "::warning::RENOVATE_TOKEN is not set. Update PRs opened with GITHUB_TOKEN do not start CI, so automerge has no checks to wait for. See the header of renovate.yml."
+          fi
 
       - name: Renovate
         uses: renovatebot/github-action@2804199d260ad00c1fae0e9e842888369391c776 # v46.3.10
