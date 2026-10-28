@@ -36,7 +36,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # Installed from PyPI rather than through a marketplace action. The token lets zizmor run its
+      # Pedantic persona; see .github/zizmor.yml for the one threshold we relax. Installed from PyPI rather than through a marketplace action. The token lets zizmor run its
       # online audits (impostor commits, known-vulnerable actions); findings fail the job.
       - name: Run zizmor
         env:
@@ -44,7 +44,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
-          "$HOME/.local/bin/zizmor" --format plain .
+          "$HOME/.local/bin/zizmor" --persona pedantic --format plain .
 
   pin-actions:
     name: pin actions
