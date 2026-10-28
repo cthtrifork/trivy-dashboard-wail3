@@ -48,7 +48,8 @@ jobs:
           node --version
           make frontend
 
-      # Biome lint (see frontend/biome.json) and format check. Run `npm run format` to fix.
+      # Biome lint (see frontend/biome.json), format check and knip (unused exports and dependencies,
+      # frontend/knip.json). Run `npm run format` to fix formatting.
       - name: Lint and check formatting (frontend)
         run: make lint-frontend
 

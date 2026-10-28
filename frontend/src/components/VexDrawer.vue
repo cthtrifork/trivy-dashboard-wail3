@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref, watch } from "vue";
-import { ScanService, assessing, result, vex, findingsById, errText, lsGet, lsSet } from "../store.js";
+import { ScanService, assessing, result, vex, findingsById, errText, lsGet, lsSet, KEYS } from "../store.js";
 import { JUSTIFICATION_PLAIN, STATUS_LABEL, cvssFloor, detailUrl, openUrl, tierStyle } from "../lib/format.js";
 import { glance } from "../lib/glance.js";
 import Chip from "./Chip.vue";
@@ -71,7 +71,7 @@ function load() {
     justification: e?.justification || "",
     impact: e?.impact || "",
     action: e?.action || "",
-    author: e?.author || lsGet("vex-author"),
+    author: e?.author || lsGet(KEYS.vexAuthor),
     expires: e?.expires || "",
   });
   alsoKeys.value = new Set();
@@ -122,7 +122,7 @@ async function save() {
       });
       next.set(saved.key, saved);
     }
-    lsSet("vex-author", form.author.trim());
+    lsSet(KEYS.vexAuthor, form.author.trim());
     vex.value = next;
     close();
   } catch (e) {

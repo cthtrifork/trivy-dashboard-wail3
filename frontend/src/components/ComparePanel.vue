@@ -18,6 +18,7 @@ import {
   setStatus,
   errText,
   lsSet,
+  KEYS,
   cancel,
   refreshFootprint,
 } from "../store.js";
@@ -51,11 +52,11 @@ async function run() {
     showSuppressed: opts.showSuppressed,
     showWillNotFix: !opts.ignoreWillNotFix,
     showNotAffected: !opts.ignoreNotAffected,
-    trivyImage: trivyImageSetting(),
+    trivyImage: trivyImageSetting.value,
     ignorePolicy: opts.ignorePolicy,
     ignoreFile: opts.ignoreFile,
   };
-  lsSet("cmp-b", cmpForm.b);
+  lsSet(KEYS.cmpTarget, cmpForm.b);
   logText.value = "";
   comparing.value = scanning.value = true;
   refreshFootprint();

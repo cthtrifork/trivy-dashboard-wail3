@@ -1,11 +1,11 @@
 <script setup>
 import JsonBox from "./JsonBox.vue";
 import { computed, reactive, ref, watch } from "vue";
-import { ScanService, result, vex, loadVEX, errText, lsGet, lsSet } from "../store.js";
+import { ScanService, result, vex, loadVEX, errText, lsGet, lsSet, KEYS } from "../store.js";
 
 const dlg = ref(null);
 const preview = ref(null);
-const form = reactive({ author: lsGet("vex-author"), onlyCurrent: false });
+const form = reactive({ author: lsGet(KEYS.vexAuthor), onlyCurrent: false });
 const text = ref("");
 const msg = ref("");
 
@@ -48,7 +48,7 @@ async function loadMeta() {
   try {
     const doc = JSON.parse(await ScanService.VEXExport(result.value.image, "", "", false));
     const imported = doc.author && doc.author !== "<author>";
-    form.author = imported ? doc.author : lsGet("vex-author");
+    form.author = imported ? doc.author : lsGet(KEYS.vexAuthor);
   } catch {
     /* no assessments yet: the stored values stay */
   }
@@ -85,7 +85,7 @@ async function copy() {
 }
 
 async function save() {
-  lsSet("vex-author", form.author);
+  lsSet(KEYS.vexAuthor, form.author);
   try {
     const path = await ScanService.VEXSave(result.value.image, form.author, "", form.onlyCurrent);
     msg.value = path ? "Saved to " + path : "";
