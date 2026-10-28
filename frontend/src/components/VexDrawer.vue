@@ -167,7 +167,7 @@ async function clear() {
           <div class="glance-head">{{ meaning.headline }}</div>
           <div class="kv">Only matters if the component is running and reachable. If not, say so below.</div>
           <div class="glance-facts">
-            <div v-for="f in meaning.facts" :key="f.label">
+            <div v-for="f in meaning.facts" :key="f.label" :class="{ wide: f.label === 'Fix' }">
               <span>{{ f.label }}</span>
               <b :class="{ mono: f.mono }">{{ f.value }}</b>
             </div>
