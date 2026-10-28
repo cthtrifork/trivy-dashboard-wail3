@@ -114,3 +114,28 @@ func TestServiceShutdownDoesNotHangOnAStuckScan(t *testing.T) {
 	}
 	<-done
 }
+
+// The findings live in memory only. After a restart the browser still shows the scan it kept in
+// localStorage, so RestoreScan must make the VEX calls see that scan instead of "scan the image first".
+func TestRestoreScanLetsVEXCallsSeeTheRememberedScan(t *testing.T) {
+	s := newTestService(&blockingEngine{started: make(chan struct{}, 1)})
+	s.found = map[string][]trivy.Vulnerability{}
+	image := "ghcr.io/acme/app:1.0"
+
+	if _, err := s.VEXMarkUnassessed(image, "", ""); err == nil || !strings.Contains(err.Error(), "scan the image first") {
+		t.Fatalf("before restore: err = %v", err)
+	}
+	s.RestoreScan(&trivy.ScanResult{
+		Image:           image,
+		ProductPURL:     "pkg:oci/app",
+		Vulnerabilities: []trivy.Vulnerability{{ID: "CVE-2026-0001", Package: "libfoo", Severity: "HIGH"}},
+	})
+	n, err := s.VEXMarkUnassessed(image, "", "")
+	if err != nil || n != 1 {
+		t.Fatalf("after restore: marked %d, err = %v", n, err)
+	}
+	s.RestoreScan(nil) // nothing to restore must not wipe what is there
+	if len(s.latest) != 1 {
+		t.Errorf("RestoreScan(nil) cleared the findings")
+	}
+}

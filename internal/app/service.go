@@ -289,6 +289,22 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 	return res, err
 }
 
+// RestoreScan puts a scan result the frontend remembered across a reload back into the service's
+// memory. The findings live only in this process, so after a restart the VEX import and export,
+// "mark unassessed" and re-ranking would otherwise claim there is no scan while the UI still
+// shows one. Nothing is rescanned and the saved VEX file is kept.
+func (s *ScanService) RestoreScan(res *trivy.ScanResult) {
+	if res == nil || res.Image == "" {
+		return
+	}
+	repo := trivy.ImageRepo(res.Image)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.product[repo] = res.ProductPURL
+	s.found = map[string][]trivy.Vulnerability{repo: res.Vulnerabilities}
+	s.latest = res.Vulnerabilities
+}
+
 // UpdateDB checks for a newer vulnerability database with the given Trivy version (empty means the
 // default) and reports whether Trivy downloaded one. Trivy only downloads when the cached one is out of
 // date, and a failure keeps the cache.

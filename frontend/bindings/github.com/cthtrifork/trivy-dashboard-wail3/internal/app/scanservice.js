@@ -172,6 +172,18 @@ export function RestartToUpdate() {
 }
 
 /**
+ * RestoreScan puts a scan result the frontend remembered across a reload back into the service's
+ * memory. The findings live only in this process, so after a restart the VEX import and export,
+ * "mark unassessed" and re-ranking would otherwise claim there is no scan while the UI still
+ * shows one. Nothing is rescanned and the saved VEX file is kept.
+ * @param {trivy$0.ScanResult | null} res
+ * @returns {$CancellablePromise<void>}
+ */
+export function RestoreScan(res) {
+    return $Call.ByID(2957415868, res);
+}
+
+/**
  * RulePresets returns the built-in scoring presets.
  * @returns {$CancellablePromise<trivy$0.Preset[]>}
  */

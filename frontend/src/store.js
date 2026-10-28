@@ -484,6 +484,13 @@ async function restoreScan() {
     scannedSettings.value = scanSettings(); // the options are not saved with the result: assume they match
     const { repo, tag } = splitRef(want);
     enterSplit(repo, tag);
+    // The backend keeps findings only in memory: hand them back so VEX import/export and re-ranking
+    // work after a server restart, not just in the tab that scanned.
+    try {
+      await ScanService.RestoreScan(saved.result);
+    } catch {
+      /* the result is still shown; the backend asks for a rescan when it needs the findings */
+    }
     rerank();
     await loadVEX();
     setStatus(`Restored the last scan of ${want}.`);
