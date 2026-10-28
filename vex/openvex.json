@@ -1,0 +1,10 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/cthtrifork/trivy-dashboard-wail3/vex",
+  "author": "Trivy Scanner maintainers",
+  "role": "Document Creator",
+  "timestamp": "1970-01-01T00:00:00Z",
+  "version": 1,
+  "tooling": "Trivy Scanner release workflow",
+  "statements": []
+}
