@@ -13,8 +13,8 @@ name: Renovate
 # on them and an automerge would have no checks to wait for. Setup: create a GitHub App with the
 # permissions below, install it on this repository, then add the repository variable
 # RENOVATE_APP_CLIENT_ID and the secret RENOVATE_APP_PRIVATE_KEY (the downloaded .pem). Also require
-# the CI checks in branch protection. App permissions (repository): Contents, Pull requests, Issues
-# and Workflows read & write; Checks, Commit statuses and Dependabot alerts read.
+# the CI checks in branch protection. App permissions (repository): Contents, Pull requests, Issues,
+# Workflows and Commit statuses read & write; Checks and Dependabot alerts read.
 on:
   pull_request:
     paths:
@@ -134,7 +134,7 @@ jobs:
           permission-issues: write # the dependency dashboard issue
           permission-workflows: write # update files under .github/workflows
           permission-checks: read # CI results, for automerge
-          permission-statuses: read # CI results, for automerge
+          permission-statuses: write # CI results for automerge, and Renovate's own renovate/stability-days status
           permission-vulnerability-alerts: read # GitHub's security alerts
 
       - name: Renovate
