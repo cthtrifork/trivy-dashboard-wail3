@@ -19,7 +19,7 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots \
+.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend govulncheck tools format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -37,6 +37,14 @@ fmt: ## Format the Go code
 fmt-check: ## Fail if any Go file needs gofmt
 	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "These files need gofmt:"; echo "$$unformatted"; exit 1; fi
 
+# Dev tool versions. Renovate keeps them current through the `# renovate:` comments (renovate.json5).
+# renovate: datasource=go depName=github.com/golangci/golangci-lint/v2
+GOLANGCI_LINT_VERSION := v2.15.0
+# renovate: datasource=go depName=golang.org/x/vuln
+GOVULNCHECK_VERSION := v1.9.0
+# renovate: datasource=go depName=golang.org/x/tools
+GOIMPORTS_VERSION := v0.38.0
+
 mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
 	go mod tidy -diff
 	go mod verify
@@ -44,7 +52,15 @@ mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
 lint: lint-go lint-frontend ## golangci-lint plus the frontend's Biome lint and format check (as CI runs them)
 
 lint-go: ## golangci-lint on the server-tag build (CGO off, no GTK needed)
-	CGO_ENABLED=0 golangci-lint run --build-tags server ./...
+	CGO_ENABLED=0 go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --build-tags server ./...
+
+govulncheck: ## govulncheck on the whole module (the GUI package needs the GTK headers to type-check)
+	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
+
+tools: ## Install goimports, golangci-lint and govulncheck into GOBIN (for editors)
+	go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 
 lint-frontend: ## Biome lint and format check for the Vue app (needs `make frontend` once for node_modules)
 	cd frontend && npm run lint && npm run format:check

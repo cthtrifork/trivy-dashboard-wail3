@@ -42,13 +42,11 @@ concurrency:
 
 env:
   GOTOOLCHAIN: local
-  # Pinned so the rendering does not change underneath committed images.
-  PLAYWRIGHT_VERSION: 1.63.0
 
 jobs:
   screenshots:
     name: screenshots
-    if: github.actor != 'dependabot[bot]'
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -58,7 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: ${{ github.event_name != 'pull_request' }} # only the main run pushes
+          persist-credentials: ${{ github.event_name != 'pull_request' }} # only the main run pushes # zizmor: ignore[artipacked]
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -67,14 +65,9 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      # The runner image already has Google Chrome, so install only the Playwright client library
-      # (playwright-core, no browser download) and drive that Chrome.
-      - name: Install Playwright client
-        run: npm install --no-save --no-package-lock "playwright-core@${PLAYWRIGHT_VERSION}"
-
       # scripts/screenshots.mjs pins Inter for the UI; DejaVu Sans Mono is the monospace default.
       - name: Install fonts
-        uses: ./.github/actions/linux-build-deps
+        uses: $/.github/actions/linux-build-deps
         with:
           packages: fonts-inter fonts-dejavu-core
 

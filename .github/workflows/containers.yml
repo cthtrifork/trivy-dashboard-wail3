@@ -1,6 +1,6 @@
 name: Containers
 
-# Builds the two container images Dependabot bumps base images for, so a bad bump fails here
+# Builds the two container images Renovate bumps base images for, so a bad bump fails here
 # instead of the next time someone runs `make headless` or opens the dev container.
 # They use a paths filter (and a weekly run), so do not mark them as required checks.
 on:

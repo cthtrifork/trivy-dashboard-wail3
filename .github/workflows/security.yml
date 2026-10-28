@@ -45,7 +45,7 @@ jobs:
           persist-credentials: false
 
       # govulncheck type-checks the cgo GUI package, so it needs the same headers as the build.
-      - uses: ./.github/actions/linux-build-deps
+      - uses: $/.github/actions/linux-build-deps
         with:
           packages: build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
         timeout-minutes: 10
@@ -60,8 +60,7 @@ jobs:
       - name: Run govulncheck
         run: |
           go version
-          go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
-          govulncheck ./...
+          make govulncheck
 
   trivy-fs:
     name: trivy (filesystem)
@@ -96,7 +95,7 @@ jobs:
           persist-credentials: false
 
       # --omit=dev: only what ships in the app (vue, @wailsio/runtime). Vite and the Vue plugin are
-      # build tooling, and an advisory there should not fail the weekly run; Dependabot and the
-      # Trivy scan above still report it. HIGH and above fails, lower severities are left to Dependabot.
+      # build tooling, and an advisory there should not fail the weekly run; Renovate and the
+      # Trivy scan above still report it. HIGH and above fails, lower severities are left to Renovate.
       - name: Audit production dependencies
         run: make audit-frontend
