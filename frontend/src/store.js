@@ -262,20 +262,28 @@ export const joinRef = (repo, tag) => (!tag ? repo : tag.startsWith("sha256:") ?
 export const imageRepo = ref("");
 export const imageTag = ref("");
 export const repoTags = ref([]); // newest first, as ListTags returns them
-let tagsFor = "";
+export const trivyTags = ref([]); // the same for the Trivy image option
 
-// ensureTags loads the registry's tags for repo once; a failed lookup leaves the list empty (tags can still be typed).
-export async function ensureTags(repo) {
-  if (!repo || tagsFor === repo) return;
-  tagsFor = repo;
-  repoTags.value = [];
-  try {
-    const tags = (await ScanService.ListTags(repo)) || [];
-    if (tagsFor === repo) repoTags.value = tags;
-  } catch {
-    tagsFor = ""; // try again on the next open
-  }
+// tagLoader returns a function that loads the registry's tags for a repository into target once;
+// a failed lookup leaves the list empty (tags can still be typed).
+function tagLoader(target) {
+  let loadedFor = "";
+  return async (repo) => {
+    if (!repo || loadedFor === repo) return;
+    loadedFor = repo;
+    target.value = [];
+    try {
+      const tags = (await ScanService.ListTags(repo)) || [];
+      if (loadedFor === repo) target.value = tags;
+    } catch {
+      loadedFor = ""; // try again on the next open
+    }
+  };
 }
+export const ensureTags = tagLoader(repoTags);
+const loadTrivyTags = tagLoader(trivyTags);
+// ensureTrivyTags loads the tags of the default Trivy repository for the version picker.
+export const ensureTrivyTags = () => loadTrivyTags((mode.value?.trivyImage || "docker.io/aquasec/trivy").replace(/:[^/:]*$/, ""));
 
 export function enterSplit(repo, tag) {
   if (!repo) return;

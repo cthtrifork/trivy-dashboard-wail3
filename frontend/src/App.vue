@@ -12,6 +12,8 @@ import {
   imageTag,
   repoTags,
   ensureTags,
+  ensureTrivyTags,
+  trivyTags,
   setTag,
   clearAll,
   scanState,
@@ -212,14 +214,15 @@ onMounted(() => {
             :placeholder="mode?.registryToken ? '••••••••  GITHUB_TOKEN (ghcr.io)' : 'Registry password / token'"
             autocomplete="off"
           />
-          <input
+          <TagInput
             id="trivy-image"
             v-model="opts.trivyImage"
+            :tags="trivyTags"
+            label="Trivy version or image"
             :placeholder="trivyPlaceholder"
-            autocomplete="off"
-            spellcheck="false"
             title="Empty uses the default version. Enter a version such as 0.77.0, or a full image reference."
-            @change="saveTrivyImage"
+            @update:model-value="saveTrivyImage"
+            @open="ensureTrivyTags"
           />
           <label class="policy"
             >Ignore policy (Rego, <code>--ignore-policy</code>)
