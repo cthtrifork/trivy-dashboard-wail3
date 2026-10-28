@@ -1,0 +1,52 @@
+name: CodeQL
+
+# Static analysis of the Vue app's JavaScript (the Go code is covered by golangci-lint and govulncheck).
+# Findings appear under Security > Code scanning. It uses a paths filter, so do not mark it as a required
+# check. Weekly as well, because new queries ship without any change to this repository.
+on:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - .github/workflows/codeql.yml
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - .github/workflows/codeql.yml
+  schedule:
+    - cron: '41 5 * * 2' # Tuesdays 05:41 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: analyze (javascript)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write # upload the SARIF results
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # build-mode none: JavaScript needs no build. Generated bindings and build output are not our code.
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          config: |
+            paths-ignore:
+              - frontend/bindings
+              - frontend/dist
+              - frontend/node_modules
+
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: /language:javascript-typescript
