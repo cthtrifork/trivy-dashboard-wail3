@@ -170,45 +170,39 @@ header {
   color: var(--mute);
   font-size: 12px;
 }
-.opts-findings {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.opts-gap {
+  margin-top: 4px;
+}
+.seg-field {
   margin: 0;
-  padding: 6px 10px 8px;
+  padding: 0;
+  min-width: 0;
+  border: 0;
+}
+.seg-field legend {
+  padding: 0 0 6px;
+}
+.seg {
+  display: flex;
+  padding: 2px;
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
-.opts-findings legend {
-  padding: 0 4px;
+.opts-body .seg button {
+  flex: 1 1 0;
+  white-space: nowrap;
+  padding: 6px 8px;
   color: var(--mute);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  cursor: pointer;
 }
-.opts-findings label,
-.opts-group-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-}
-.opts-findings code {
-  margin-left: auto;
-  color: var(--mute);
-  font-size: 11px;
-}
-.opts-group {
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--line);
-}
-.opts-group-head {
-  color: var(--mute);
-  font-size: 12px;
-}
-.opts-group label {
-  padding-left: 14px;
+.opts-body .seg button.on {
+  color: #fff;
+  background: var(--accent);
 }
 .opts-secs {
   display: flex;

@@ -212,24 +212,32 @@ onMounted(() => {
           <summary>Options<span v-if="activeCount" class="opts-count"> · {{ activeCount }} active</span
           ><span v-if="settingsChanged" class="opts-count"> · rescan to apply</span></summary>
           <div class="opts-body">
-            <fieldset class="opts-findings">
-              <legend>Findings to show</legend>
-              <div class="opts-group">
-                <div class="opts-group-head">Ignore status<code>--ignore-status</code></div>
-                <label title="Hide findings the vendor will not fix"
-                  ><input type="checkbox" id="ignore-will-not-fix" v-model="opts.ignoreWillNotFix" /> will_not_fix</label
-                >
-                <label title="Hide findings the vendor says do not affect the package"
-                  ><input type="checkbox" id="ignore-not-affected" v-model="opts.ignoreNotAffected" /> not_affected</label
-                >
+            <fieldset class="seg-field">
+              <legend class="opts-label">Findings to show</legend>
+              <div class="seg">
+              <button type="button" id="ignore-unfixed-off" :class="{ on: !opts.ignoreUnfixed }" :aria-pressed="!opts.ignoreUnfixed" @click="opts.ignoreUnfixed = false">All</button>
+              <button
+                type="button"
+                id="ignore-unfixed"
+                :class="{ on: opts.ignoreUnfixed }"
+                :aria-pressed="opts.ignoreUnfixed"
+                title="--ignore-unfixed: hide findings without a fix"
+                @click="opts.ignoreUnfixed = true"
+              >
+                Fixable only
+              </button>
               </div>
-              <label class="opts-flag" title="Hide findings without a fix"
-                ><input type="checkbox" id="ignore-unfixed" v-model="opts.ignoreUnfixed" /> Ignore unfixed<code>--ignore-unfixed</code></label
-              >
-              <label class="opts-flag" title="Include findings suppressed by VEX or ignore files"
-                ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Show suppressed<code>--show-suppressed</code></label
-              >
             </fieldset>
+            <label title="--show-suppressed: include findings suppressed by VEX or ignore files"
+              ><input type="checkbox" id="show-suppressed" v-model="opts.showSuppressed" /> Include suppressed (VEX / ignore file)</label
+            >
+            <div class="opts-label opts-gap" title="--ignore-status">Hide vendor statuses</div>
+            <label title="Hide findings the vendor will not fix"
+              ><input type="checkbox" id="ignore-will-not-fix" v-model="opts.ignoreWillNotFix" /> will_not_fix</label
+            >
+            <label title="Hide findings the vendor says do not affect the package"
+              ><input type="checkbox" id="ignore-not-affected" v-model="opts.ignoreNotAffected" /> not_affected</label
+            >
             <div class="opts-secs">
               <details class="opts-sec" id="opts-registry">
                 <summary>Registry login<span class="opts-val">{{ registrySummary }}</span></summary>
