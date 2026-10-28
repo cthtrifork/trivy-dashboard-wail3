@@ -170,11 +170,45 @@ header {
   color: var(--mute);
   font-size: 12px;
 }
-.opts-sublabel {
+.opts-findings {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 6px 10px 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.opts-findings legend {
+  padding: 0 4px;
+  color: var(--mute);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.opts-findings label,
+.opts-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+.opts-findings code {
+  margin-left: auto;
+  color: var(--mute);
   font-size: 11px;
 }
-.opts-indent {
-  margin-left: 14px;
+.opts-group {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.opts-group-head {
+  color: var(--mute);
+  font-size: 12px;
+}
+.opts-group label {
+  padding-left: 14px;
 }
 .opts-secs {
   display: flex;
