@@ -117,9 +117,9 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
             <a v-if="detailUrl(v)" :href="detailUrl(v)" title="Open CVE details" @click.stop.prevent="open(detailUrl(v))">{{ v.id }}</a>
             <template v-else>{{ v.id }}</template>
           </td>
-          <td class="mono">{{ v.package }}</td>
-          <td class="mono">{{ v.installed }}</td>
-          <td class="mono">{{ v.fixed || "—" }}</td>
+          <td class="mono wrap">{{ v.package }}</td>
+          <td class="mono wrap">{{ v.installed }}</td>
+          <td class="mono wrap">{{ v.fixed || "—" }}</td>
           <td>
             <CvssMeter :score="v.score" :severity="v.severity" :style="sevStyle(v.severity)" />
           </td>

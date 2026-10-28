@@ -21,6 +21,7 @@ func main() {
 	svc := app.NewScanService()
 	wails := application.New(application.Options{
 		Name:        "Trivy Scanner",
+		Icon:        app.WindowIcon,
 		Description: "Scan container images with Trivy running in Podman (" + app.Version() + ")",
 		Services:    []application.Service{application.NewService(svc)},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(frontend)},
@@ -39,6 +40,7 @@ func main() {
 		MinWidth:  800,
 		MinHeight: 500,
 		URL:       "/",
+		Linux:     application.LinuxWindow{Icon: app.WindowIcon},
 	})
 
 	app.AddTray(wails, window)

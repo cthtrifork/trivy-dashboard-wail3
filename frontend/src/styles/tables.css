@@ -88,6 +88,11 @@ tr.row {
   white-space: nowrap;
   word-break: normal;
 }
+/* Version and package cells can hold long unbroken lists (Fixed in: "1.82.2, 1.83.2, 1.84.1-dev.0-2026..."), so they wrap inside their fixed-width column instead of spilling into the next one. */
+#vuln-table td.wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 #vuln-table td:last-child {
   white-space: normal;
   min-width: 300px;
