@@ -25,12 +25,14 @@ import (
 // defaultTrivyRepo is the repository a bare version in the Trivy image setting refers to.
 const defaultTrivyRepo = "docker.io/aquasec/trivy"
 
-// defaultTrivyImage is the Trivy image scans run with unless the user overrides it. Renovate keeps
-// the tag current (the custom manager in .github/renovate.json5 matches this line).
+// defaultTrivyImage is the fallback Trivy image, used until (or unless) the newest release tag can
+// be looked up on Docker Hub (latest.go). Renovate keeps it current (the custom manager in
+// .github/renovate.json5 matches this line).
 const defaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
 
-// DefaultTrivyImage is the Trivy image used when the "Trivy image" setting is empty.
-func DefaultTrivyImage() string { return defaultTrivyImage }
+// DefaultTrivyImage is the Trivy image used when the "Trivy image" setting is empty: the newest
+// release tag found so far, else the pinned fallback. It never touches the network.
+func DefaultTrivyImage() string { return currentDefault() }
 
 var bareVersion = regexp.MustCompile(`^v?[0-9][0-9A-Za-z.+_-]*$`)
 
@@ -123,7 +125,7 @@ type PodmanEngine struct {
 	// Bin is the podman binary; defaults to $PODMAN or "podman".
 	Bin string
 	// Image is the Trivy image to run when a job does not name one (see TrivyJob.TrivyImage):
-	// a reference or a bare version. Empty means the version pinned in defaultTrivyImage.
+	// a reference or a bare version. Empty means the newest release (see DefaultTrivyImage).
 	Image string
 	// Cache is the Trivy cache source mounted into the scanner: a podman volume name or an
 	// absolute directory on the machine running podman. Defaults to $TRIVY_SCANNER_CACHE, then
@@ -308,6 +310,9 @@ func (p *PodmanEngine) Version(ctx context.Context) (string, error) {
 func (p *PodmanEngine) RunTrivy(ctx context.Context, job TrivyJob, log func(string)) ([]byte, error) {
 	// A name we chose lets us stop the container ourselves if the scan is cancelled.
 	name := containerName()
+	if job.TrivyImage == "" && p.Image == "" {
+		refreshLatest(ctx)
+	}
 	args, err := p.runArgs(job, name)
 	if err != nil {
 		return nil, err
