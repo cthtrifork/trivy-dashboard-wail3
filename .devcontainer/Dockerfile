@@ -1,7 +1,7 @@
 # Dev environment for Trivy Scanner: Go, Node and a full rootless podman, so scans run inside
 # the container (podman-in-podman/docker, see docs/devcontainer.md). No GTK: the app runs in
 # server mode in the browser.
-FROM mirror.gcr.io/library/golang:1.26-trixie AS go
+FROM mirror.gcr.io/library/golang:1.27-trixie AS go
 FROM mirror.gcr.io/library/node:26-trixie-slim AS node
 
 FROM mcr.microsoft.com/devcontainers/base:trixie
