@@ -240,6 +240,19 @@ function splitImage(ref) {
   return m ? { repo: m[1], tag: m[2] } : { repo: base, tag: "" };
 }
 
+// fillLatestTag lists the repository's tags (a registry lookup, not a scan) and puts the newest
+// plain version in the Target box. A failed lookup leaves it as is.
+async function fillLatestTag(repo) {
+  if (!repo) return;
+  try {
+    const tags = (await ScanService.ListTags(repo)) || [];
+    const latest = tags.find((t) => /^v?\d+(\.\d+)*$/.test(t)) || tags.find((t) => t !== "latest");
+    if (latest && cmpForm.repo === repo) cmpForm.b = latest;
+  } catch {
+    /* the user can still type the tag */
+  }
+}
+
 // scanning is true while any scan runs (single scan or compare); comparing marks the latter.
 export const scanning = ref(false);
 export const comparing = ref(false);
@@ -270,6 +283,8 @@ export async function runScan() {
   const { repo, tag } = splitImage(image.value);
   cmpForm.repo = repo;
   cmpForm.a = tag;
+  cmpForm.b = "";
+  fillLatestTag(repo);
   refreshFootprint(); // recalculate now; it is measured again when the scan ends
   logText.value = "";
   vex.value = new Map(); // the backend drops the saved VEX file when a scan starts
