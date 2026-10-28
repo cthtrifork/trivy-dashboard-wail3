@@ -187,6 +187,62 @@
 .opts-pane .opts-label:not(:first-child) {
   margin-top: 10px;
 }
-.opts-pane .file-btn + .policy {
-  margin-top: 10px;
+.ignore-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.ignore-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ignore-name {
+  font-weight: 600;
+}
+.ignore-count {
+  color: var(--mute);
+  font-size: 12px;
+}
+.ignore-count.err {
+  color: var(--CRITICAL);
+}
+.ignore-row code {
+  color: var(--mute);
+  font-size: 11px;
+}
+.ignore-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ignore-acts button {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+/* The ignore rules editor: wider than the default dialog, like the code it holds. */
+#ignore-dialog {
+  width: min(860px, 94vw);
+}
+#ignore-dialog .seg {
+  width: fit-content;
+  margin: 10px 0;
+}
+#ignore-dialog .ignore-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+#ignore-dialog .field-err {
+  color: var(--CRITICAL);
+}
+#ignore-dialog .dlg-actions {
+  align-items: center;
+  justify-content: space-between;
 }

@@ -234,15 +234,23 @@ if (views !== "deps") {
   await page.setViewportSize({ width: 1400, height: 1100 }); // the popup is taller than the usual window
   await page.click("#opts summary");
   await page.waitForTimeout(700);
-  await page.evaluate(() => {
-    // Pin sample ignore rules so the editors show highlighting instead of their placeholders.
-    const put = (id, text) => {
-      const v = document.getElementById(id).__cm;
-      v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: text } });
-    };
-    put("ignore-policy", '# Ignore kernel headers\npackage trivy\n\ndefault ignore := false\n\nignore if {\n  input.PkgName == "linux-libc-dev"\n}\n');
-    put("ignore-file", "vulnerabilities:\n  - id: CVE-2024-12345\n    statement: Not reachable in our setup\n");
-  });
+  // Pin sample ignore rules through the editor dialog so the Sources summary shows real counts.
+  const pinRules = (id, text) =>
+    page.evaluate(
+      ([id, text]) => {
+        const v = document.getElementById(id).__cm;
+        v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: text } });
+      },
+      [id, text],
+    );
+  await page.click("#opts-tab-sources");
+  await page.click("#edit-ignore-policy");
+  await pinRules("ignore-policy", '# Ignore kernel headers\npackage trivy\n\ndefault ignore := false\n\nignore if {\n  input.PkgName == "linux-libc-dev"\n}\n');
+  await page.click("#ignore-tab-file");
+  await pinRules("ignore-file", "vulnerabilities:\n  - id: CVE-2024-12345\n    statement: Not reachable in our setup\n");
+  await page.waitForTimeout(700);
+  await shot("15-ignore-rules");
+  await page.click("#ignore-close");
   const panes = [];
   for (const t of ["findings", "sources", "scanner", "updates"]) {
     await page.click(`#opts-tab-${t}`);
