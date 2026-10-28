@@ -72,7 +72,7 @@ func vexFile() string {
 
 func NewScanService() *ScanService {
 	engine, mode := newEngine()
-	mode.TrivyImage = trivy.DefaultTrivyImage()
+	mode.TrivyImage = trivy.DefaultTrivyImage
 	if user, _, ok := trivy.GithubLogin(); ok {
 		mode.RegistryToken, mode.RegistryUser = true, user
 	}

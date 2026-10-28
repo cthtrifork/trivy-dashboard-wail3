@@ -22,40 +22,25 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
-// defaultTrivyRepo is the Trivy repository; the Trivy version setting only picks a tag of it.
-const defaultTrivyRepo = "docker.io/aquasec/trivy"
-
-// defaultTrivyImage is the Trivy image scans run with unless the user picks another version or
-// image. The renovate comment on the line above the const makes Renovate keep the tag current (the
-// custom manager in .github/renovate.json5).
+// DefaultTrivyImage is the Trivy image scans run with unless the user picks another version. The
+// renovate comment on the line above keeps the tag current (the custom manager in
+// .github/renovate.json5).
 // renovate: datasource=docker depName=docker.io/aquasec/trivy
-const defaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
+const DefaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
 
-// DefaultTrivyImage is the Trivy image used when the "Trivy image" setting is empty.
-func DefaultTrivyImage() string { return defaultTrivyImage }
-
-// isVersion reports whether v parses as a version ("0.77.0", "v0.77.0"); anything with a registry,
-// path, tag or digest separator is an image reference, not a version.
-func isVersion(v string) bool {
-	if strings.ContainsAny(v, "/:@") {
-		return false
-	}
-	_, err := version.Parse(strings.TrimPrefix(v, "v"))
-	return err == nil
-}
-
-// ResolveTrivyImage turns the "Trivy version" setting into an image reference: empty means the
-// default image, a version ("0.77.0", "v0.77.0") means that tag of the default repository. The
-// repository itself cannot be changed.
+// ResolveTrivyImage turns the "Trivy version" setting into an image reference: empty means
+// DefaultTrivyImage, a version ("0.77.0", "v0.77.0") means that tag of the same repository. Anything
+// with a registry, path, tag or digest separator is an image reference and is refused.
 func ResolveTrivyImage(v string) (string, error) {
 	v = strings.TrimSpace(v)
-	switch {
-	case v == "":
-		return DefaultTrivyImage(), nil
-	case isVersion(v):
-		return defaultTrivyRepo + ":" + strings.TrimPrefix(v, "v"), nil
+	if v == "" {
+		return DefaultTrivyImage, nil
 	}
-	return "", fmt.Errorf("%q is not a valid Trivy version", v)
+	if _, err := version.Parse(strings.TrimPrefix(v, "v")); err != nil || strings.ContainsAny(v, "/:@") {
+		return "", fmt.Errorf("%q is not a valid Trivy version", v)
+	}
+	repo, _, _ := strings.Cut(DefaultTrivyImage, ":")
+	return repo + ":" + strings.TrimPrefix(v, "v"), nil
 }
 
 const (
@@ -103,7 +88,7 @@ func loadEnv() Env {
 // TrivyJob is one `trivy image` invocation.
 type TrivyJob struct {
 	Image string // image reference to scan; empty for --download-db-only
-	// TrivyImage is the Trivy version to run (see ResolveTrivyImage); empty means the engine's default.
+	// TrivyImage is the Trivy version to run (see ResolveTrivyImage); empty means DefaultTrivyImage.
 	TrivyImage string
 	Flags      []string // e.g. --format json --scanners vuln
 	Username   string   // optional registry credentials
@@ -130,9 +115,6 @@ type Engine interface {
 type PodmanEngine struct {
 	// Bin is the podman binary; defaults to $PODMAN or "podman".
 	Bin string
-	// Image is the Trivy version to run when a job does not name one (see TrivyJob.TrivyImage).
-	// Empty means defaultTrivyImage.
-	Image string
 	// Cache is the Trivy cache source mounted into the scanner: a podman volume name or an
 	// absolute directory on the machine running podman. Defaults to $TRIVY_SCANNER_CACHE, then
 	// defaultCache().
@@ -226,11 +208,7 @@ func (p *PodmanEngine) runArgs(job TrivyJob, name string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	setting := job.TrivyImage
-	if setting == "" {
-		setting = p.Image
-	}
-	image, err := ResolveTrivyImage(setting)
+	image, err := ResolveTrivyImage(job.TrivyImage)
 	if err != nil {
 		return nil, err
 	}

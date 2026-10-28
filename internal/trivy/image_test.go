@@ -6,18 +6,18 @@ import (
 )
 
 func TestDefaultTrivyImageIsPinned(t *testing.T) {
-	img := DefaultTrivyImage()
+	img := DefaultTrivyImage
 	repo, tag, ok := strings.Cut(img, ":")
-	if !ok || repo != defaultTrivyRepo {
+	if !ok || repo != "docker.io/aquasec/trivy" {
 		t.Fatalf("default image = %q", img)
 	}
-	if tag == "latest" || !isVersion(tag) {
+	if _, err := ResolveTrivyImage(tag); err != nil {
 		t.Errorf("default must be a pinned version, got tag %q", tag)
 	}
 }
 
 func TestResolveTrivyImage(t *testing.T) {
-	def := DefaultTrivyImage()
+	def := DefaultTrivyImage
 	for in, want := range map[string]string{
 		"":        def,
 		"  ":      def,
@@ -35,7 +35,7 @@ func TestResolveTrivyImage(t *testing.T) {
 	}
 }
 
-func TestRunArgsUseJobImageThenEngineImage(t *testing.T) {
+func TestRunArgsUseJobVersionElseDefault(t *testing.T) {
 	line := func(e *PodmanEngine, j TrivyJob) string {
 		args, err := e.runArgs(j, "n")
 		if err != nil {
@@ -43,14 +43,11 @@ func TestRunArgsUseJobImageThenEngineImage(t *testing.T) {
 		}
 		return strings.Join(args, " ")
 	}
-	if got := line(&PodmanEngine{Cache: "c"}, TrivyJob{Image: "x"}); !strings.Contains(got, DefaultTrivyImage()+" image") {
+	if got := line(&PodmanEngine{Cache: "c"}, TrivyJob{Image: "x"}); !strings.Contains(got, DefaultTrivyImage+" image") {
 		t.Errorf("default not used: %s", got)
 	}
-	if got := line(&PodmanEngine{Cache: "c", Image: "1.0.0"}, TrivyJob{Image: "x"}); !strings.Contains(got, "trivy:1.0.0 image") {
-		t.Errorf("engine image not used: %s", got)
-	}
-	if got := line(&PodmanEngine{Cache: "c", Image: "1.0.0"}, TrivyJob{Image: "x", TrivyImage: "v0.99.0"}); !strings.Contains(got, "trivy:0.99.0 image") {
-		t.Errorf("job image must win: %s", got)
+	if got := line(&PodmanEngine{Cache: "c"}, TrivyJob{Image: "x", TrivyImage: "v0.99.0"}); !strings.Contains(got, "trivy:0.99.0 image") {
+		t.Errorf("job version must be used: %s", got)
 	}
 	if _, err := (&PodmanEngine{Cache: "c"}).runArgs(TrivyJob{Image: "x", TrivyImage: "--rm"}, "n"); err == nil {
 		t.Error("a flag-like image must be refused")
