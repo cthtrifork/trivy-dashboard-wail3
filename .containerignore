@@ -1,8 +1,0 @@
-.git
-.github
-docs
-bin
-build
-screenshots
-node_modules
-*.md

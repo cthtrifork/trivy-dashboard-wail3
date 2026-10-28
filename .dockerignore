@@ -1,0 +1,19 @@
+# Build context for build/docker/headless.Dockerfile. Docker reads only .dockerignore; podman reads
+# it too when there is no .containerignore, so this one file serves both.
+# Allow list: whatever is not named here is not sent to the daemon and cannot bust a layer cache.
+*
+
+# Go build stage
+!go.mod
+!go.sum
+!main.go
+!internal/
+!vex/openvex.json
+
+# Frontend build stage (dist is rebuilt in the image; node_modules comes from `npm ci`)
+!frontend/
+frontend/dist
+**/node_modules
+
+# Tests are not needed to build the binary
+**/*_test.go
