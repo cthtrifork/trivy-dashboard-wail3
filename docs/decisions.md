@@ -4,7 +4,7 @@ Short records of decisions. Add new entries at the bottom; supersede rather than
 
 | # | Decision | Why |
 |---|---|---|
-| 1 | Wails v3 (beta.34), Go 1.26, plain JS frontend with no build step | Matches the requested stack; no Node needed to build; frontend embedded with `go:embed` |
+| 1 | Wails v3 (v3.0.0), Go 1.26, plain JS frontend with no build step | Matches the requested stack; no Node needed to build; frontend embedded with `go:embed` |
 | 2 | Scans run Trivy in a **podman** container, not a local Trivy install | Requested; keeps the host clean; the Trivy DB lives in a host cache directory (local podman) or the `trivy-cache` volume (remote podman), see architecture.md |
 | 3 | Fixtures are for tests and screenshots only; `wails dev` uses real podman unless `TRIVY_SCANNER_FAKE_PODMAN=1` | Maintainer reversed an earlier "fake in dev" design; fixtures are compiled out of production builds |
 | 4 | Priorities view ranks with an explainable rule engine (KEV, EPSS, CVSS, attack vector, fix availability) | Goal: ten findings that matter, with a reason shown |
