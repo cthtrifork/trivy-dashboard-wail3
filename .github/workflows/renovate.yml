@@ -1,0 +1,85 @@
+name: Renovate
+
+# Self-hosted Renovate (renovatebot/github-action) keeps dependencies current: Go modules, the
+# frontend npm packages, Docker base images, pip (zizmor), the SHA-pinned Actions and the versions
+# marked `# renovate:` (Makefile, workflows). It replaces Dependabot. Config: .github/renovate.json5.
+#   - weekly and by hand: opens or updates the update PRs.
+#   - on a pull request that changes the config or this workflow: a dry run, which logs what Renovate
+#     would do on the PR's branch and writes nothing. Read the log to check a config change.
+# PRs opened with the default GITHUB_TOKEN do not start other workflows. Add a RENOVATE_TOKEN secret
+# (a fine-grained PAT or a GitHub App token with contents, pull requests and issues write) so CI runs
+# on them; the workflow uses it when it exists.
+on:
+  pull_request:
+    paths:
+      - .github/renovate.json5
+      - .github/workflows/renovate.yml
+  schedule:
+    - cron: '12 4 * * 1' # Mondays 04:12 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: renovate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  dry-run:
+    name: dry run
+    # A fork's token is read-only and cannot read this repository's Renovate state.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read # read the repository
+      pull-requests: read # existing Renovate PRs
+      issues: read # the dependency dashboard issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Renovate (dry run)
+        uses: renovatebot/github-action@2804199d260ad00c1fae0e9e842888369391c776 # v46.3.10
+        with:
+          configurationFile: .github/renovate.json5
+          token: ${{ github.token }}
+          # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
+          renovate-version: '44'
+        env:
+          LOG_LEVEL: debug
+          RENOVATE_DRY_RUN: full
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          # Look at the PR's branch, not main, so the PR's own changes are what gets checked.
+          RENOVATE_BASE_BRANCHES: ${{ github.head_ref }}
+          # The config comes from the file above, not from a renovate.json on the default branch.
+          RENOVATE_ONBOARDING: 'false'
+          RENOVATE_REQUIRE_CONFIG: ignored
+
+  renovate:
+    name: renovate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write # push the update branches
+      pull-requests: write # open and update the update PRs
+      issues: write # the dependency dashboard issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Renovate
+        uses: renovatebot/github-action@2804199d260ad00c1fae0e9e842888369391c776 # v46.3.10
+        with:
+          configurationFile: .github/renovate.json5
+          token: ${{ secrets.RENOVATE_TOKEN || github.token }}
+          # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
+          renovate-version: '44'
+        env:
+          LOG_LEVEL: info
+          RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_ONBOARDING: 'false'
+          RENOVATE_REQUIRE_CONFIG: ignored

@@ -26,7 +26,7 @@ import (
 // defaultTrivyRepo is the repository a bare version in the Trivy image setting refers to.
 const defaultTrivyRepo = "docker.io/aquasec/trivy"
 
-// trivyDockerfile pins the default Trivy version where Dependabot can update it.
+// trivyDockerfile pins the default Trivy version where Renovate can update it.
 //
 //go:embed image/Dockerfile
 var trivyDockerfile string

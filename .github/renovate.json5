@@ -1,0 +1,56 @@
+// Renovate config. Renovate runs self-hosted from .github/workflows/renovate.yml, which loads this
+// file as its global config, so a pull request that changes it is checked by a dry run (see docs/ci.md).
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  extends: [
+    "config:recommended",
+    // Actions stay pinned to a commit SHA with a `# vX.Y.Z` comment.
+    "helpers:pinGitHubActionDigests",
+  ],
+  // Same as the 2-day Dependabot cooldown this replaces.
+  minimumReleaseAge: "2 days",
+  postUpdateOptions: ["gomodTidy"],
+  packageRules: [
+    {
+      matchManagers: ["github-actions"],
+      groupName: "actions",
+    },
+    {
+      matchManagers: ["gomod"],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "go-minor-and-patch",
+    },
+    {
+      matchManagers: ["npm"],
+      matchUpdateTypes: ["minor", "patch"],
+      groupName: "frontend-minor-and-patch",
+    },
+    {
+      // Kept in step with the Go module by hand (the wails3 CLI and the runtime must match).
+      matchPackageNames: ["@wailsio/runtime"],
+      enabled: false,
+    },
+    {
+      matchManagers: ["custom.regex"],
+      groupName: "dev tools",
+    },
+    {
+      // The runner image is pinned on purpose: it fixes the glibc and WebKitGTK baseline of the
+      // release binary (see release.yml). Moving to a new Ubuntu is a decision, not an update.
+      matchDatasources: ["github-runners"],
+      enabled: false,
+    },
+  ],
+  customManagers: [
+    {
+      // Versions with no manager of their own: a `# renovate: datasource=<ds> depName=<name>` comment on
+      // the line above a `KEY := value`, `KEY=value` or `KEY: value` line. Used for the Go dev tools in
+      // the Makefile, the gh-pin-actions extension and the Renovate image in the workflows.
+      customType: "regex",
+      managerFilePatterns: ["/(^|/)Makefile$/", "/^\\.github/workflows/[^/]+\\.ya?ml$/"],
+      matchStrings: [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+\\S+\\s*(?::=|=|:)\\s*['\"]?(?<currentValue>[^\\s'\"]+)",
+      ],
+    },
+  ],
+}

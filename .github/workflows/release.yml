@@ -114,9 +114,7 @@ jobs:
           go-version: '1.26'
           check-latest: true
           cache: ${{ steps.meta.outputs.publish != 'true' }} # off when publishing: a restored cache could poison the release; on for dry runs # zizmor: ignore[cache-poisoning]
-          cache-dependency-path: |
-            go.sum
-            tools/go.sum
+          cache-dependency-path: go.sum
 
       - name: Toolchain versions
         run: |
@@ -192,7 +190,7 @@ jobs:
           format: cyclonedx
           scanners: license
           output: ${{ runner.temp }}/sbom.cdx.json
-          skip-dirs: internal/trivy/fixtures,frontend/node_modules,dist,tools
+          skip-dirs: internal/trivy/fixtures,frontend/node_modules,dist
 
       - name: Add SBOM to the release files
         env:

@@ -37,25 +37,30 @@ fmt: ## Format the Go code
 fmt-check: ## Fail if any Go file needs gofmt
 	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "These files need gofmt:"; echo "$$unformatted"; exit 1; fi
 
-# golangci-lint, govulncheck and goimports are pinned in tools/go.mod (a separate module, so their
-# dependencies stay out of the app's go.mod and Trivy's scan). Dependabot updates it.
-GO_TOOL := go tool -modfile=tools/go.mod
+# Dev tool versions. Renovate keeps them current through the `# renovate:` comments (renovate.json5).
+# renovate: datasource=go depName=github.com/golangci/golangci-lint/v2
+GOLANGCI_LINT_VERSION := v2.15.0
+# renovate: datasource=go depName=golang.org/x/vuln
+GOVULNCHECK_VERSION := v1.9.0
+# renovate: datasource=go depName=golang.org/x/tools
+GOIMPORTS_VERSION := v0.38.0
 
-mod-check: ## Fail if go.mod/go.sum (app and tools/) are not tidy, then verify the modules
+mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
 	go mod tidy -diff
 	go mod verify
-	cd tools && go mod tidy -diff && go mod verify
 
 lint: lint-go lint-frontend ## golangci-lint plus the frontend's Biome lint and format check (as CI runs them)
 
 lint-go: ## golangci-lint on the server-tag build (CGO off, no GTK needed)
-	CGO_ENABLED=0 $(GO_TOOL) golangci-lint run --build-tags server ./...
+	CGO_ENABLED=0 go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --build-tags server ./...
 
 govulncheck: ## govulncheck on the whole module (the GUI package needs the GTK headers to type-check)
-	$(GO_TOOL) govulncheck ./...
+	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
 
 tools: ## Install goimports, golangci-lint and govulncheck into GOBIN (for editors)
-	go install -modfile=tools/go.mod tool
+	go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 
 lint-frontend: ## Biome lint and format check for the Vue app (needs `make frontend` once for node_modules)
 	cd frontend && npm run lint && npm run format:check

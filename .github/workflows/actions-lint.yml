@@ -5,7 +5,7 @@ name: Actions lint
 #     permissions, cache poisoning, unpinned or impostor action refs, ...).
 #   - gh-pin-actions checks that every `uses:` is pinned to a commit SHA with a version comment, and
 #     that it is the latest release. On pull requests only the workflows the PR adds or changes.
-# They run when workflow, action or Dependabot files change, and weekly, because new zizmor audits
+# They run when workflow, action or Renovate files change, and weekly, because new zizmor audits
 # and advisories appear without any change here. They use a paths filter, so do not mark them as
 # required checks.
 on:
@@ -71,9 +71,10 @@ jobs:
         if: github.event_name != 'pull_request' || steps.changed.outputs.any_changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          # renovate: datasource=github-releases depName=amenocal/gh-pin-actions
+          GH_PIN_ACTIONS_VERSION: v0.1.0
         run: |
-          # Latest release, not pinned: Dependabot cannot track gh extensions, so a pin would go stale.
-          gh extension install amenocal/gh-pin-actions
+          gh extension install amenocal/gh-pin-actions --pin "$GH_PIN_ACTIONS_VERSION"
           gh pin-actions workflows --latest --overwrite
 
       - name: Fail on unpinned or outdated actions

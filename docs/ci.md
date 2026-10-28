@@ -31,7 +31,17 @@ Sources:
 
 ## Lint and format checks
 
-`ci.yml` also runs, in the `test` job: `make lint-frontend` (Biome lint and format check, config in `frontend/biome.json`) and `make lint-go` (golangci-lint with the config in `.golangci.yml`: default linters; staticcheck's tagged-switch quick fixes and unchecked `Close`/test-helper writes are excluded). golangci-lint, `govulncheck` and `goimports` are pinned as `tool` directives in `tools/go.mod` (a separate module, so their dependencies stay out of the app's `go.mod`, and `tools` is skipped by the Trivy scan and the release SBOM; Dependabot updates it) and run through `go tool -modfile=tools/go.mod`, rather than through a third-party action. `make tools` installs them into `GOBIN` for editors. `make lint` runs both locally; `make fmt` and `make format-frontend` fix formatting.
+`ci.yml` also runs, in the `test` job: `make lint-frontend` (Biome lint and format check, config in `frontend/biome.json`) and `make lint-go` (golangci-lint with the config in `.golangci.yml`: default linters; staticcheck's tagged-switch quick fixes and unchecked `Close`/test-helper writes are excluded). golangci-lint and `govulncheck` run through `go run <module>@<version>` (`make lint-go`, `make govulncheck`), with the versions pinned in the `Makefile`, rather than through a third-party action. `make tools` installs them and `goimports` into `GOBIN` for editors. `make lint` runs both locally; `make fmt` and `make format-frontend` fix formatting.
+
+## Dependency updates (Renovate)
+
+Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces Dependabot. It runs weekly and on demand, with the config in `.github/renovate.json5`, and updates Go modules, the frontend npm packages, Docker base images, pip (`.github/requirements.txt`, zizmor), the SHA-pinned Actions (`helpers:pinGitHubActionDigests` keeps the `# vX.Y.Z` comment) and anything marked with a `# renovate: datasource=<ds> depName=<name>` comment on the line above its version: the Go dev tools in the `Makefile`, the `gh-pin-actions` extension and the Renovate image itself. New releases wait 2 days (`minimumReleaseAge`).
+
+A pull request that changes `renovate.json5` or `renovate.yml` runs a **dry run** on its own branch (`RENOVATE_DRY_RUN=full`, debug log): it writes nothing, and the log lists the updates and branches Renovate would create. PRs opened with the default `GITHUB_TOKEN` do not start CI; add a `RENOVATE_TOKEN` secret (a fine-grained PAT or GitHub App token) and the workflow uses it.
+
+## Actions lint
+
+`actions-lint.yml` runs on changes under `.github/`, on `main` and weekly: zizmor (pedantic persona, installed from `.github/requirements.txt`) audits workflows and composite actions, and `gh pin-actions workflows --latest` re-pins every `uses:` in the workflows a PR adds or changes. The check fails on an unpinned action or one with a newer release. The tool pins immutable releases to the tag instead of the SHA; that is the same version, so it is not a failure.
 
 ## Screenshots
 

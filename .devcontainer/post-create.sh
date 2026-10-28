@@ -12,5 +12,5 @@ git config --global --add safe.directory "$PWD"
 go mod download
 make wails3-install
 # Tools the Go extension runs from .vscode/settings.json (format on save, lint on save).
-# Pinned in tools/go.mod: goimports, golangci-lint and govulncheck.
+# Versions are pinned in the Makefile.
 make tools
