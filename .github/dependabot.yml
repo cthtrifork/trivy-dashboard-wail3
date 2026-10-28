@@ -8,7 +8,7 @@ updates:
     schedule:
       interval: weekly
     cooldown:
-      default-days: 2
+      default-days: 2 # zizmor: ignore[dependabot-cooldown] 2 days chosen on purpose
     groups:
       go-minor-and-patch:
         update-types: [minor, patch]
@@ -17,7 +17,7 @@ updates:
     schedule:
       interval: weekly
     cooldown:
-      default-days: 2
+      default-days: 2 # zizmor: ignore[dependabot-cooldown] 2 days chosen on purpose
     groups:
       actions:
         patterns: ["*"]
@@ -27,7 +27,7 @@ updates:
     schedule:
       interval: weekly
     cooldown:
-      default-days: 2
+      default-days: 2 # zizmor: ignore[dependabot-cooldown] 2 days chosen on purpose
     groups:
       frontend-minor-and-patch:
         update-types: [minor, patch]
@@ -39,7 +39,7 @@ updates:
     schedule:
       interval: weekly
     cooldown:
-      default-days: 2
+      default-days: 2 # zizmor: ignore[dependabot-cooldown] 2 days chosen on purpose
   # The headless server image. Dependabot only recognises files with "dockerfile" in the name,
   # which is why this is not called Containerfile.
   - package-ecosystem: docker
@@ -47,11 +47,11 @@ updates:
     schedule:
       interval: weekly
     cooldown:
-      default-days: 2
+      default-days: 2 # zizmor: ignore[dependabot-cooldown] 2 days chosen on purpose
   # The dev container's base images.
   - package-ecosystem: docker
     directory: /.devcontainer
     schedule:
       interval: weekly
     cooldown:
-      default-days: 2
+      default-days: 2 # zizmor: ignore[dependabot-cooldown] 2 days chosen on purpose
