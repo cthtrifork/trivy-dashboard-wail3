@@ -298,6 +298,9 @@ watch(trivyNewest, setTrivyDefault);
 // trivyImageSetting is what scans send: the user's choice, else the newest version found, else
 // empty so the backend falls back to its Renovate-managed default.
 export const trivyImageSetting = () => opts.trivyImage.trim() || trivyNewest.value;
+// The version of the last successful scan or comparison. When the newest version cannot be looked up
+// (offline), this is the default instead of the pinned one: podman is known to have its image.
+export const rememberTrivyVersion = (v) => v && lsSet("trivy-last-used", v);
 
 export function enterSplit(repo, tag) {
   if (!repo) return;
@@ -378,6 +381,7 @@ export async function runScan() {
   result.value = null; // don't show the previous image's findings while the new scan runs
   rerank();
   setStatus("Starting scan…", { busy: true });
+  const trivyVersion = trivyImageSetting();
   try {
     const r = await ScanService.Scan({
       image: image.value,
@@ -387,12 +391,13 @@ export async function runScan() {
       showSuppressed: opts.showSuppressed,
       showWillNotFix: !opts.ignoreWillNotFix,
       showNotAffected: !opts.ignoreNotAffected,
-      trivyImage: trivyImageSetting(),
+      trivyImage: trivyVersion,
       ignorePolicy: opts.ignorePolicy,
       ignoreFile: opts.ignoreFile,
       markUnderInvestigation: opts.markUnderInvestigation,
     });
     result.value = r;
+    rememberTrivyVersion(trivyVersion);
     rememberScan(r);
     remember(image.value.trim(), r);
     rerank();
@@ -452,7 +457,7 @@ export function init() {
   ScanService.Mode().then(
     (m) => {
       mode.value = m;
-      setTrivyDefault(m.trivyImage.split(":").pop());
+      setTrivyDefault(lsGet("trivy-last-used") || m.trivyImage.split(":").pop());
       ensureTrivyTags(); // so the default can be the newest version
       if (!m.fixtures) return;
       if (!image.value) image.value = m.image;
