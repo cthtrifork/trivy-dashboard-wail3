@@ -26,7 +26,7 @@ sudo loginctl enable-linger "$USER"
 
 # 2. Run it (pin a version such as :1.2.3 instead of :latest for reproducible deployments).
 podman run -d --name trivy-scanner --restart unless-stopped \
-  --network host --security-opt label=disable \
+  --network host --security-opt label=disable --userns=keep-id \
   -v "$XDG_RUNTIME_DIR/podman/podman.sock:/run/podman/podman.sock" \
   -v trivy-scanner-data:/data \
   ghcr.io/cthtrifork/trivy-dashboard-wail3:latest
@@ -51,7 +51,7 @@ podman build -t trivy-scanner --build-arg VERSION="$(git describe --tags --alway
 
 # 3. Run it.
 podman run -d --name trivy-scanner --restart unless-stopped \
-  --network host --security-opt label=disable \
+  --network host --security-opt label=disable --userns=keep-id \
   -v "$XDG_RUNTIME_DIR/podman/podman.sock:/run/podman/podman.sock" \
   -v trivy-scanner-data:/data \
   localhost/trivy-scanner
@@ -99,7 +99,7 @@ VEX assessments (`/data/vex.json`) and the EPSS/KEV cache live in the `trivy-sca
 
 - **`--network host` + `WAILS_SERVER_HOST=127.0.0.1`** (the image default): the app listens only on the server's loopback, so it is reachable through the SSH tunnel and nowhere else. Wails also rejects requests whose `Host` header is not a loopback name on loopback binds (DNS-rebinding protection), so `localhost:<any port>` through the tunnel works.
 - **No authentication.** Do not bind the app to `0.0.0.0` or publish the port (`-p`) unless something in front of it authenticates users. Anyone who can reach it can start scans and, through the mounted socket, run containers as your user.
-- **The podman socket is mounted into the container.** That grants the app control of your (rootless) podman. Run it as an unprivileged user, not root.
+- **The podman socket is mounted into the container.** That grants the app control of your (rootless) podman. The image runs as the distroless `nonroot` user (uid 65532), and `--userns=keep-id` makes rootless podman run it as your own uid instead, which is what lets it open the socket and write `/data`. Without `--userns=keep-id` the process cannot read the socket. With a rootful podman socket, pass `--user` with a uid/gid (e.g. `--group-add`) that may open it.
 - **`--security-opt label=disable`** is needed on SELinux hosts (Fedora, RHEL) so the container may use the socket.
 - **Self-update is disabled** in server mode; update by rebuilding as above.
 - **OpenVEX export** has no native save dialog on a server, so the browser downloads the file instead.
