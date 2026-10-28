@@ -1,7 +1,7 @@
 name: Renovate
 
 # Self-hosted Renovate (renovatebot/github-action) keeps dependencies current: Go modules, the
-# frontend npm packages, Docker base images, pip (zizmor), the SHA-pinned Actions and the versions
+# frontend npm packages, Docker base images, the SHA-pinned Actions and the versions
 # marked `# renovate:` (Makefile, workflows). It replaces Dependabot. Config: .github/renovate.json5.
 #   - weekly and by hand: opens or updates the update PRs.
 #   - on a pull request that changes the config or this workflow: a dry run, which logs what Renovate

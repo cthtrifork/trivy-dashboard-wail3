@@ -35,13 +35,13 @@ Sources:
 
 ## Dependency updates (Renovate)
 
-Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces Dependabot. It runs weekly and on demand, with the config in `.github/renovate.json5`, and updates Go modules, the frontend npm packages, Docker base images, pip (`.github/requirements.txt`, zizmor), the SHA-pinned Actions (`helpers:pinGitHubActionDigests` keeps the `# vX.Y.Z` comment) and anything marked with a `# renovate: datasource=<ds> depName=<name>` comment on the line above its version: the Go dev tools in the `Makefile`, and the `gh-pin-actions` extension. New releases wait 2 days (`minimumReleaseAge`).
+Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces Dependabot. It runs weekly and on demand, with the config in `.github/renovate.json5`, and updates Go modules, the frontend npm packages, Docker base images, the SHA-pinned Actions (`helpers:pinGitHubActionDigests` keeps the `# vX.Y.Z` comment) and anything marked with a `# renovate: datasource=<ds> depName=<name>` comment on the line above its version: the Go dev tools in the `Makefile`, and zizmor and the `gh-pin-actions` extension in `actions-lint.yml`. New releases wait 2 days (`minimumReleaseAge`).
 
 A pull request that changes `renovate.json5` or `renovate.yml` runs a **dry run** on its own branch (`RENOVATE_DRY_RUN=full`, debug log): it writes nothing, and the log lists the updates and branches Renovate would create. PRs opened with the default `GITHUB_TOKEN` do not start CI; add a `RENOVATE_TOKEN` secret (a fine-grained PAT or GitHub App token) and the workflow uses it.
 
 ## Actions lint
 
-`actions-lint.yml` runs on changes under `.github/`, on `main` and weekly: zizmor (pedantic persona, installed from `.github/requirements.txt`) audits workflows and composite actions, and `gh pin-actions workflows --latest` re-pins every `uses:` in the workflows a PR adds or changes. The check fails on an unpinned action or one with a newer release. The tool pins immutable releases to the tag instead of the SHA; that is the same version, so it is not a failure.
+`actions-lint.yml` runs on changes under `.github/`, on `main` and weekly: zizmor (pedantic persona, installed from PyPI at the version pinned in the workflow) audits workflows and composite actions, and `gh pin-actions workflows --latest` re-pins every `uses:` in the workflows a PR adds or changes. The check fails on an unpinned action or one with a newer release. The tool pins immutable releases to the tag instead of the SHA; that is the same version, so it is not a failure.
 
 ## Screenshots
 
