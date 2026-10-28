@@ -5,6 +5,7 @@ import { tierStyle, pct, detailUrl, openUrl as open, COLUMN_HELP, effectiveScore
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
 import Chip from "./Chip.vue";
+import CopyId from "./CopyId.vue";
 import CvssMeter from "./CvssMeter.vue";
 import Ratings from "./Ratings.vue";
 import SummaryCard from "./SummaryCard.vue";
@@ -116,6 +117,7 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
           <td class="mono" style="white-space: nowrap">
             <a v-if="detailUrl(v)" :href="detailUrl(v)" title="Open CVE details" @click.stop.prevent="open(detailUrl(v))">{{ v.id }}</a>
             <template v-else>{{ v.id }}</template>
+            <CopyId :text="v.id" />
           </td>
           <td class="mono wrap">{{ v.package }}</td>
           <td class="mono wrap">{{ v.installed }}</td>
