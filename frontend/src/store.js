@@ -287,11 +287,14 @@ export const ensureTrivyTags = () => loadTrivyTags((mode.value?.trivyImage || "d
 // trivyNewest is the first tag: ListTags sorts plain versions first, newest first, so it is the newest
 // release ("0.76.1") and not the floating "latest". Empty until the lookup succeeds.
 export const trivyNewest = computed(() => trivyTags.value[0] || "");
-// The field is never left empty: once the newest version is known it is filled in, unless the user
-// has chosen one. It is not saved until the user edits it, so the default keeps following the newest.
-watch(trivyNewest, (v) => {
-  if (v && !opts.trivyImage.trim()) opts.trivyImage = v;
-});
+// The field is never left empty: it starts with the pinned default version and switches to the newest
+// one once that is known, as long as the user has not chosen a version. Neither is saved until the user
+// edits the field, so the default keeps following.
+let trivyAuto = "";
+function setTrivyDefault(v) {
+  if (v && (!opts.trivyImage.trim() || opts.trivyImage === trivyAuto)) opts.trivyImage = trivyAuto = v;
+}
+watch(trivyNewest, setTrivyDefault);
 // trivyImageSetting is what scans send: the user's choice, else the newest version found, else
 // empty so the backend falls back to its Renovate-managed default.
 export const trivyImageSetting = () => opts.trivyImage.trim() || trivyNewest.value;
@@ -449,6 +452,7 @@ export function init() {
   ScanService.Mode().then(
     (m) => {
       mode.value = m;
+      setTrivyDefault(m.trivyImage.split(":").pop());
       ensureTrivyTags(); // so the default can be the newest version
       if (!m.fixtures) return;
       if (!image.value) image.value = m.image;
