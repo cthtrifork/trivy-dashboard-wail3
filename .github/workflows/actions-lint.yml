@@ -59,7 +59,8 @@ jobs:
 
       # --latest re-pins every `uses:` in .github/workflows to the newest release (SHA plus version
       # comment). The tool always rewrites all workflows; the next step only looks at the ones the
-      # pull request adds or changes, so a release of an action elsewhere does not fail unrelated PRs.
+      # pull request adds or changes, so a release of an action elsewhere does not fail unrelated PRs,
+      # and only fails on a different version, not on the tool's SHA to tag rewrite.
       - name: Pin actions
         env:
           GH_TOKEN: ${{ github.token }}
@@ -82,8 +83,9 @@ jobs:
           else
             files=(.github/workflows)
           fi
-          if ! git diff --exit-code -- "${files[@]}"; then
-            echo "::error::Unpinned or outdated actions found. Run 'gh pin-actions workflows --latest --overwrite' and commit the result."
+          # Not a plain git diff: for immutable releases the tool writes the tag instead of the SHA.
+          if ! scripts/check-pinned-actions.py "${files[@]}"; then
+            echo "::error::Fix the actions above, e.g. with 'gh pin-actions workflows --latest --overwrite'."
             exit 1
           fi
           if [ -n "$(git ls-files --others --exclude-standard -- .github/workflows)" ]; then
