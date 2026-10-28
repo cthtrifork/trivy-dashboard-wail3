@@ -253,7 +253,7 @@ func (e tagsEngine) ListTags(context.Context, string) ([]string, error) { return
 
 func TestLatestTagPicksHighestSemver(t *testing.T) {
 	s := &Scanner{Engine: tagsEngine{tags: []string{"latest", "1.9", "1.27-alpine", "1.10.2", "2.0.0-rc1", "1.27"}}}
-	got, err := s.LatestTag(context.Background(), "nginx")
+	got, err := s.LatestTag(context.Background(), "nginx", "")
 	if err != nil || got != "1.27" {
 		t.Fatalf("LatestTag = %q, %v; want 1.27", got, err)
 	}
@@ -280,5 +280,19 @@ func TestListTagsSortsBySemver(t *testing.T) {
 	want := []string{"1.27.1", "1.27", "1.10.2", "1.9", "v1.5", "1.28.0-rc1", "1.27-alpine", "stable", "latest"}
 	if err != nil || !slices.Equal(got, want) {
 		t.Fatalf("ListTags = %v, %v; want %v", got, err, want)
+	}
+}
+
+func TestLatestTagKeepsTheBaseSuffix(t *testing.T) {
+	s := &Scanner{Engine: tagsEngine{tags: []string{"1.27", "1.28", "1.27-alpine", "1.28-alpine", "1.29-perl", "latest"}}}
+	for base, want := range map[string]string{
+		"1.27-alpine": "1.28-alpine",
+		"1.27-perl":   "1.29-perl",
+		"1.27-slim":   "1.28", // no such variant: plain latest
+		"1.27":        "1.28",
+	} {
+		if got, err := s.LatestTag(context.Background(), "nginx", base); err != nil || got != want {
+			t.Errorf("LatestTag(base %q) = %q, %v; want %q", base, got, err, want)
+		}
 	}
 }

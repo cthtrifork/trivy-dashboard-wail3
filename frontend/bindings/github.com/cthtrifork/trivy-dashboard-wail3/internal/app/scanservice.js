@@ -100,12 +100,14 @@ export function InstallUpdate() {
 }
 
 /**
- * LatestTag returns the highest semantic-version tag a registry offers for an image repository.
+ * LatestTag returns the highest semantic-version tag a registry offers for an image repository,
+ * preferring one with the same suffix as baseTag (see trivy.Scanner.LatestTag).
  * @param {string} repo
+ * @param {string} baseTag
  * @returns {$CancellablePromise<string>}
  */
-export function LatestTag(repo) {
-    return $Call.ByID(2547070678, repo);
+export function LatestTag(repo, baseTag) {
+    return $Call.ByID(2547070678, repo, baseTag);
 }
 
 /**

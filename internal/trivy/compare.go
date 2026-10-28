@@ -167,12 +167,21 @@ func compareTags(a, b string) int {
 	return compareVersions("", a, b)
 }
 
-// LatestTag returns the highest plain semantic version among repo's tags, or "" when none is
-// one. Tags that are not versions ("latest") and variants such as "1.27-alpine" are skipped.
-func (s *Scanner) LatestTag(ctx context.Context, repo string) (string, error) {
-	tags, err := s.ListTags(ctx, repo)
+// LatestTag returns the highest semantic version among repo's tags, or "" when none is one.
+// When baseTag carries a suffix ("1.27-alpine") it returns the highest tag with that same
+// suffix; with no such tag, or no suffix, it returns the highest plain version. Tags that are
+// not versions ("latest") are never returned.
+func (s *Scanner) LatestTag(ctx context.Context, repo, baseTag string) (string, error) {
+	tags, err := s.ListTags(ctx, repo) // best-effort semver, plain versions first
 	if err != nil {
 		return "", err
+	}
+	if _, suffix, ok := strings.Cut(baseTag, "-"); ok {
+		for _, t := range tags {
+			if tagRank(t) == 1 && strings.HasSuffix(t, "-"+suffix) {
+				return t, nil
+			}
+		}
 	}
 	if len(tags) > 0 && tagRank(tags[0]) == 2 {
 		return tags[0], nil

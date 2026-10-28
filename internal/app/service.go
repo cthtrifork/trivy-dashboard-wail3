@@ -453,11 +453,12 @@ func (s *ScanService) SplitImage(ref string) ImageParts {
 	return ImageParts{Repo: trivy.ImageRepo(ref), Tag: trivy.ImageTag(ref)}
 }
 
-// LatestTag returns the highest semantic-version tag a registry offers for an image repository.
-func (s *ScanService) LatestTag(repo string) (string, error) {
+// LatestTag returns the highest semantic-version tag a registry offers for an image repository,
+// preferring one with the same suffix as baseTag (see trivy.Scanner.LatestTag).
+func (s *ScanService) LatestTag(repo, baseTag string) (string, error) {
 	ctx, cancel := context.WithTimeout(s.appCtx(), time.Minute)
 	defer cancel()
-	return s.scanner.LatestTag(ctx, repo)
+	return s.scanner.LatestTag(ctx, repo, baseTag)
 }
 
 // ListTags returns the tags a registry offers for an image repository.
