@@ -4,13 +4,14 @@ import { EditorState } from "@codemirror/state";
 import { EditorView, placeholder as cmPlaceholder } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { yaml } from "@codemirror/lang-yaml";
-import { syntaxHighlighting } from "@codemirror/language";
+import { ensureSyntaxTree, syntaxHighlighting } from "@codemirror/language";
 import { setDiagnostics } from "@codemirror/lint";
 import { rego } from "codemirror-lang-rego";
 import { highlight, theme } from "../lib/codemirror.js";
 
 // An editable YAML or Rego box (CodeMirror 6) with syntax highlighting. `error` is the message the Go side
 // found for the text; the box underlines the line it names (or the first line of code when it names none).
+// Rego also gets warnings from the grammar for spots that do not parse.
 const props = defineProps({
   modelValue: { type: String, default: "" },
   language: { type: String, default: "yaml" }, // yaml | rego
@@ -37,16 +38,35 @@ function errorLine(doc) {
   return 1;
 }
 
+// The Rego grammar is young: it flags some valid rules (a one-line `x := v if cond`, `every` blocks). So its
+// findings are only warnings, a few at most, and the wording says the check can be wrong.
+const SYNTAX_WARNING = "Possible Rego syntax problem here. This check can be wrong on valid policies: Trivy has the final say.";
+const MAX_SYNTAX_WARNINGS = 5;
+
+function syntaxWarnings(state) {
+  const doc = state.doc;
+  const found = [];
+  if (props.language !== "rego" || !doc.length) return found;
+  ensureSyntaxTree(state, doc.length, 50)?.iterate({
+    enter: (node) => {
+      if (!node.type.isError || found.length >= MAX_SYNTAX_WARNINGS) return;
+      const from = Math.min(node.from, doc.length - 1);
+      found.push({ from, to: Math.min(Math.max(node.to, from + 1), doc.length), severity: "warning", message: SYNTAX_WARNING });
+    },
+  });
+  return found;
+}
+
 function showError() {
   if (!view) return;
   const doc = view.state.doc;
-  if (!props.error || !doc.length) {
-    view.dispatch(setDiagnostics(view.state, []));
-    return;
+  const diagnostics = syntaxWarnings(view.state);
+  if (props.error && doc.length) {
+    const line = doc.line(errorLine(doc));
+    const to = Math.min(Math.max(line.to, line.from + 1), doc.length);
+    diagnostics.unshift({ from: line.from, to, severity: "error", message: props.error });
   }
-  const line = doc.line(errorLine(doc));
-  const to = Math.max(line.to, line.from + 1);
-  view.dispatch(setDiagnostics(view.state, [{ from: line.from, to: Math.min(to, doc.length), severity: "error", message: props.error }]));
+  view.dispatch(setDiagnostics(view.state, diagnostics));
 }
 
 onMounted(() => {
