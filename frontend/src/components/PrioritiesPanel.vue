@@ -1,6 +1,6 @@
 <script setup>
-import { computed, reactive, ref } from "vue";
-import { result, vulns, vex } from "../store.js";
+import { computed, nextTick, reactive, ref, watch } from "vue";
+import { prioTarget, result, showInGraph, vulns, vex } from "../store.js";
 import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import CopyId from "./CopyId.vue";
@@ -105,8 +105,36 @@ const displayed = computed(() => {
   return out;
 });
 const itemKey = (it) => (it.head ? "group|" + it.head.name : cardKey(it.v));
-const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(displayed, { key: itemKey, estimate: 46, gap: GAP });
+const { scroller, rows: visible, before, after, vMeasure, scrollToIndex } = useVirtualList(displayed, { key: itemKey, estimate: 46, gap: GAP });
 const toggleRow = (v) => flip(expanded, cardKey(v));
+// "Show in Priorities" from the Dependencies inspector: make the finding visible whatever the view
+// filters are, open it, and scroll to it. `landed` marks it and drives the way-back banner.
+const landed = ref(null); // { key, id, label, from }
+const supOpen = ref(false);
+async function land(t) {
+  const v = all.value.find((x) => cardKey(x) === t.key);
+  if (!v) return;
+  landed.value = { key: t.key, id: v.id, label: `${v.package} ${v.installed}`, from: t.from };
+  if (prio.hideResolved && isResolved(v)) {
+    supPage.value = Math.floor(supGroups.value.findIndex((g) => g.id === v.id) / SUPPRESSED_PAGE);
+    supOpen.value = true;
+    await nextTick();
+    document.getElementById("prio-suppressed")?.scrollIntoView({ block: "start" });
+    return;
+  }
+  if (!pool.value.includes(v) || (prio.fixableOnly && !v.fixed)) {
+    clearFilters();
+    prio.fixableOnly = false;
+  }
+  if (prio.top && pool.value.indexOf(v) >= prio.top) prio.top = 0;
+  if (prio.groupBy === "binary") collapsedGroups.delete(binaryOf(v));
+  expanded.add(t.key);
+  await nextTick();
+  scrollToIndex(displayed.value.findIndex((it) => !it.head && cardKey(it.v) === t.key));
+}
+// "post": the tab has been switched to by then, so the list has a size to scroll in.
+watch(prioTarget, (t) => t && land(t), { flush: "post" });
+watch(result, () => (landed.value = null));
 const attackVector = (v) => /AV:([NALP])/.exec(v.vector)?.[1];
 
 defineExpose({ count: computed(() => pool.value.length) });
@@ -165,6 +193,14 @@ defineExpose({ count: computed(() => pool.value.length) });
     </label>
     <span id="prio-note">{{ note }}</span>
   </div>
+  <div v-if="landed" class="planded">
+    <span
+      >Showing <b class="mono">{{ landed.id }}</b> in <b>{{ landed.label }}</b
+      >, selected in Dependencies.</span
+    >
+    <button v-if="landed.from" type="button" class="link" @click="showInGraph(landed.from.ref)">← Back to {{ landed.from.label }} in Dependencies</button>
+    <button type="button" class="ghost" aria-label="Dismiss" @click="landed = null">×</button>
+  </div>
   <div id="prio-list" class="scroll" ref="scroller">
     <div v-if="!result" class="empty">Run a scan to see what matters most.</div>
     <div v-else-if="!all.length" class="empty">No vulnerabilities found 🎉</div>
@@ -189,7 +225,7 @@ defineExpose({ count: computed(() => pool.value.length) });
         <span class="kv">{{ head.count }} {{ head.count === 1 ? "finding" : "findings" }}</span>
         <span class="sev sevpill tier" :style="tierStyle(head.worst)" title="Highest priority tier in this group">{{ head.worst }}</span>
       </button>
-      <div v-else v-measure="cardKey(v)" class="prow" :class="{ open: expanded.has(cardKey(v)) }" :style="sevStyle(v)">
+      <div v-else v-measure="cardKey(v)" class="prow" :class="{ open: expanded.has(cardKey(v)), landed: landed?.key === cardKey(v) }" :style="sevStyle(v)">
         <div class="prow-main">
           <span class="sev sevpill" :class="v.severity">{{ v.severity }}</span>
           <CvssMeter :score="v.score" :severity="v.severity" />
@@ -261,16 +297,16 @@ defineExpose({ count: computed(() => pool.value.length) });
       <div v-if="after > 0" class="pad" :style="{ height: after - GAP + 'px' }"></div>
       <div v-if="!list.length" class="empty">Nothing left to show with these filters.</div>
       <div v-else-if="pool.length > list.length" class="kv">{{ pool.length - list.length }} more findings not shown — they rank lower.</div>
-      <details v-if="hidden.length" id="prio-suppressed" class="suppressed">
+      <details v-if="hidden.length" id="prio-suppressed" class="suppressed" :open="supOpen" @toggle="supOpen = $event.target.open">
         <summary>Suppressed by VEX ({{ hidden.length }})</summary>
         <template v-for="g in suppressedShown" :key="g.id">
-          <SuppressedRow v-if="g.items.length === 1" :v="g.items[0]" />
-          <details v-else class="sup supgroup">
+          <SuppressedRow v-if="g.items.length === 1" :v="g.items[0]" :class="{ landed: landed?.key === cardKey(g.items[0]) }" />
+          <details v-else class="sup supgroup" :open="landed?.id === g.id || undefined">
             <summary>
               <span class="id">{{ g.id }}</span>
               <Chip>{{ g.items.length }} components</Chip>
             </summary>
-            <SuppressedRow v-for="v in g.items" :key="cardKey(v)" :v="v" child />
+            <SuppressedRow v-for="v in g.items" :key="cardKey(v)" :v="v" child :class="{ landed: landed?.key === cardKey(v) }" />
           </details>
         </template>
         <div v-if="supPages > 1" class="row pager">

@@ -107,6 +107,7 @@
 }
 .prow {
   flex: none;
+  scroll-margin-top: 40px; /* clear the sticky column header when scrolled to */
   border-bottom: 1px solid var(--line);
   box-shadow: inset 4px 0 0 var(--c);
 }
@@ -458,4 +459,32 @@
 .pwhere .link {
   margin-top: 6px;
   font-size: 12px;
+}
+/* Where "Show in Priorities" landed: a banner with the way back, and the finding itself outlined. */
+.planded {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  border-radius: 8px;
+  font-size: 13px;
+}
+.planded .link {
+  width: auto;
+  margin-left: auto;
+}
+.planded .ghost {
+  padding: 2px 8px;
+}
+.prow.landed {
+  box-shadow:
+    inset 4px 0 0 var(--c),
+    inset 0 0 0 2px var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+}
+.sup.landed {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
