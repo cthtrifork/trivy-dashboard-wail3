@@ -60,6 +60,7 @@ export function CheckIgnorePolicy(text) {
 
 /**
  * Compare scans two tags of an image and returns what changed between them.
+ * The base is not scanned again when it is the image of the last scan, made with the same options.
  * @param {trivy$0.CompareRequest} req
  * @returns {$CancellablePromise<trivy$0.CompareResult | null>}
  */
