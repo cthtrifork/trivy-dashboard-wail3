@@ -1,35 +1,16 @@
 <script setup>
-import { Clipboard } from "@wailsio/runtime";
 import { onBeforeUnmount, ref } from "vue";
+import { copyText } from "../lib/clipboard.js";
 
 const props = defineProps({ text: { type: String, required: true } });
 const done = ref(false);
 let timer;
 
 async function copy() {
-  try {
-    await Clipboard.SetText(props.text);
-  } catch {
-    await webCopy(props.text);
-  }
+  await copyText(props.text);
   done.value = true;
   clearTimeout(timer);
   timer = setTimeout(() => (done.value = false), 1500);
-}
-
-// Headless (server) mode has no native clipboard bridge; use the browser's.
-async function webCopy(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.cssText = "position:fixed;opacity:0";
-    document.body.append(ta);
-    ta.select();
-    document.execCommand("copy");
-    ta.remove();
-  }
 }
 
 onBeforeUnmount(() => clearTimeout(timer));
