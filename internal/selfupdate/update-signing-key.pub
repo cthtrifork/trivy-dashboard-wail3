@@ -1,0 +1,3 @@
+# Placeholder: no update signing key has been set up yet, so release builds cannot update themselves.
+# Run scripts/gen-update-key.sh and follow docs/releasing.md ("The update signing key"); it replaces this
+# file with a PEM public key.

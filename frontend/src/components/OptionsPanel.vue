@@ -275,7 +275,7 @@ const updateAction = computed(() => {
           {{ updateAction.label }}
         </button>
       </div>
-      <span class="kv">{{ appInfo?.enabled ? "Updates download from GitHub releases and are verified with SHA-256 before they are installed." : appInfo?.reason }}</span>
+      <span class="kv">{{ appInfo?.enabled ? "Updates download from GitHub releases. One is installed only if it is signed with the release key built into the app and its SHA-256 matches." : appInfo?.reason }}</span>
     </div>
   </div>
 </details>

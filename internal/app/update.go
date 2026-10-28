@@ -32,7 +32,7 @@ func InitUpdater(s *ScanService, app *application.App) {
 		s.update.Reason = "The updater needs a native window, which headless server mode doesn't have."
 		return
 	}
-	provider, err := selfupdate.NewProvider(updateAPIBase())
+	provider, err := newUpdateProvider()
 	if err == nil {
 		err = app.Updater.Init(updater.Config{
 			// The tutorial passes the version without the leading "v".
@@ -48,6 +48,16 @@ func InitUpdater(s *ScanService, app *application.App) {
 		return
 	}
 	s.update.Enabled = true
+}
+
+// newUpdateProvider is the release feed, trusting only releases signed by the key compiled into the app.
+// Without that key (see docs/releasing.md) there is no provider: an unsigned feed is never an option.
+func newUpdateProvider() (updater.Provider, error) {
+	key, err := selfupdate.SigningKey()
+	if err != nil {
+		return nil, err
+	}
+	return selfupdate.NewProvider(updateAPIBase(), key)
 }
 
 // UpdateInfo reports the running version and whether it can update itself.

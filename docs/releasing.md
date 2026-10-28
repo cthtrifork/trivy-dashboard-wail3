@@ -26,7 +26,7 @@ The workflow then:
 2. works out the tag (`scripts/next-version.sh`) and stops if a **release** for it already exists;
 3. creates an annotated tag on the head of `main` and pushes it, unless the tag already exists (see *Retrying*);
 4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck`, builds the binary, and publishes the
-   release with its assets (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
+   release with its assets (binary and its `.sig`, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
    have the names they do. The same run also pushes the headless container image to
    `ghcr.io/cthtrifork/trivy-dashboard-wail3` (tags `1.2.3`, `v1.2.3`, and `latest` for a final release) with a signed
    provenance attestation; see [headless](headless.md). The image is only pushed for a tagged release, never from a
@@ -46,6 +46,29 @@ gpg --armor --export-secret-keys <fingerprint>        # -> secret RELEASE_GPG_PR
 Use a key made only for this. The workflow exports the matching public key as `trivy-scanner-release-key.asc` on every
 release and prints its fingerprint in the log, so publish the fingerprint somewhere users can cross-check it (the README
 is a good place). Rotating the key means updating the secrets; users import the new public key.
+
+## The update signing key
+
+The in-app updater installs a binary only if it carries an Ed25519 signature from a key compiled into the app (see
+[self-update](self-update.md#security)). This is a different key from the PGP one above: it is checked by the app, not
+by `apt` or `dnf`. Until it is set up, release builds report "no update signing key" and never update themselves, and a
+real release **fails** (a dry run on a branch skips signing).
+
+```sh
+scripts/gen-update-key.sh ~/update-key.pem        # writes the private key there and the public key into the repo
+# put the contents of ~/update-key.pem into the repository secret RELEASE_UPDATE_SIGNING_KEY, then:
+shred -u ~/update-key.pem
+git add internal/selfupdate/update-signing-key.pub && git commit -m "Add the update signing key"
+```
+
+Merge the public key **before** cutting the release that is meant to be the first signed one: the app embeds it at
+build time. The workflow signs `trivy-scanner_linux_amd64` into `trivy-scanner_linux_amd64.sig`, verifies the signature
+with the committed public key and fails if it does not match (a wrong secret, or a key that was not committed), so an
+unverifiable release cannot be published. Keep a copy of the private key somewhere safe: a lost key means shipping a new
+app with a new public key, and installed apps will not update across that gap by themselves (they must be installed again,
+for example from the `.deb`).
+
+To rotate it, ship a release signed with the *old* key that embeds the *new* public key, then switch the secret.
 
 ## Packages
 

@@ -22,11 +22,16 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
-// DefaultTrivyImage is the Trivy image scans run with unless the user picks another version. The
-// renovate comment on the line above keeps the tag current (the custom manager in
-// .github/renovate.json5).
+// pinnedTrivyImage is the Trivy image scans run with unless the user picks another version: a tag
+// plus the digest it had when it was reviewed, so a tag that is later re-pushed (or hijacked) does not
+// change what runs. The renovate comment keeps both current (the custom manager in
+// .github/renovate.json5); only a Renovate PR or a person moves the digest.
 // renovate: datasource=docker depName=docker.io/aquasec/trivy
-const DefaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
+const pinnedTrivyImage = "docker.io/aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c"
+
+// DefaultTrivyImage is the pinned image without its digest ("repo:tag"). It is what the UI shows and
+// what version pickers compare against. ResolveTrivyImage adds the digest back for this tag.
+var DefaultTrivyImage, defaultTrivyDigest, _ = strings.Cut(pinnedTrivyImage, "@")
 
 // DefaultDBRepository is the vulnerability DB Trivy downloads, unless TRIVY_DB_REPOSITORY names a
 // mirror. The tag is the DB schema version, so it is a floating tag that rarely changes; Renovate
@@ -35,18 +40,24 @@ const DefaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
 const DefaultDBRepository = "ghcr.io/aquasecurity/trivy-db:2"
 
 // ResolveTrivyImage turns the "Trivy version" setting into an image reference: empty means
-// DefaultTrivyImage, a version ("0.77.0", "v0.77.0") means that tag of the same repository. Anything
-// with a registry, path, tag or digest separator is an image reference and is refused.
+// the pinned default, a version ("0.77.0", "v0.77.0") means that tag of the same repository. The
+// default's own tag keeps its digest. Any other tag is a floating tag: the picker lists what the
+// registry offers, so it cannot be pinned ahead of time. Anything with a registry, path, tag or
+// digest separator is an image reference and is refused.
 func ResolveTrivyImage(v string) (string, error) {
 	v = strings.TrimSpace(v)
 	if v == "" {
-		return DefaultTrivyImage, nil
+		return pinnedTrivyImage, nil
 	}
 	if _, err := version.Parse(strings.TrimPrefix(v, "v")); err != nil || strings.ContainsAny(v, "/:@") {
 		return "", fmt.Errorf("%q is not a valid Trivy version", v)
 	}
 	repo, _, _ := strings.Cut(DefaultTrivyImage, ":")
-	return repo + ":" + strings.TrimPrefix(v, "v"), nil
+	ref := repo + ":" + strings.TrimPrefix(v, "v")
+	if ref == DefaultTrivyImage {
+		return pinnedTrivyImage, nil
+	}
+	return ref, nil
 }
 
 const (

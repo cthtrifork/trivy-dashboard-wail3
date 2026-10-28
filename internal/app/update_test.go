@@ -3,6 +3,8 @@ package app
 import (
 	"strings"
 	"testing"
+
+	"github.com/cthtrifork/trivy-dashboard-wail3/internal/selfupdate"
 )
 
 // A build that does not identify as a release must never be able to replace itself:
@@ -29,5 +31,16 @@ func TestNonReleaseBuildsCannotUpdate(t *testing.T) {
 				t.Errorf("version %q: %s() = %v, want the reason it is disabled", v, name, err)
 			}
 		}
+	}
+}
+
+// A build with no update signing key (the repository before docs/releasing.md is followed) must have no
+// release feed at all, not fall back to unsigned releases.
+func TestNoUpdateProviderWithoutSigningKey(t *testing.T) {
+	if _, err := selfupdate.SigningKey(); err == nil {
+		t.Skip("a signing key is committed")
+	}
+	if p, err := newUpdateProvider(); err == nil || p != nil || !strings.Contains(err.Error(), "signing key") {
+		t.Errorf("newUpdateProvider() = %v, %v", p, err)
 	}
 }

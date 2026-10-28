@@ -3,7 +3,7 @@ name: Release
 # Publishes a GitHub release (and the headless container image on ghcr.io) with a Linux amd64 binary, a tarball, a .deb and an .rpm (PGP-signed,
 # with the public key published alongside), SHA256SUMS, a CycloneDX SBOM and signed attestations
 # (build provenance for the binary, tarball, packages and SBOM; the SBOM bound to the binary). The
-# in-app updater installs the raw binary and verifies it against SHA256SUMS, so those names are an interface. Three ways to run it:
+# in-app updater installs the raw binary and verifies it against SHA256SUMS and its Ed25519 .sig, so those names are an interface. Three ways to run it:
 #   - the "Tag and release" workflow creates a tag and calls this one (workflow_call). This is the
 #     normal route. It has to call rather than rely on the tag push below, because a tag pushed with
 #     the workflow's own GITHUB_TOKEN does not trigger other workflows.
@@ -147,6 +147,32 @@ jobs:
           # The layout matters: see scripts/package-release.sh and internal/selfupdate.
           scripts/package-release.sh "$built" "${VERSION}" dist
 
+      # The in-app updater only installs a binary signed with the update signing key (an Ed25519 key,
+      # not the PGP key of the packages): the SHA256SUMS next to the binary comes from the same
+      # release, so it proves nothing about who published it. The key is in RELEASE_UPDATE_SIGNING_KEY
+      # and the matching public key is compiled into the app (internal/selfupdate). A release fails
+      # without the key, and verifies its own signature with the committed public key before it is
+      # published, so a key that does not match the one in the app cannot ship. A dry run on a branch
+      # skips signing. See docs/releasing.md.
+      - name: Sign the binary for the in-app updater
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+          PUBLISH: ${{ steps.meta.outputs.publish }}
+          UPDATE_KEY: ${{ secrets.RELEASE_UPDATE_SIGNING_KEY }}
+        run: |
+          if [ -z "$UPDATE_KEY" ]; then
+            if [ "$PUBLISH" = true ]; then
+              echo "::error::RELEASE_UPDATE_SIGNING_KEY is not set, so the binary cannot be signed for the in-app updater (see docs/releasing.md)"; exit 1
+            fi
+            echo "::warning::RELEASE_UPDATE_SIGNING_KEY is not set: the binary in this dry run is unsigned"
+            exit 0
+          fi
+          keydir="$(mktemp -d)"
+          trap 'rm -rf "$keydir"' EXIT
+          (umask 077; printf '%s\n' "$UPDATE_KEY" > "$keydir/private.pem")
+          scripts/sign-update.sh sign "dist/${APP}_linux_amd64" "$VERSION" "$keydir/private.pem"
+          scripts/sign-update.sh verify "dist/${APP}_linux_amd64" "$VERSION" internal/selfupdate/update-signing-key.pub
+
       # The .deb and .rpm come from the same binary, via `wails3 tool package` (nfpm) and
       # build/linux/nfpm/nfpm.yaml, which also installs the .desktop file and icons. A release is
       # signed with the PGP key in the RELEASE_GPG_* secrets and fails without it; a dry run on a
@@ -200,7 +226,7 @@ jobs:
           # SHA256SUMS lists every asset, so regenerate it with the SBOM included.
           (cd dist && sha256sum "${APP}_linux_amd64" "${APP}_${VERSION}_linux_amd64.tar.gz" \
             "${APP}_${VERSION}_amd64.deb" "${APP}_${VERSION}_x86_64.rpm" \
-            "${APP}_${VERSION}.sbom.cdx.json" $(ls "${APP}-release-key.asc" 2>/dev/null) > SHA256SUMS)
+            "${APP}_${VERSION}.sbom.cdx.json" $(ls "${APP}-release-key.asc" "${APP}_linux_amd64.sig" 2>/dev/null) > SHA256SUMS)
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
