@@ -1,10 +1,10 @@
 <script setup>
 import JsonBox from "./JsonBox.vue";
+import { copyText } from "../lib/clipboard.js";
 import { computed, reactive, ref, watch } from "vue";
 import { ScanService, result, vex, loadVEX, errText, lsGet, lsSet, KEYS } from "../store.js";
 
 const dlg = ref(null);
-const preview = ref(null);
 const form = reactive({ author: lsGet(KEYS.vexAuthor), onlyCurrent: false });
 const text = ref("");
 const msg = ref("");
@@ -75,12 +75,7 @@ async function markAll() {
 }
 
 async function copy() {
-  try {
-    await navigator.clipboard.writeText(text.value);
-  } catch {
-    preview.value.select();
-    document.execCommand("copy");
-  }
+  await copyText(text.value);
   msg.value = "Copied.";
 }
 
@@ -128,7 +123,7 @@ defineExpose({ open });
     <label class="chk"
       ><input id="vex-only-current" v-model="form.onlyCurrent" type="checkbox" /> Leave out statements that no longer match a finding ({{ stale }})</label
     >
-    <JsonBox ta-id="vex-preview" ref="preview" :model-value="text" readonly :rows="14" />
+    <JsonBox ta-id="vex-preview" :model-value="text" readonly :rows="14" />
     <div id="vex-msg" class="kv">{{ msg }}</div>
     <div class="dlg-actions">
       <button type="button" class="ghost" id="vex-copy" @click="copy">Copy</button>
