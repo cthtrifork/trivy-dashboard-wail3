@@ -131,6 +131,9 @@ dialog.drawer[open] {
   padding: 4px 8px;
   min-width: 0;
 }
+.glance-facts .wide {
+  grid-column: 1 / -1;
+}
 .glance-facts span {
   display: block;
   font-size: 11px;
