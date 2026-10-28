@@ -16,7 +16,6 @@ export const KEYS = {
   rules: "score-rules",
   presets: "score-presets",
   trivyImage: "trivy-image",
-  trivyLastUsed: "trivy-last-used",
   ignorePolicy: "ignore-policy",
   ignoreFile: "ignore-file",
   image: "image",
@@ -315,23 +314,17 @@ export const ensureTags = tagLoader(repoTags);
 const loadTrivyTags = tagLoader(trivyTags);
 // ensureTrivyTags loads the tags of the default Trivy repository for the version picker.
 export const ensureTrivyTags = () => loadTrivyTags((mode.value?.trivyImage || "docker.io/aquasec/trivy").split(":")[0]);
-// trivyNewest is the first tag: ListTags sorts plain versions first, newest first, so it is the newest
-// release ("0.76.1") and not the floating "latest". Empty until the lookup succeeds.
-export const trivyNewest = computed(() => trivyTags.value[0] || "");
-// The field is never left empty: it starts with the pinned default version and switches to the newest
-// one once that is known, as long as the user has not chosen a version. Neither is saved until the user
-// edits the field, so the default keeps following.
+// The field starts with the version of the pinned default image, which the backend runs by tag and
+// digest (the digest is added there, see ResolveTrivyImage). The picker lists what the registry offers,
+// but picking another version is the user's choice and is run by plain tag. The default is not saved
+// until the user edits the field, so it follows the Renovate-managed pin.
 let trivyAuto = "";
 function setTrivyDefault(v) {
-  if (v && (!opts.trivyImage.trim() || opts.trivyImage === trivyAuto)) opts.trivyImage = trivyAuto = v;
+  if (v && !opts.trivyImage.trim()) opts.trivyImage = trivyAuto = v;
 }
-watch(trivyNewest, setTrivyDefault);
-// trivyImageSetting is what scans send: the user's choice, else the newest version found, else
-// empty so the backend falls back to its Renovate-managed default.
-export const trivyImageSetting = computed(() => opts.trivyImage.trim() || trivyNewest.value);
-// The version of the last successful scan or comparison. When the newest version cannot be looked up
-// (offline), this is the default instead of the pinned one: podman is known to have its image.
-export const rememberTrivyVersion = (v) => v && lsSet(KEYS.trivyLastUsed, v);
+// trivyImageSetting is what scans send: the user's choice, else empty so the backend falls back to
+// its pinned default.
+export const trivyImageSetting = computed(() => opts.trivyImage.trim());
 
 function enterSplit(repo, tag) {
   if (!repo) return;
@@ -447,7 +440,6 @@ export async function runScan() {
     });
     result.value = r;
     scannedSettings.value = settings;
-    rememberTrivyVersion(trivyVersion);
     persistScan(r);
     addRecent(image.value.trim(), r);
     rerank();
@@ -514,15 +506,14 @@ export function init() {
   ScanService.Mode().then(
     (m) => {
       mode.value = m;
-      setTrivyDefault(lsGet(KEYS.trivyLastUsed) || m.trivyImage.split(":").pop());
-      ensureTrivyTags(); // so the default can be the newest version
+      setTrivyDefault(m.trivyImage.split(":").pop());
+      ensureTrivyTags(); // so the picker lists the available versions
       if (!m.fixtures) return;
       if (!image.value) image.value = m.image;
       if (!cmpForm.b) cmpForm.b = m.tagB;
     },
     (err) => {
       // Scans still work (the backend falls back to its pinned Trivy), but say why the defaults are missing.
-      setTrivyDefault(lsGet(KEYS.trivyLastUsed));
       ensureTrivyTags();
       setStatus("Could not read the app mode: " + errText(err), { err: true });
     },

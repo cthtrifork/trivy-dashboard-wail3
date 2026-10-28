@@ -4,7 +4,7 @@ What the app sends over the network, when, and what happens offline. There are n
 
 | When | Network activity | If offline |
 |---|---|---|
-| App start | `podman search --list-tags` on `docker.io/aquasec/trivy`. It fills the Trivy version picker and sets the field to the newest version. | The list is empty. The field keeps the version of the last successful scan, or the pinned default (`DefaultTrivyImage`) if nothing has scanned yet. |
+| App start | `podman search --list-tags` on `docker.io/aquasec/trivy`. It fills the Trivy version picker; the field itself starts at the pinned default (`DefaultTrivyImage`). | The list is empty; a version can still be typed. |
 | Opening the image tag field (split view) | `podman search --list-tags` on that image's repository, once per repository. | The list is empty; a tag can still be typed. |
 | First scan of a session | `trivy image --download-db-only` from `DefaultDBRepository` (`ghcr.io/aquasecurity/trivy-db:2`) or the `TRIVY_DB_REPOSITORY` mirror. Trivy downloads only if the cached DB is out of date. Podman first pulls the Trivy image if it is not local. | A warning is logged and the cached DB is used; the check is retried on the next scan. The scan fails if the Trivy image is not local. |
 | Every scan | Trivy fetches the target image from its registry, in two runs (vulnerabilities, then SBOM). | Expected to fail: the container has no podman socket, so it needs the registry. |
@@ -18,6 +18,6 @@ What the app sends over the network, when, and what happens offline. There are n
 
 - **The DB is checked once per session** (one run of the app) when it succeeds. A failed check is retried on every scan until one succeeds. Changing the Trivy version does not trigger a check. Scans run with `--skip-db-update`. See [`architecture.md`](architecture.md#vulnerability-db).
 - **Nothing at startup** touches the vulnerability DB, EPSS, KEV or GitHub.
-- **The default Trivy version** is the newest plain version found by the startup lookup, else the last successful one, else the pinned constant. It is only saved once you edit the field, so an offline start reuses an image podman already has.
+- **The default Trivy version** is the pinned constant, run by tag and digest. The startup lookup only fills the picker. A version you pick is saved once you edit the field and runs by plain tag.
 - **Offline with an earlier scan:** the last result is restored from browser storage, so it can be viewed. VEX, rescoring and presets are local. Scanning again needs the registry.
 - **Mirrors and proxies:** `TRIVY_DB_REPOSITORY`, `TRIVY_JAVA_DB_REPOSITORY`, `TRIVY_SCANNER_EPSS_URL`, `TRIVY_SCANNER_KEV_URL`, `HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY` and `TRIVY_SCANNER_CA_BUNDLE` redirect or secure these calls; see [`architecture.md`](architecture.md#vulnerability-db) and the help dialog.

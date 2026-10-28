@@ -10,7 +10,6 @@ import {
   repoTags,
   ensureTags,
   trivyImageSetting,
-  rememberTrivyVersion,
   compareData as data,
   scanning,
   comparing,
@@ -62,7 +61,6 @@ async function run() {
   setStatus("Scanning both images…", { busy: true });
   try {
     data.value = await ScanService.Compare(req);
-    rememberTrivyVersion(req.trivyImage);
     setStatus("Comparison complete.");
   } catch (err) {
     setStatus(errText(err), { err: true });

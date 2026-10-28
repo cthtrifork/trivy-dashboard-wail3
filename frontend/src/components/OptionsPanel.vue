@@ -5,7 +5,6 @@ import {
   opts,
   trivyImageSetting,
   trivyTags,
-  trivyNewest,
   ensureTrivyTags,
   saveTrivyImage,
   loadIgnorePolicyFile,
@@ -25,7 +24,7 @@ import TagInput from "./TagInput.vue";
 
 // The Options popover: tabs for what findings to show, where the scan gets credentials and ignore rules,
 // the Trivy version and database, and app updates.
-const trivyPlaceholder = computed(() => trivyNewest.value || mode.value?.trivyImage?.split(":").pop() || "Trivy version");
+const trivyPlaceholder = computed(() => mode.value?.trivyImage?.split(":").pop() || "Trivy version");
 // What the Options popover shows without opening a section.
 const activeCount = computed(
   () => [opts.ignoreUnfixed, opts.showSuppressed].filter(Boolean).length + opts.ignoreStatus.length,
