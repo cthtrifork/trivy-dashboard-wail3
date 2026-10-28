@@ -172,7 +172,7 @@ async function updateStep(busyMsg, run) {
   }
 }
 
-// The DB is checked once per session; this checks again now. Trivy downloads only if the cached one is out of date.
+// The DB is checked once after startup; this checks again now. Trivy downloads only if the cached one is out of date.
 const updateDB = () =>
   updateStep("Updating the vulnerability database…", async () => {
     dbBusy.value = true;
@@ -352,7 +352,7 @@ onMounted(() => {
                   />
               <div class="opts-label">Vulnerability database</div>
               <div class="opts-row-plain">
-                <span class="kv">Checked automatically before the first scan of a session. Update it here to get the latest data right away.</span>
+                <span class="kv">Checked automatically before the first scan after startup. Update it here to get the latest data right away.</span>
                 <button
                   type="button"
                   class="ghost"
