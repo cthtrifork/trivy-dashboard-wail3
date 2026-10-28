@@ -15,7 +15,26 @@ your machine                          server (podman only)
                                     └───────────────────────────────────────────┘
 ```
 
-## One-time setup
+## Quick start: the published image
+
+Every release publishes the image to `ghcr.io/cthtrifork/trivy-dashboard-wail3` (tags `latest`, `1.2.3`, `v1.2.3`). No clone or build needed:
+
+```sh
+# 1. Let the app talk to the server's podman through its API socket (rootless).
+systemctl --user enable --now podman.socket
+sudo loginctl enable-linger "$USER"
+
+# 2. Run it (pin a version such as :1.2.3 instead of :latest for reproducible deployments).
+podman run -d --name trivy-scanner --restart unless-stopped \
+  --network host --security-opt label=disable \
+  -v "$XDG_RUNTIME_DIR/podman/podman.sock:/run/podman/podman.sock" \
+  -v trivy-scanner-data:/data \
+  ghcr.io/cthtrifork/trivy-dashboard-wail3:latest
+```
+
+Then open the SSH tunnel as described below. To update: `podman pull ghcr.io/cthtrifork/trivy-dashboard-wail3:latest`, `podman rm -f trivy-scanner`, and repeat the `podman run`. If the package is private, `podman login ghcr.io` first with a token that has `read:packages`.
+
+## One-time setup (build from source)
 
 ```sh
 # 1. Let the app talk to the server's podman through its API socket (rootless).

@@ -1,6 +1,6 @@
 name: Release
 
-# Publishes a GitHub release with a Linux amd64 binary, a tarball, a .deb and an .rpm (PGP-signed,
+# Publishes a GitHub release (and the headless container image on ghcr.io) with a Linux amd64 binary, a tarball, a .deb and an .rpm (PGP-signed,
 # with the public key published alongside), SHA256SUMS, a CycloneDX SBOM and signed attestations
 # (build provenance for the binary, tarball, packages and SBOM; the SBOM bound to the binary). The
 # in-app updater installs the raw binary and verifies it against SHA256SUMS, so those names are an interface. Three ways to run it:
@@ -266,3 +266,64 @@ jobs:
           flags=(--verify-tag --generate-notes --title "$TAG")
           [ "$PRERELEASE" = "true" ] && flags+=(--prerelease)
           gh release create "$TAG" dist/* "${flags[@]}"
+
+  # The headless image (build/docker/headless.Dockerfile, docs/headless.md) goes out with the other
+  # release artifacts: only for a tagged release, never from a branch push, and only after the
+  # binary build has passed vet, tests and govulncheck.
+  image:
+    name: publish headless image
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write # push to ghcr.io
+      id-token: write # sign the provenance attestation
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # Tags: 1.2.3 and v1.2.3, plus latest for a final release (not for a pre-release).
+      - name: Image tags and labels
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.build.outputs.version }}
+            type=raw,value=${{ needs.build.outputs.version }}
+            type=raw,value=latest,enable=${{ needs.build.outputs.prerelease == 'false' }}
+          labels: |
+            org.opencontainers.image.title=Trivy Scanner (headless)
+            org.opencontainers.image.version=${{ needs.build.outputs.version }}
+
+      - name: Build and push
+        id: push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: build/docker/headless.Dockerfile
+          build-args: VERSION=${{ needs.build.outputs.version }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Attest image provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
