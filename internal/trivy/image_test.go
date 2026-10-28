@@ -11,7 +11,7 @@ func TestDefaultTrivyImageIsPinned(t *testing.T) {
 	if !ok || repo != defaultTrivyRepo {
 		t.Fatalf("default image = %q", img)
 	}
-	if tag == "latest" || !bareVersion.MatchString(tag) {
+	if tag == "latest" || !isBareVersion(tag) {
 		t.Errorf("default must be a pinned version, got tag %q", tag)
 	}
 }
@@ -22,6 +22,7 @@ func TestResolveTrivyImage(t *testing.T) {
 		"":                                  def,
 		"  ":                                def,
 		"0.77.0":                            "docker.io/aquasec/trivy:0.77.0",
+		"nginx":                             "nginx",
 		"v0.77.0":                           "docker.io/aquasec/trivy:0.77.0",
 		"registry.local/mirror/trivy:0.7":   "registry.local/mirror/trivy:0.7",
 		"docker.io/aquasec/trivy@sha256:ab": "docker.io/aquasec/trivy@sha256:ab",

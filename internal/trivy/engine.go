@@ -12,13 +12,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"slices"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/aquasecurity/go-version/pkg/version"
 	"github.com/caarlos0/env/v11"
 )
 
@@ -34,7 +34,16 @@ const defaultTrivyImage = "docker.io/aquasec/trivy:0.76.1"
 // DefaultTrivyImage is the Trivy image used when the "Trivy image" setting is empty.
 func DefaultTrivyImage() string { return defaultTrivyImage }
 
-var bareVersion = regexp.MustCompile(`^v?[0-9][0-9A-Za-z.+_-]*$`)
+// isBareVersion reports whether v is just a version ("0.77.0", "v0.77.0"), not an image reference.
+// A name such as "nginx" is not a version, and anything with a registry, path, tag or digest
+// separator is a reference.
+func isBareVersion(v string) bool {
+	if strings.ContainsAny(v, "/:@") {
+		return false
+	}
+	_, err := version.Parse(strings.TrimPrefix(v, "v"))
+	return err == nil
+}
 
 // ResolveTrivyImage turns the "Trivy image" setting into an image reference: empty means the
 // default, a bare version ("0.77.0", "v0.77.0") means that tag of the default repository, and
@@ -46,7 +55,7 @@ func ResolveTrivyImage(v string) (string, error) {
 		return DefaultTrivyImage(), nil
 	case strings.HasPrefix(v, "-") || strings.ContainsAny(v, " \t\r\n"):
 		return "", fmt.Errorf("%q is not a valid Trivy image", v)
-	case bareVersion.MatchString(v):
+	case isBareVersion(v):
 		return defaultTrivyRepo + ":" + strings.TrimPrefix(v, "v"), nil
 	}
 	return v, nil
