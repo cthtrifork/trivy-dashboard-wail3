@@ -270,13 +270,15 @@ export function VEXList(image) {
 
 /**
  * VEXMarkUnassessed marks every finding of the latest scan that has no
- * assessment as under_investigation and returns how many it marked.
+ * assessment as under_investigation and returns how many it marked. A
+ * non-empty minSeverity limits that to findings of that severity or worse.
  * @param {string} image
  * @param {string} author
+ * @param {string} minSeverity
  * @returns {$CancellablePromise<number>}
  */
-export function VEXMarkUnassessed(image, author) {
-    return $Call.ByID(2268542789, image, author);
+export function VEXMarkUnassessed(image, author, minSeverity) {
+    return $Call.ByID(2268542789, image, author, minSeverity);
 }
 
 /**

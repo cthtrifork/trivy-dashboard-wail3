@@ -14,7 +14,15 @@ const error = ref("");
 // What the last import did, one line per event, newest import only.
 const report = ref(null);
 
-const findingCount = computed(() => new Set((result.value?.vulnerabilities ?? []).map((v) => v.key)).size);
+// Generate: how many findings the chosen severity limit covers.
+const genSeverity = ref("");
+const SEV_RANK = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+const findingCount = computed(() => {
+  const min = SEV_RANK[genSeverity.value] ?? 0;
+  const keys = new Set();
+  for (const v of result.value?.vulnerabilities ?? []) if ((SEV_RANK[v.severity] ?? 0) >= min) keys.add(v.key);
+  return keys.size;
+});
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
@@ -77,7 +85,7 @@ async function generate() {
   busy.value = true;
   error.value = "";
   try {
-    await ScanService.VEXMarkUnassessed(result.value.image, lsGet(KEYS.vexAuthor));
+    await ScanService.VEXMarkUnassessed(result.value.image, lsGet(KEYS.vexAuthor), genSeverity.value);
     await loadVEX();
     dlg.value.close();
     emit("generated");
@@ -136,10 +144,19 @@ defineExpose({ open });
         </li>
       </ul>
     </div>
-    <div v-if="!vex.size" id="vex-generate" class="vex-generate">
-      <span class="kv">No VEX file yet? Start one from the {{ findingCount }} findings of this scan.</span>
-      <button type="button" id="vex-generate-btn" :disabled="busy || !findingCount" @click="generate">Generate…</button>
-    </div>
     <div class="dlg-actions"><button type="button" class="ghost" id="vex-import-close" @click="dlg.close()">Close</button></div>
+    <div v-if="!vex.size" id="vex-generate" class="vex-generate">
+      <span class="kv">No VEX file yet? Generate one from this scan.</span>
+      <span class="vex-generate-ctl">
+        <select id="vex-generate-min" v-model="genSeverity" aria-label="Findings to include">
+          <option value="">All findings ({{ findingCount }})</option>
+          <option value="CRITICAL">Critical</option>
+          <option value="HIGH">High and above</option>
+          <option value="MEDIUM">Medium and above</option>
+          <option value="LOW">Low and above</option>
+        </select>
+        <button type="button" id="vex-generate-btn" :disabled="busy || !findingCount" @click="generate">Generate…</button>
+      </span>
+    </div>
   </dialog>
 </template>

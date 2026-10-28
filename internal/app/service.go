@@ -410,15 +410,16 @@ func (s *ScanService) VEXImport(image, doc string, markRest bool, minSeverity st
 }
 
 // VEXMarkUnassessed marks every finding of the latest scan that has no
-// assessment as under_investigation and returns how many it marked.
-func (s *ScanService) VEXMarkUnassessed(image, author string) (int, error) {
+// assessment as under_investigation and returns how many it marked. A
+// non-empty minSeverity limits that to findings of that severity or worse.
+func (s *ScanService) VEXMarkUnassessed(image, author, minSeverity string) (int, error) {
 	s.mu.Lock()
 	findings := s.found[trivy.ImageRepo(image)]
 	s.mu.Unlock()
 	if len(findings) == 0 {
 		return 0, errors.New("scan the image first")
 	}
-	return s.vex.MarkUnassessed(image, findings, author, "")
+	return s.vex.MarkUnassessed(image, findings, author, minSeverity)
 }
 
 // VEXSave exports the document through a native save dialog. It returns the

@@ -65,7 +65,7 @@ async function open() {
 // Cover every finding that has no assessment yet, so nothing is silently missing from the export.
 async function markAll() {
   try {
-    const n = await ScanService.VEXMarkUnassessed(result.value.image, form.author);
+    const n = await ScanService.VEXMarkUnassessed(result.value.image, form.author, "");
     await loadVEX();
     await refresh();
     msg.value = n ? `Marked ${n} finding${n === 1 ? "" : "s"} as under investigation.` : "Every finding already has an assessment.";
