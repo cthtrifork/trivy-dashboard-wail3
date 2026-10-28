@@ -294,6 +294,15 @@ export function setTag(tag) {
   image.value = joinRef(imageRepo.value, tag);
 }
 
+// scanState tells the three situations apart: "new" (nothing scanned), "current" (the shown results are
+// for exactly this input, so Scan is a rescan, e.g. for a floating tag) and "changed" (edited since, not scanned).
+const sameRef = (a, b) => {
+  const x = splitRef(a),
+    y = splitRef(b);
+  return joinRef(x.repo, x.tag) === joinRef(y.repo, y.tag);
+};
+export const scanState = computed(() => (!result.value ? "new" : sameRef(result.value.image, image.value) ? "current" : "changed"));
+
 // clearAll empties the shown findings and goes back to the single image box (which keeps the reference).
 export function clearAll() {
   split.value = false;

@@ -14,6 +14,7 @@ import {
   ensureTags,
   setTag,
   clearAll,
+  scanState,
   opts,
   saveTrivyImage,
   saveIgnorePolicy,
@@ -286,6 +287,7 @@ onMounted(() => {
             :model-value="imageTag"
             :tags="repoTags"
             :disabled="scanning"
+            :class="{ changed: scanState === 'changed' }"
             @update:model-value="setTag"
             @open="ensureTags(imageRepo)"
           />
@@ -332,7 +334,15 @@ onMounted(() => {
             <div class="recent-hint" aria-hidden="true">↑↓ to choose · Enter to rescan · Tab to fill the field</div>
           </div>
         </div>
-        <button id="scan-btn" type="submit" :disabled="scanning">Scan</button>
+        <button
+          id="scan-btn"
+          type="submit"
+          :class="{ rescan: scanState === 'current' }"
+          :disabled="scanning"
+          :title="scanState === 'current' ? 'Scan this image again, e.g. when a floating tag has moved' : ''"
+        >
+          {{ scanState === "current" ? "Rescan" : "Scan" }}
+        </button>
         <div id="vex-split" :class="{ solo: !vex.size }">
           <button
             v-if="vex.size"
@@ -365,6 +375,10 @@ onMounted(() => {
         </div>
         <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
       </div>
+      <p v-if="split && !scanning && scanState !== 'new'" id="scan-state" :class="scanState" role="status">
+        <template v-if="scanState === 'current'">✓ Showing the scan of {{ result.image }}. Rescan to check it again.</template>
+        <template v-else>● Not scanned yet: the results below are for {{ result.image }}. Press Scan for {{ image }}.</template>
+      </p>
     </form>
     <button id="help-btn" type="button" class="ghost" title="Glossary and app configuration" aria-label="Help" @click="helpDialog.open()">
       ?
