@@ -6,7 +6,8 @@ import { basicSetup } from "codemirror";
 import { yaml } from "@codemirror/lang-yaml";
 import { syntaxHighlighting } from "@codemirror/language";
 import { setDiagnostics } from "@codemirror/lint";
-import { highlight, rego, theme } from "../lib/codemirror.js";
+import { rego } from "codemirror-lang-rego";
+import { highlight, theme } from "../lib/codemirror.js";
 
 // An editable YAML or Rego box (CodeMirror 6) with syntax highlighting. `error` is the message the Go side
 // found for the text; the box underlines the line it names (or the first line of code when it names none).
@@ -51,7 +52,7 @@ function showError() {
 onMounted(() => {
   const extensions = [
     basicSetup,
-    props.language === "rego" ? rego : yaml(),
+    props.language === "rego" ? rego() : yaml(),
     syntaxHighlighting(highlight),
     theme,
     EditorView.contentAttributes.of({ "aria-label": props.taId || props.language }),
