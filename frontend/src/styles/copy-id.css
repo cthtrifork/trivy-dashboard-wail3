@@ -54,3 +54,8 @@
 .copy-tip:empty {
   display: none;
 }
+/* .psub aligns on baselines and spaces items by 10px; centre the icon and pull it next to the id. */
+.psub .copy-id {
+  align-self: center;
+  margin-left: -6px;
+}
