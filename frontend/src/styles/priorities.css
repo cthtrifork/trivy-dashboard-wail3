@@ -433,3 +433,25 @@
 .pwhere > p {
   margin: 6px 0 0;
 }
+.pgroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  background: var(--bg);
+  color: var(--text);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  padding: 8px 12px;
+}
+.pgroup-caret {
+  color: var(--mute);
+  font-size: 10px;
+}
+.pgroup-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
