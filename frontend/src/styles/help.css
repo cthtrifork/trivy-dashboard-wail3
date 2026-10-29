@@ -293,26 +293,72 @@
   border-radius: 8px;
 }
 
-/* Current behaviour tiles */
-.htiles {
+/* Collapsed config sections: a one-line summary that opens to the full content */
+.hsum {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-  padding-bottom: 3px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 3px 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
-.htile {
+.hsum.split {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.hsum:hover .htoggle {
+  text-decoration: underline;
+}
+.hsum + dl,
+.hsum + h5 {
+  margin-top: 6px;
+}
+.htoggle {
+  flex: none;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Quick-reference legends above a group: the severity buckets and the priority tiers */
+.hsev {
   display: flex;
-  flex-direction: column;
-  padding: 4px 10px;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.hsev span {
+  flex: 1;
+  padding: 3px 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.hladder {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.hladder span {
+  padding: 3px 10px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
+  font-weight: 600;
 }
-.htile span {
-  color: var(--mute);
-  font-size: 11.5px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+.hladder span:nth-child(1) {
+  border-color: var(--CRITICAL);
+}
+.hladder span:nth-child(2) {
+  border-color: var(--HIGH);
 }
 
 /* Code-led tables: flags, paths, environment variables */

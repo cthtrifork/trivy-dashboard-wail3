@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { ScanService, mode, errText } from "../store.js";
 
 const dlg = ref(null);
@@ -14,6 +14,7 @@ const glossary = [
     title: "How bad is it?",
     caption: "Vulnerability data",
     format: "table",
+    legend: "severity",
     items: [
       ["CVE", "Common Vulnerabilities and Exposures: the public ID (CVE-YYYY-NNNN) of one known security flaw."],
       [
@@ -31,6 +32,7 @@ const glossary = [
     title: "What to fix first?",
     caption: "Prioritisation signals",
     format: "cards",
+    legend: "tiers",
     items: [
       [
         "KEV",
@@ -101,6 +103,10 @@ const glossary = [
   },
 ];
 
+// Quick-reference legends above two groups; the full text stays in the group below them.
+const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
+const TIERS = ["Act now", "Fix soon", "Plan", "Monitor"];
+
 // What every scan passes to `trivy image` (see internal/trivy). The Options menu toggles the last three.
 const trivyFlags = [
   ["--scanners vuln", "Vulnerabilities only; the SBOM is a separate CycloneDX run."],
@@ -142,17 +148,27 @@ const behaviour = computed(() =>
 const runsFrom = computed(() => (cfg.value?.paths ?? []).filter((p) => !p.note));
 const keeps = computed(() => (cfg.value?.paths ?? []).filter((p) => p.note));
 
+// Variables that are set show up front; the others sit behind "Show" and are grouped by what they control.
+const envSet = computed(() => (cfg.value?.env ?? []).filter((e) => e.set));
+const envUnset = computed(() => (cfg.value?.env ?? []).filter((e) => !e.set));
+
 const envGroups = computed(() => {
-  const byName = new Map((cfg.value?.env ?? []).map((e) => [e.name, e]));
+  const byName = new Map(envUnset.value.map((e) => [e.name, e]));
   const groups = ENV_GROUPS.map(([title, format, names]) => ({
     title,
     format,
     vars: names.map((n) => byName.get(n)).filter(Boolean),
   }));
   const listed = new Set(ENV_GROUPS.flatMap(([, , names]) => names));
-  groups.push({ title: "Other", format: "list", vars: (cfg.value?.env ?? []).filter((e) => !listed.has(e.name)) });
+  groups.push({ title: "Other", format: "list", vars: envUnset.value.filter((e) => !listed.has(e.name)) });
   return groups.filter((g) => g.vars.length);
 });
+
+// Config sections start collapsed; each one opens to its full content.
+const opened = reactive({ flags: false, files: false, env: false });
+const toggle = (key) => {
+  opened[key] = !opened[key];
+};
 
 // Resolved by the Go side each time, so it reflects this process's real environment.
 async function load() {
@@ -178,6 +194,7 @@ function open() {
   dlg.value.showModal();
   body.value.scrollTop = 0;
   section.value = "glossary";
+  Object.assign(opened, { flags: false, files: false, env: false });
   load();
 }
 defineExpose({ open });
@@ -201,6 +218,12 @@ defineExpose({ open });
             <small v-if="g.caption">{{ g.caption }}</small>
           </header>
           <div class="hbody">
+            <div v-if="g.legend === 'severity'" class="hsev" aria-hidden="true">
+              <span v-for="sev in SEVERITIES" :key="sev" :style="{ background: `var(--${sev})`, color: `var(--on-${sev})` }">{{ sev }}</span>
+            </div>
+            <div v-else-if="g.legend === 'tiers'" class="hladder" aria-hidden="true">
+              <span v-for="t in TIERS" :key="t">{{ t }}</span>
+            </div>
             <dl v-if="g.format === 'table'" class="htable">
               <template v-for="[term, def] in g.items" :key="term">
                 <dt>{{ term }}</dt>
@@ -249,21 +272,28 @@ defineExpose({ open });
               <b>Current behaviour</b>
               <small>App config</small>
             </header>
-            <div class="hbody htiles">
-              <div v-for="[k, v] in behaviour" :key="k" class="htile">
-                <span>{{ k }}</span>
-                <b>{{ v }}</b>
-              </div>
+            <div class="hbody">
+              <dl class="htable">
+                <template v-for="[k, v] in behaviour" :key="k">
+                  <dt>{{ k }}</dt>
+                  <dd>{{ v }}</dd>
+                </template>
+              </dl>
             </div>
           </section>
 
           <section class="hgroup">
             <header>
               <b>Trivy flags</b>
-              <small>Passed on every scan</small>
+              <small>{{ trivyFlags.length }} flags</small>
             </header>
             <div class="hbody">
-              <dl class="hflags">
+              <button type="button" class="hsum" :aria-expanded="opened.flags" @click="toggle('flags')">
+                <span v-if="!opened.flags"><b>{{ everyScan.length }}</b> passed on every scan · <b>{{ optionFlags.length }}</b> changed in Options</span>
+                <span v-else class="kv">Passed on every scan</span>
+                <span class="htoggle">{{ opened.flags ? "Hide ▾" : "Show ▸" }}</span>
+              </button>
+              <dl v-if="opened.flags" class="hflags">
                 <template v-for="[flag, desc] in everyScan" :key="flag">
                   <dt>
                     <code>{{ flag }}</code>
@@ -274,7 +304,7 @@ defineExpose({ open });
             </div>
           </section>
 
-          <section class="hgroup">
+          <section v-if="opened.flags" class="hgroup">
             <header>
               <b>Changed in Options</b>
               <small>Trivy flags</small>
@@ -299,65 +329,97 @@ defineExpose({ open });
           <section class="hgroup">
             <header>
               <b>Files and locations (this machine)</b>
-              <small>App config</small>
+              <small>{{ runsFrom.length + keeps.length }} locations</small>
             </header>
             <div class="hbody">
-              <template v-if="runsFrom.length">
-                <h5 class="hsub">Where it runs</h5>
-                <dl class="hpaths">
-                  <template v-for="p in runsFrom" :key="p.label">
-                    <dt>{{ p.label }}</dt>
-                    <dd>
+              <button type="button" class="hsum" :aria-expanded="opened.files" @click="toggle('files')">
+                <span><b>Where it runs</b> {{ runsFrom.length }} · <b>Data it keeps</b> {{ keeps.length }}</span>
+                <span class="htoggle">{{ opened.files ? "Hide ▾" : "Show ▸" }}</span>
+              </button>
+              <template v-if="opened.files">
+                <template v-if="runsFrom.length">
+                  <h5 class="hsub">Where it runs</h5>
+                  <dl class="hpaths">
+                    <template v-for="p in runsFrom" :key="p.label">
+                      <dt>{{ p.label }}</dt>
+                      <dd>
+                        <code>{{ p.value }}</code>
+                      </dd>
+                    </template>
+                  </dl>
+                </template>
+                <template v-if="keeps.length">
+                  <h5 class="hsub">Data it keeps</h5>
+                  <div class="hcards one">
+                    <div v-for="p in keeps" :key="p.label" class="hcard">
+                      <h5>{{ p.label }}</h5>
                       <code>{{ p.value }}</code>
-                    </dd>
-                  </template>
-                </dl>
-              </template>
-              <template v-if="keeps.length">
-                <h5 class="hsub">Data it keeps</h5>
-                <div class="hcards one">
-                  <div v-for="p in keeps" :key="p.label" class="hcard">
-                    <h5>{{ p.label }}</h5>
-                    <code>{{ p.value }}</code>
-                    <div class="kv">{{ p.note }}</div>
+                      <div class="kv">{{ p.note }}</div>
+                    </div>
                   </div>
-                </div>
+                </template>
               </template>
             </div>
           </section>
 
-          <section v-for="g in envGroups" :key="g.title" class="hgroup">
+          <section class="hgroup">
             <header>
-              <b>{{ g.title }}</b>
-              <small>Environment variables</small>
+              <b>Environment variables</b>
+              <small>{{ envSet.length }} of {{ cfg.env.length }} set</small>
             </header>
             <div class="hbody">
-              <dl v-if="g.format === 'list'" class="henv">
-                <template v-for="e in g.vars" :key="e.name">
+              <dl v-if="envSet.length" class="henv">
+                <template v-for="e in envSet" :key="e.name">
                   <dt>
                     <code>{{ e.name }}</code>
                   </dt>
                   <dd>
-                    <span :class="['envstate', { on: e.set }]">{{ e.set ? "set" : "not set" }}</span>
-                    <code v-if="e.set && e.value"> {{ e.value }}</code>
+                    <span class="envstate on">set</span>
+                    <code v-if="e.value"> {{ e.value }}</code>
                     <div>{{ e.desc }}</div>
                     <div class="kv">Default: {{ e.default }}</div>
                   </dd>
                 </template>
               </dl>
-              <div v-else :class="['hcards', { three: g.format === 'cards3' }]">
-                <div v-for="e in g.vars" :key="e.name" class="hcard">
-                  <h5>
-                    <code>{{ e.name }}</code>
-                  </h5>
-                  <span :class="['envstate', { on: e.set }]">{{ e.set ? "set" : "not set" }}</span>
-                  <code v-if="e.set && e.value"> {{ e.value }}</code>
-                  <p>{{ e.desc }}</p>
-                  <div class="kv">Default: {{ e.default }}</div>
-                </div>
-              </div>
+              <button v-if="envUnset.length" type="button" :class="['hsum', { split: envSet.length }]" :aria-expanded="opened.env" @click="toggle('env')">
+                <span><b>{{ envUnset.length }}</b> not set, using their defaults</span>
+                <span class="htoggle">{{ opened.env ? "Hide ▾" : "Show ▸" }}</span>
+              </button>
             </div>
           </section>
+
+          <template v-if="opened.env">
+            <section v-for="g in envGroups" :key="g.title" class="hgroup">
+              <header>
+                <b>{{ g.title }}</b>
+                <small>Environment variables</small>
+              </header>
+              <div class="hbody">
+                <dl v-if="g.format === 'list'" class="henv">
+                  <template v-for="e in g.vars" :key="e.name">
+                    <dt>
+                      <code>{{ e.name }}</code>
+                    </dt>
+                    <dd>
+                      <span class="envstate">not set</span>
+                      <div>{{ e.desc }}</div>
+                      <div class="kv">Default: {{ e.default }}</div>
+                    </dd>
+                  </template>
+                </dl>
+                <div v-else :class="['hcards', { three: g.format === 'cards3' }]">
+                  <div v-for="e in g.vars" :key="e.name" class="hcard">
+                    <h5>
+                      <code>{{ e.name }}</code>
+                    </h5>
+                    <span class="envstate">not set</span>
+                    <p>{{ e.desc }}</p>
+                    <div class="kv">Default: {{ e.default }}</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </template>
         </template>
       </div>
     </div>

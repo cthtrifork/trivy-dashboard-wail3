@@ -276,6 +276,9 @@ if (views !== "deps") {
 if (views !== "deps") {
   await page.click("#help-btn");
   await page.waitForSelector("#help-config .hgroup");
+  // The config sections start collapsed: open them all so the image shows everything.
+  await page.evaluate(() => document.querySelectorAll("#help-config .hsum").forEach((b) => b.click()));
+  await page.waitForSelector("#help-config .hpaths");
   await page.evaluate(() => {
     const sample = {
       Executable: "/usr/local/bin/trivy-scanner",
