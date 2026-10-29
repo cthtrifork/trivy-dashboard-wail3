@@ -49,6 +49,16 @@ Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces 
 
 `actions-lint.yml` runs on changes under `.github/`, on `main` and weekly: zizmor (pedantic persona, installed from PyPI at the version pinned in the workflow) audits workflows and composite actions, and `gh pin-actions workflows --latest` re-pins every `uses:` in the workflows a PR adds or changes. The check fails on an unpinned action or one with a newer release. The tool pins immutable releases to the tag instead of the SHA; that is the same version, so it is not a failure.
 
+## Lighthouse
+
+`lighthouse.yml` audits the UI and fails when a score drops. `make lighthouse` (`scripts/lighthouse.sh`, `scripts/lighthouse.mjs`) builds the headless server app on recorded data (like the screenshots: no GTK, podman or network), runs Lighthouse for mobile and desktop three times each and takes the median, because a single run varies by a few points.
+
+- **Thresholds** (minimum median score): performance 90, accessibility 95, best practices 90, SEO 90, set in `scripts/lighthouse.mjs`. They sit below the measured values (95-100) so noise does not fail a PR, but a lost compression header or an eagerly loaded editor does.
+- **Where the result shows:** one sticky PR comment (marker `<!-- lighthouse-score -->`, updated on every push) and the job summary: a table of the four scores with the 🟢/🟠/🔴 bands Lighthouse uses (90 / 50), and a collapsed metrics table (FCP, LCP, TBT, CLS, Speed Index). The full HTML and JSON reports of the median run are the `lighthouse-reports` artifact (14 days). Fork PRs have a read-only token, so they get the job summary only. Pushes to `main` run the same audit with a job summary only.
+- **No third-party action:** Lighthouse runs through `npx lighthouse@<version>`, with the version pinned in the `Makefile` (`LIGHTHOUSE_VERSION`, kept current by the `# renovate:` comment). The browser is the runner's Google Chrome (`CHROME_PATH`).
+- **Not a required check:** it has a paths filter, like the screenshots workflow.
+- **What it does not cover:** only the landing page (no scan loaded). The audited build uses the dev-tag server build for the fixtures, which has the same frontend and asset middleware as the headless release but is not `-tags production`.
+
 ## Screenshots
 
 Screenshots are not committed from a feature branch, with one exception (the dependency graph, below). Every PR that rewrote the PNGs conflicted with every other one (git cannot merge binary files), so `screenshots.yml` renders them in CI instead:
