@@ -56,7 +56,8 @@
 .pseg button:last-child {
   border-right: 0;
 }
-.pseg button i {
+.pseg button i,
+.ptier i {
   width: 8px;
   height: 8px;
   border-radius: 2px;
@@ -74,9 +75,6 @@
 }
 #prio-list {
   gap: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
 }
 #prio-list > .kv,
 #prio-list > .empty {
@@ -88,15 +86,13 @@
   grid-template-columns: 92px 128px minmax(0, 1fr) 150px 90px;
   gap: 12px;
   align-items: center;
-  padding: 0 12px;
+  padding: 8px 12px;
 }
 .ptable-head {
   position: sticky;
   top: 0;
   z-index: 2; /* above the row links and tier pills, which sit at 1 */
   flex: none;
-  padding-top: 8px;
-  padding-bottom: 8px;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
   color: var(--mute);
@@ -117,8 +113,6 @@
 .prow-main {
   position: relative;
   min-height: 46px;
-  padding-top: 8px;
-  padding-bottom: 8px;
   cursor: pointer;
 }
 .prow-main:hover {
@@ -172,6 +166,7 @@
 .ptitle {
   font-weight: 600;
   overflow-wrap: anywhere;
+  margin: 2px 0 6px;
 }
 .pexpand {
   all: unset;
@@ -182,11 +177,6 @@
   content: "";
   position: absolute;
   inset: 0;
-}
-.psub .id,
-.ptier {
-  position: relative;
-  z-index: 1;
 }
 .pexpand:focus-visible {
   outline: 2px solid var(--accent);
@@ -200,22 +190,20 @@
   color: var(--mute);
 }
 .psub .id {
+  position: relative;
+  z-index: 1;
   color: var(--accent);
   font-family: ui-monospace, monospace;
   font-size: 12px;
 }
 .ptier {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
   font-weight: 600;
-}
-.ptier i {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: var(--c);
 }
 .pfix {
   color: var(--mute);
@@ -241,32 +229,6 @@
 .pdetail .pfoot {
   padding: 0;
   border-top: 0;
-}
-@media (max-width: 760px) {
-  .ptable-head {
-    display: none;
-  }
-  .prow-main {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 6px 12px;
-  }
-  .prow-main .pfind {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-  .prow-main .ptier,
-  .prow-main .pfix {
-    grid-column: 1 / -1;
-  }
-  .pdetail {
-    padding-left: 16px;
-  }
-  #prio-filters {
-    grid-template-columns: 1fr;
-  }
-  #prio-filters .ghost {
-    grid-column: 1;
-  }
 }
 .pmeans {
   background: var(--bg);
@@ -305,33 +267,6 @@
   font-weight: 600;
   font-size: 15px;
 }
-.chips {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin: 6px 0;
-}
-.chip {
-  font-size: 11px;
-  padding: 1px 8px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  color: var(--mute);
-}
-.chip.hot {
-  background: var(--CRITICAL);
-  border-color: var(--CRITICAL);
-  color: #fff;
-  font-weight: 600;
-}
-.chip.warm {
-  border-color: var(--HIGH);
-  color: var(--HIGH);
-}
-.chip.vex {
-  border-color: var(--accent);
-  color: var(--accent);
-}
 .attack {
   margin: 6px 0;
   line-height: 1.5;
@@ -358,10 +293,6 @@
   color: var(--CRITICAL);
   font-size: 12px;
 }
-.kv {
-  color: var(--mute);
-  font-size: 12px;
-}
 .sev.tier {
   min-width: 64px;
   text-align: center;
@@ -369,11 +300,6 @@
 .why .tierwhy {
   margin-top: 2px;
   color: var(--text);
-}
-
-.ptitle {
-  font-weight: 600;
-  margin: 2px 0 6px;
 }
 
 .rawvector {
@@ -487,4 +413,30 @@
 .sup.landed {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
+}
+@media (max-width: 760px) {
+  .ptable-head {
+    display: none;
+  }
+  .prow-main {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 6px 12px;
+  }
+  .prow-main .pfind {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .prow-main .ptier,
+  .prow-main .pfix {
+    grid-column: 1 / -1;
+  }
+  .pdetail {
+    padding-left: 16px;
+  }
+  #prio-filters {
+    grid-template-columns: 1fr;
+  }
+  #prio-filters .ghost {
+    grid-column: 1;
+  }
 }

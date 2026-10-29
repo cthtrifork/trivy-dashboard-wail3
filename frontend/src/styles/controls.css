@@ -1,4 +1,4 @@
-/* Shared controls: segmented switch, checkbox row, ghost button. */
+/* Shared controls: segmented switch, checkbox row, ghost button, file picker, code boxes, chips. */
 .seg {
   display: flex;
   border: 1px solid var(--line);
@@ -22,8 +22,74 @@
   color: var(--mute);
   white-space: nowrap;
 }
+/* Before .ghost on purpose: `ghost file-btn` labels take the ghost padding. */
+.file-btn {
+  position: relative;
+  align-self: flex-start;
+  padding: 5px 12px;
+  color: var(--accent);
+  font-size: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.file-btn:hover {
+  border-color: var(--accent);
+}
+.file-btn input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.file-btn:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .ghost {
   background: none;
   color: var(--accent);
   padding: 6px 8px;
+}
+/* The CodeMirror hosts: a fixed height of --rows lines. */
+.json-box,
+.code-box {
+  height: calc(var(--rows) * 1.45 * 13px + 14px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.chips,
+.ignore-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chips {
+  margin: 6px 0;
+}
+.chip {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  color: var(--mute);
+}
+.chip.hot {
+  background: var(--CRITICAL);
+  border-color: var(--CRITICAL);
+  color: #fff;
+  font-weight: 600;
+}
+.chip.warm {
+  border-color: var(--HIGH);
+  color: var(--HIGH);
+}
+.chip.vex {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.kv {
+  color: var(--mute);
+  font-size: 12px;
 }
