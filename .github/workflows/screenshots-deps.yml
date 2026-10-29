@@ -5,9 +5,8 @@ name: Screenshots (dependencies)
 # that changes the graph code renders it here and commits the images to its own branch, where the
 # author reviews them in the diff.
 #
-# The commit is pushed with GITHUB_TOKEN, so no workflow starts on it: CI does not run on that
-# commit and this workflow does not loop. Re-run CI (or push again) if a required check needs to
-# report on the new head. Only a push that changes the graph code renders again, so a later,
+# The commit is pushed with the Renovate GitHub App's token, so CI runs on it. This workflow does
+# not loop: the next run sees a push that changed no graph code. Only a push that changes the graph code renders again, so a later,
 # unrelated push never commits render noise. Fork PRs have a read-only token and are skipped.
 on:
   pull_request:
@@ -34,14 +33,25 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
-      contents: write # push the images to the PR branch
+      contents: read # the push uses the App token
     steps:
+      # Push with the GitHub App's token, not GITHUB_TOKEN: a push made with GITHUB_TOKEN starts no
+      # workflows, so CI would never report on the bot commit. The App is the one Renovate uses.
+      - name: Get a GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          permission-contents: write # push the commit
+
       # On the PR branch itself, not the merge commit, so the images can be committed to it. The
       # full history lets the next step ask what this push changed.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
           # The credentials stay: a later step pushes the images to the PR branch.
           persist-credentials: true # zizmor: ignore[artipacked]
 
