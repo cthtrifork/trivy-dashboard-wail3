@@ -103,9 +103,6 @@
 .graph-wrap {
   position: relative;
   min-height: 0;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
   overflow: hidden;
 }
 #dep-canvas {

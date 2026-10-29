@@ -11,9 +11,6 @@
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 120px);
   overflow-y: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
   box-shadow: 0 8px 24px #0006;
 }
 .opts-body .policy {

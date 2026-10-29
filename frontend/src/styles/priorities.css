@@ -75,9 +75,6 @@
 }
 #prio-list {
   gap: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
 }
 #prio-list > .kv,
 #prio-list > .empty {

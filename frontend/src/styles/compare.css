@@ -28,9 +28,6 @@
   flex: none;
 }
 .side {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
   padding: 12px 14px;
 }
 .side h4 {
@@ -70,9 +67,6 @@
 .verdict {
   flex: none;
   padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--panel);
-  border: 1px solid var(--line);
   border-left: 4px solid var(--c, var(--accent));
 }
 .chg {
