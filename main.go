@@ -24,7 +24,7 @@ func main() {
 		Icon:        app.WindowIcon,
 		Description: "Scan container images with Trivy running in Podman (" + app.Version() + ")",
 		Services:    []application.Service{application.NewService(svc)},
-		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(frontend)},
+		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(frontend), Middleware: app.AssetMiddleware},
 		// Linux: the program name is the window's app_id/WM_CLASS, which the packaged
 		// trivy-scanner.desktop (StartupWMClass) matches for the launcher icon and grouping.
 		Linux: application.LinuxOptions{ProgramName: "trivy-scanner"},

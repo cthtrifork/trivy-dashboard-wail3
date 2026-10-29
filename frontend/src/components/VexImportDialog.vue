@@ -1,7 +1,10 @@
 <script setup>
-import JsonBox from "./JsonBox.vue";
-import { computed, ref } from "vue";
+import { computed, defineAsyncComponent, ref } from "vue";
 import { ScanService, result, vex, loadVEX, errText, lsGet, KEYS } from "../store.js";
+
+// CodeMirror is ~half of the bundle; keep it out of the first load.
+const JsonBox = defineAsyncComponent(() => import("./JsonBox.vue"));
+const loaded = ref(false); // mount the editor on first open, not at startup
 
 const emit = defineEmits(["generated"]);
 const dlg = ref(null);
@@ -44,6 +47,7 @@ const log = computed(() => {
 const ICON = { ok: "✓", info: "•", skip: "↷", warn: "!" };
 
 function open() {
+  loaded.value = true;
   error.value = "";
   report.value = null;
   paste.value = "";
@@ -107,6 +111,7 @@ defineExpose({ open });
       >, saved as assessments (replacing existing ones for the same finding; others are kept).
     </p>
     <JsonBox
+      v-if="loaded"
       v-model="paste"
       vex
       ta-id="vex-paste"

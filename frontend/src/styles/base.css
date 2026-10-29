@@ -40,7 +40,7 @@ button {
   border-radius: 6px;
   padding: 8px 16px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   cursor: pointer;
 }
 button:disabled {

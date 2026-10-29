@@ -105,11 +105,18 @@ await page.waitForTimeout(400);
 
 await page.click("#export-vex-btn");
 await page.fill("#vex-author", "Security Team");
-// The editors are CodeMirror views; JsonBox keeps the view on the container as __cm.
-const editorText = (sel) => page.evaluate((s) => document.querySelector(s).__cm.state.doc.toString(), sel);
-const setEditor = (sel, text) =>
-  page.evaluate(([s, t]) => { const v = document.querySelector(s).__cm; v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: t } }); }, [sel, text]);
-await page.waitForFunction(() => document.querySelector("#vex-preview").__cm.state.doc.toString().includes("@context"));
+// The editors are CodeMirror views; JsonBox keeps the view on the container as __cm. They are lazy
+// chunks mounted when a dialog first opens, so wait for the view before touching it.
+const editorReady = (sel) => page.waitForFunction((s) => document.querySelector(s)?.__cm, sel);
+const editorText = async (sel) => {
+  await editorReady(sel);
+  return page.evaluate((s) => document.querySelector(s).__cm.state.doc.toString(), sel);
+};
+const setEditor = async (sel, text) => {
+  await editorReady(sel);
+  await page.evaluate(([s, t]) => { const v = document.querySelector(s).__cm; v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: t } }); }, [sel, text]);
+};
+await page.waitForFunction(() => document.querySelector("#vex-preview")?.__cm?.state.doc.toString().includes("@context"));
 // The document and its statements are stamped with the current time, and the document id is a hash
 // over them; pin all of it so reruns produce identical pixels.
 const pin = (t) => t
@@ -233,14 +240,7 @@ if (views !== "deps") {
   await page.click("#opts summary");
   await page.waitForTimeout(700);
   // Pin sample ignore rules through the editor dialog so the Sources summary shows real counts.
-  const pinRules = (id, text) =>
-    page.evaluate(
-      ([id, text]) => {
-        const v = document.getElementById(id).__cm;
-        v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: text } });
-      },
-      [id, text],
-    );
+  const pinRules = (id, text) => setEditor(`#${id}`, text);
   await page.click("#opts-tab-sources");
   await page.click("#edit-ignore-policy");
   await pinRules("ignore-policy", '# Ignore kernel headers\npackage trivy\n\ndefault ignore := false\n\nignore if {\n  input.PkgName == "linux-libc-dev"\n}\n');

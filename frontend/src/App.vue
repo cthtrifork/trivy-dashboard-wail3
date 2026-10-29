@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 import {
   sevStyle,
   result,
@@ -115,6 +115,11 @@ watch(logText, async () => {
   await nextTick();
   if (logEl.value) logEl.value.scrollTop = logEl.value.scrollHeight;
 });
+
+// The tabs other than the first are mounted on their first visit, so the startup does not build the
+// dependency graph, tables and compare form nobody has opened yet. Once seen they stay mounted.
+const seen = reactive(new Set(["prio"]));
+watch(tab, (t) => seen.add(t), { immediate: true });
 
 onMounted(init);
 onMounted(() => {
@@ -261,10 +266,10 @@ onMounted(() => {
     <section id="tab-prio" class="panel" :class="{ active: tab === 'prio' }">
       <PrioritiesPanel ref="prio" />
     </section>
-    <section id="tab-vulns" class="panel" :class="{ active: tab === 'vulns' }"><VulnsPanel /></section>
-    <section id="tab-deps" class="panel" :class="{ active: tab === 'deps' }"><DepsPanel /></section>
-    <section id="tab-sbom" class="panel" :class="{ active: tab === 'sbom' }"><SbomPanel /></section>
-    <section id="tab-compare" class="panel" :class="{ active: tab === 'compare' }"><ComparePanel /></section>
+    <section id="tab-vulns" class="panel" :class="{ active: tab === 'vulns' }"><VulnsPanel v-if="seen.has('vulns')" /></section>
+    <section id="tab-deps" class="panel" :class="{ active: tab === 'deps' }"><DepsPanel v-if="seen.has('deps')" /></section>
+    <section id="tab-sbom" class="panel" :class="{ active: tab === 'sbom' }"><SbomPanel v-if="seen.has('sbom')" /></section>
+    <section id="tab-compare" class="panel" :class="{ active: tab === 'compare' }"><ComparePanel v-if="seen.has('compare')" /></section>
     <section id="tab-log" class="panel" :class="{ active: tab === 'log' }">
       <pre id="log" ref="logEl">{{ logText }}</pre>
     </section>

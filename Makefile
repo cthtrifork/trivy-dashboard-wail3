@@ -19,7 +19,7 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend govulncheck tools format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots \
+.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend govulncheck tools format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots lighthouse \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -44,6 +44,8 @@ GOLANGCI_LINT_VERSION := v2.15.0
 GOVULNCHECK_VERSION := v1.9.0
 # renovate: datasource=go depName=golang.org/x/tools
 GOIMPORTS_VERSION := v0.52.0
+# renovate: datasource=npm depName=lighthouse
+LIGHTHOUSE_VERSION := 13.6.0
 
 mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
 	go mod tidy -diff
@@ -115,6 +117,9 @@ demo: frontend ## Run the desktop app on recorded data (dev build only)
 
 screenshots: ## Regenerate docs/screenshots (needs Node and Playwright)
 	scripts/screenshots.sh
+
+lighthouse: ## Lighthouse scores for the UI, written to ./lighthouse (needs Node and Chrome; CHROME_PATH)
+	LIGHTHOUSE_VERSION=$(LIGHTHOUSE_VERSION) scripts/lighthouse.sh
 
 ## Headless server in podman (no Go on the host; see docs/headless.md) ------
 
