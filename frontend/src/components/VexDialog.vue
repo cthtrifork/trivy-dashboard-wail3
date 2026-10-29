@@ -1,8 +1,11 @@
 <script setup>
-import JsonBox from "./JsonBox.vue";
 import { copyText } from "../lib/clipboard.js";
-import { computed, reactive, ref, watch } from "vue";
+import { computed, defineAsyncComponent, reactive, ref, watch } from "vue";
 import { ScanService, result, vex, loadVEX, errText, lsGet, lsSet, KEYS } from "../store.js";
+
+// CodeMirror is ~half of the bundle; keep it out of the first load.
+const JsonBox = defineAsyncComponent(() => import("./JsonBox.vue"));
+const loaded = ref(false); // mount the editor on first open, not at startup
 
 const dlg = ref(null);
 const form = reactive({ author: lsGet(KEYS.vexAuthor), onlyCurrent: false });
@@ -55,6 +58,7 @@ async function loadMeta() {
 }
 
 async function open() {
+  loaded.value = true;
   msg.value = vex.value.size ? "" : "No assessments yet: open a finding and set a VEX status first.";
   text.value = "";
   dlg.value.showModal();
@@ -123,7 +127,7 @@ defineExpose({ open });
     <label class="chk"
       ><input id="vex-only-current" v-model="form.onlyCurrent" type="checkbox" /> Leave out statements that no longer match a finding ({{ stale }})</label
     >
-    <JsonBox ta-id="vex-preview" :model-value="text" readonly :rows="14" />
+    <JsonBox v-if="loaded" ta-id="vex-preview" :model-value="text" readonly :rows="14" />
     <div id="vex-msg" class="kv">{{ msg }}</div>
     <div class="dlg-actions">
       <button type="button" class="ghost" id="vex-copy" @click="copy">Copy</button>

@@ -90,7 +90,7 @@
   border-radius: 999px;
 }
 .opts-body .chip.on {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -115,7 +115,7 @@
   cursor: pointer;
 }
 .opts-body .opts-seg button.on {
-  color: #fff;
+  color: var(--on-accent);
   background: var(--accent);
 }
 .opts-val {

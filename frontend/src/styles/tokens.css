@@ -8,6 +8,7 @@
   --text: #dde3ee;
   --mute: #8b95a7;
   --accent: #4c8dff;
+  --on-accent: #0f1218;
   --CRITICAL: #e5484d;
   --HIGH: #f76b15;
   --MEDIUM: #f5b800;
@@ -29,5 +30,7 @@
     --text: #1c2330;
     --mute: #5e6878;
     --ok: #1a7f45;
+    --accent: #2563eb;
+    --on-accent: #fff;
   }
 }

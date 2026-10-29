@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, defineAsyncComponent, ref } from "vue";
 import {
   opts,
   saveIgnorePolicy,
@@ -9,7 +9,10 @@ import {
   ignorePolicyError,
   ignoreFileError,
 } from "../store.js";
-import CodeBox from "./CodeBox.vue";
+
+// CodeMirror is ~half of the bundle; keep it out of the first load.
+const CodeBox = defineAsyncComponent(() => import("./CodeBox.vue"));
+const loaded = ref(false); // mount the editor on first open, not at startup
 
 // The large editor for the two ignore rule sets (Rego policy and .trivyignore.yaml), opened from
 // Options → Sources like the VEX dialog. The text is the same `opts` state the scan sends; it is
@@ -49,6 +52,7 @@ const text = computed({
 const error = computed(() => (tab.value === "policy" ? ignorePolicyError.value : ignoreFileError.value));
 
 function open(which = "policy") {
+  loaded.value = true;
   tab.value = which;
   dlg.value.showModal();
 }
@@ -83,6 +87,7 @@ defineExpose({ open });
       </button>
     </div>
     <CodeBox
+      v-if="loaded"
       :key="tab"
       v-model="text"
       :language="set.language"
