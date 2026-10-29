@@ -16,7 +16,7 @@ func assetHandler() http.Handler {
 		"assets/a-1.js": {Data: []byte(strings.Repeat("var a=1;", 500))},
 		"logo.png":      {Data: []byte("\x89PNG\r\n\x1a\n" + strings.Repeat("x", 500))},
 	}
-	return AssetMiddleware(http.FileServerFS(fsys))
+	return assetMiddleware(http.FileServerFS(fsys), true)
 }
 
 func get(t *testing.T, path string, hdr map[string]string) *httptest.ResponseRecorder {
@@ -77,11 +77,11 @@ func TestAssetMiddlewareCacheHeaders(t *testing.T) {
 
 func TestAssetMiddlewareLeavesOtherRequestsAlone(t *testing.T) {
 	var sawWriter http.ResponseWriter
-	h := AssetMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	h := assetMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sawWriter = w
 		w.Header().Set("Content-Type", "text/event-stream")
 		_, _ = w.Write([]byte("data: x\n\n"))
-	}))
+	}), true)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/wails/runtime", nil)
 	req.Header.Set("Accept-Encoding", "gzip")
@@ -96,5 +96,21 @@ func TestAssetMiddlewareLeavesOtherRequestsAlone(t *testing.T) {
 	h.ServeHTTP(rec, req)
 	if rec.Header().Get("Content-Encoding") != "" {
 		t.Error("an event stream must not be compressed")
+	}
+}
+
+func TestAssetMiddlewareNativeWindowIsNotCompressed(t *testing.T) {
+	h := assetMiddleware(http.FileServerFS(fstest.MapFS{
+		"assets/a-1.js": {Data: []byte(strings.Repeat("var a=1;", 500))},
+	}), false)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/assets/a-1.js", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	h.ServeHTTP(rec, req)
+	if rec.Header().Get("Content-Encoding") != "" {
+		t.Error("the native window build must not compress")
+	}
+	if !strings.Contains(rec.Header().Get("Cache-Control"), "immutable") {
+		t.Error("cache headers still apply without compression")
 	}
 }

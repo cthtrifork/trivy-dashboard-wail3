@@ -12,7 +12,13 @@ import (
 // content-hashes everything under /assets/, so those files are immutable; index.html must stay
 // revalidated because it names the current hashes. Only plain GET/HEAD requests are touched:
 // bound-method calls, websocket upgrades and event streams pass through unchanged.
-func AssetMiddleware(next http.Handler) http.Handler {
+//
+// Compression is for the headless server only (a real HTTP browser). The native window is fed by
+// the webview's asset scheme, where a Content-Encoding header may not be honoured, so it gets the
+// bytes as they are.
+func AssetMiddleware(next http.Handler) http.Handler { return assetMiddleware(next, headless) }
+
+func assetMiddleware(next http.Handler, compress bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if (r.Method != http.MethodGet && r.Method != http.MethodHead) || r.Header.Get("Upgrade") != "" {
 			next.ServeHTTP(w, r)
@@ -25,7 +31,7 @@ func AssetMiddleware(next http.Handler) http.Handler {
 			w.Header().Set("Cache-Control", "no-cache")
 		}
 		// Range responses must stay byte-exact, so they are never compressed.
-		if r.Header.Get("Range") != "" || !acceptsGzip(r) {
+		if !compress || r.Header.Get("Range") != "" || !acceptsGzip(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
