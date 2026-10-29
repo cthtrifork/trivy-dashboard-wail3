@@ -268,6 +268,45 @@ if (views !== "deps") {
   await sheet.close();
 }
 
+// ---- Help ----
+// The dialog scrolls (glossary, then app config), so it is photographed once with its height limit
+// lifted: one image of the whole modal. Paths that depend on the machine or the throwaway temp dir
+// are replaced, so the image does not change from one run or machine to the next.
+if (views !== "deps") {
+  await page.click("#help-btn");
+  await page.waitForSelector("#help-config .hgroup");
+  await page.evaluate(() => {
+    const sample = {
+      Executable: "/usr/local/bin/trivy-scanner",
+      "Working directory": "/home/user",
+      Home: "/home/user",
+      "User cache dir": "/home/user/.cache",
+      "User config dir": "/home/user/.config",
+      "Trivy cache": "/home/user/.cache/trivy-scanner/trivy",
+      "EPSS / KEV cache": "/home/user/.cache/trivy-scanner/enrich",
+      "VEX assessments": "/home/user/.config/trivy-scanner/vex.json",
+    };
+    // "Where it runs" rows are dt/dd pairs, "Data it keeps" are cards; both carry the path in a <code>.
+    for (const label of document.querySelectorAll("#help-config .hpaths dt, #help-config .hcard h5")) {
+      const holder = label.matches("dt") ? label.nextElementSibling : label.parentElement;
+      const code = holder?.querySelector("code");
+      const value = sample[label.textContent.trim()];
+      if (value && code) code.textContent = value;
+    }
+    for (const code of document.querySelectorAll("#help-config .henv code, #help-config .hcard code")) {
+      code.textContent = code.textContent.replace(/(\/[^\s/]+)*\/tmp\.[A-Za-z0-9]+/g, "/tmp/screenshots");
+    }
+  });
+  await page.addStyleTag({ content: "#help-dialog{height:fit-content !important;max-height:none !important}.help-body{overflow:visible !important}" });
+  await page.setViewportSize({ width: 1400, height: 8000 });
+  const height = await page.locator("#help-dialog").evaluate((d) => Math.ceil(d.getBoundingClientRect().height));
+  await page.setViewportSize({ width: 1400, height: height + 80 });
+  await page.waitForTimeout(700);
+  await page.locator("#help-dialog").screenshot({ path: path.join(outDir, "16-help.png"), animations: "disabled", caret: "hide" });
+  console.log("  16-help.png");
+  await page.setViewportSize({ width: 1400, height: 900 });
+}
+
 await browser.close();
 
 const files = readdirSync(outDir).filter((f) => f.endsWith(".png"));

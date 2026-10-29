@@ -29,7 +29,9 @@ make frontend
 echo "building (server mode, dev tags)…"
 CGO_ENABLED=0 go build -tags server -o "$tmp/app" .
 
-# A throwaway VEX store and cache keep the screenshots independent of your own data.
+# A throwaway VEX store and cache keep the screenshots independent of your own data. The proxy
+# variables are dropped so the Help dialog's environment section looks the same on every machine.
+env -u HTTPS_PROXY -u HTTP_PROXY -u NO_PROXY -u https_proxy -u http_proxy -u no_proxy \
 TRIVY_SCANNER_FAKE_PODMAN=1 \
 TRIVY_SCANNER_VEX_FILE="$tmp/vex.json" \
 XDG_CACHE_HOME="$tmp/cache" \
