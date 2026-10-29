@@ -37,6 +37,11 @@ const shownVulns = computed(() => selectedVulns.value.slice(0, LIST_MAX));
 // How the selection got into the image, and how far it reaches back up: both walk the requires-edges.
 const route = computed(() => routeTo(result.value, selectedNode.value));
 const radius = computed(() => (selectedNode.value ? blastRadius(nodes.value, dep.selected) : null));
+// The detail pane's checkbox and the toolbar's Focus menu are two controls for one setting.
+const radiusOnly = computed({
+  get: () => dep.focus === "up",
+  set: (on) => (dep.focus = on ? "up" : 0),
+});
 const radiusShare = computed(() => (radius.value ? Math.round(((radius.value.hops.size - 1) / count.value) * 100) : 0));
 // A hub such as stdlib can have hundreds of dependants or findings: list the first few.
 const LIST_MAX = 100;
@@ -315,9 +320,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
             {{ radius.transitive }} through others. {{ radius.findings }}
             {{ radius.findings === 1 ? "finding sits" : "findings sit" }} in them.
           </div>
-          <button type="button" class="link" @click="dep.focus = dep.focus === 'up' ? 0 : 'up'">
-            {{ dep.focus === "up" ? "Show the whole graph →" : "Show only the selection and what requires it →" }}
-          </button>
+          <label class="chk"><input type="checkbox" id="dep-radius-only" v-model="radiusOnly" /> Show only these in the graph</label>
         </template>
         <div v-else class="kv">nothing requires this component</div>
         <h4>

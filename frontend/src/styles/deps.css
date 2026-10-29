@@ -232,3 +232,6 @@ button.vpick:focus-visible {
 .dep-path-here {
   font-weight: 600;
 }
+#dep-detail .chk {
+  margin-top: 6px;
+}
