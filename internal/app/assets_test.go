@@ -16,7 +16,7 @@ func assetHandler() http.Handler {
 		"assets/a-1.js": {Data: []byte(strings.Repeat("var a=1;", 500))},
 		"logo.png":      {Data: []byte("\x89PNG\r\n\x1a\n" + strings.Repeat("x", 500))},
 	}
-	return ServeAssets(http.FileServerFS(fsys))
+	return AssetMiddleware(http.FileServerFS(fsys))
 }
 
 func get(t *testing.T, path string, hdr map[string]string) *httptest.ResponseRecorder {
@@ -30,7 +30,7 @@ func get(t *testing.T, path string, hdr map[string]string) *httptest.ResponseRec
 	return rec
 }
 
-func TestServeAssetsGzipsText(t *testing.T) {
+func TestAssetMiddlewareGzipsText(t *testing.T) {
 	rec := get(t, "/assets/a-1.js", map[string]string{"Accept-Encoding": "gzip, br"})
 	if rec.Header().Get("Content-Encoding") != "gzip" {
 		t.Fatalf("Content-Encoding = %q, want gzip", rec.Header().Get("Content-Encoding"))
@@ -48,7 +48,7 @@ func TestServeAssetsGzipsText(t *testing.T) {
 	}
 }
 
-func TestServeAssetsPassThrough(t *testing.T) {
+func TestAssetMiddlewarePassThrough(t *testing.T) {
 	for name, tc := range map[string]struct {
 		path string
 		hdr  map[string]string
@@ -66,11 +66,35 @@ func TestServeAssetsPassThrough(t *testing.T) {
 	}
 }
 
-func TestServeAssetsCacheHeaders(t *testing.T) {
+func TestAssetMiddlewareCacheHeaders(t *testing.T) {
 	if cc := get(t, "/assets/a-1.js", nil).Header().Get("Cache-Control"); !strings.Contains(cc, "immutable") {
 		t.Errorf("hashed asset Cache-Control = %q, want immutable", cc)
 	}
 	if cc := get(t, "/index.html", nil).Header().Get("Cache-Control"); cc != "no-cache" {
 		t.Errorf("index Cache-Control = %q, want no-cache", cc)
+	}
+}
+
+func TestAssetMiddlewareLeavesOtherRequestsAlone(t *testing.T) {
+	var sawWriter http.ResponseWriter
+	h := AssetMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawWriter = w
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: x\n\n"))
+	}))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/wails/runtime", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	h.ServeHTTP(rec, req)
+	if sawWriter != http.ResponseWriter(rec) || rec.Header().Get("Cache-Control") != "" {
+		t.Error("a POST must reach the next handler untouched")
+	}
+
+	rec = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/events", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	h.ServeHTTP(rec, req)
+	if rec.Header().Get("Content-Encoding") != "" {
+		t.Error("an event stream must not be compressed")
 	}
 }

@@ -7,15 +7,21 @@ import (
 	"sync"
 )
 
-// ServeAssets wraps the embedded frontend handler with what a plain file server lacks: gzip for
-// text assets (the bundle is ~700 KB of JS) and cache headers. Vite content-hashes everything
-// under /assets/, so those files are immutable; index.html must stay revalidated because it
-// names the current hashes.
-func ServeAssets(next http.Handler) http.Handler {
+// AssetMiddleware is the Wails AssetOptions.Middleware hook for what the embedded file server
+// lacks: gzip for text assets (the bundle is hundreds of KB of JS) and cache headers. Vite
+// content-hashes everything under /assets/, so those files are immutable; index.html must stay
+// revalidated because it names the current hashes. Only plain GET/HEAD requests are touched:
+// bound-method calls, websocket upgrades and event streams pass through unchanged.
+func AssetMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/assets/") {
+		if (r.Method != http.MethodGet && r.Method != http.MethodHead) || r.Header.Get("Upgrade") != "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/assets/"):
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		} else {
+		case r.URL.Path == "/" || r.URL.Path == "/index.html":
 			w.Header().Set("Cache-Control", "no-cache")
 		}
 		// Range responses must stay byte-exact, so they are never compressed.
@@ -41,7 +47,7 @@ func acceptsGzip(r *http.Request) bool {
 func compressible(contentType string) bool {
 	ct, _, _ := strings.Cut(contentType, ";")
 	ct = strings.TrimSpace(ct)
-	return strings.HasPrefix(ct, "text/") || ct == "application/json" ||
+	return (strings.HasPrefix(ct, "text/") && ct != "text/event-stream") || ct == "application/json" ||
 		ct == "image/svg+xml" || strings.Contains(ct, "javascript")
 }
 
@@ -85,6 +91,15 @@ func (g *gzipWriter) close() {
 	if g.gz != nil {
 		_ = g.gz.Close()
 		gzipPool.Put(g.gz)
+	}
+}
+
+func (g *gzipWriter) Flush() {
+	if g.gz != nil {
+		_ = g.gz.Flush()
+	}
+	if f, ok := g.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
 	}
 }
 
