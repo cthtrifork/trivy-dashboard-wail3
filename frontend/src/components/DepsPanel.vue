@@ -42,7 +42,34 @@ const radiusOnly = computed({
   get: () => dep.focus === "up",
   set: (on) => (dep.focus = on ? "up" : 0),
 });
-const radiusShare = computed(() => (radius.value ? Math.round(((radius.value.hops.size - 1) / count.value) * 100) : 0));
+// "13 components (3% of the image) require this, 10 directly and 3 through others." with the plurals and
+// the zero cases worded properly.
+const radiusText = computed(() => {
+  const r = radius.value;
+  const n = r.hops.size - 1;
+  const pct = (n / count.value) * 100;
+  const share = pct < 1 ? "under 1%" : Math.round(pct) + "%";
+  const how = n === 1 ? "directly" : r.transitive === 0 ? "all directly" : `${r.direct} directly and ${r.transitive} through others`;
+  const found = r.findings ? ` ${r.findings} ${r.findings === 1 ? "finding sits" : "findings sit"} in ${n === 1 ? "it" : "them"}.` : "";
+  return `${n} ${n === 1 ? "component" : "components"} (${share} of the image) ${n === 1 ? "requires" : "require"} this, ${how}.${found}`;
+});
+
+// A long route shows its first two and last two steps; the middle opens on request.
+const FOLD_OVER = 6;
+const pathOpen = ref(false);
+const pathRows = computed(() => {
+  const chain = route.value?.chain ?? [];
+  const rows = chain.map((n, i) => ({ n, i }));
+  if (pathOpen.value || chain.length <= FOLD_OVER) return rows;
+  return [...rows.slice(0, 2), { hidden: chain.length - 4 }, ...rows.slice(-2)];
+});
+
+// Components visited through the detail pane's links, so Back can return to the one inspected before.
+const trail = ref([]);
+const back = () => select(trail.value.pop(), true, "keep");
+const step = (ref) => select(ref, true, "push");
+// Why the filters changed when a selection brought them with it.
+const note = ref("");
 // A hub such as stdlib can have hundreds of dependants or findings: list the first few.
 const LIST_MAX = 100;
 const more = (n) => (n > LIST_MAX ? n - LIST_MAX : 0);
@@ -186,6 +213,7 @@ function renderGraph() {
   for (const r of result.value.depRoots) if (keep.has(r)) edges.push([IMAGE_NODE, r]);
 
   graph.setData(gnodes, edges);
+  graph.setReach(dep.focus === "up" && dep.selected ? [...keep, IMAGE_NODE] : null);
   graph.select(dep.selected && keep.has(dep.selected) ? dep.selected : null);
   markRoute();
   shown.value =
@@ -205,11 +233,23 @@ function describe(id) {
 
 // Select a component. If it is currently filtered out, relax the filters so it shows; the watcher
 // below redraws, and the graph is told afterwards so it can centre on the result.
-async function select(ref, center = false) {
-  if (ref !== dep.selected) dep.vuln = null;
+// history: "push" remembers the previous selection for Back, "keep" is Back itself, anything else starts afresh.
+async function select(ref, center = false, history = "reset") {
+  if (ref !== dep.selected) {
+    dep.vuln = null;
+    pathOpen.value = false;
+  }
+  if (history === "push" && dep.selected && ref !== dep.selected) trail.value.push(dep.selected);
+  else if (history === "reset") trail.value = [];
+  note.value = "";
   dep.selected = ref;
   if (ref) {
     if (!visibleRefs().refs.includes(ref)) {
+      const cleared = [];
+      if (dep.filter) cleared.push("the search");
+      if (dep.cat !== "all") cleared.push("the OS/Application filter");
+      if (dep.vulnOnly && !total(nodes.value[ref])) cleared.push("Vulnerable paths only");
+      if (cleared.length) note.value = `Cleared ${cleared.join(" and ")} so this component shows in the graph.`;
       dep.filter = "";
       dep.cat = "all";
       if (!total(nodes.value[ref])) dep.vulnOnly = false;
@@ -235,6 +275,8 @@ watch(
 );
 watch(result, () => {
   dep.selected = null;
+  trail.value = [];
+  note.value = "";
   dep.vuln = null;
   depth = null;
   renderGraph();
@@ -277,7 +319,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
         <option :value="1">selection ±1 hop</option>
         <option :value="2">selection ±2 hops</option>
         <option :value="3">selection ±3 hops</option>
-        <option value="up">selection and all that require it</option>
+        <option value="up">selection and dependants</option>
       </select>
     </label>
     <label class="chk"><input type="checkbox" id="dep-labels" v-model="dep.labels" /> All labels</label>
@@ -298,15 +340,20 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
       <div v-if="!result" class="empty">Run a scan to explore dependencies. Click a node to inspect it.</div>
       <div v-else-if="!selectedNode" class="empty">Click a node to inspect it.</div>
       <template v-else>
+        <button v-if="trail.length" type="button" class="link" @click="back">
+          ← Back to {{ nodes[trail.at(-1)]?.name }} {{ nodes[trail.at(-1)]?.version }}
+        </button>
         <h3>{{ selectedNode.name }} {{ selectedNode.version }}</h3>
+        <div v-if="note" class="kv">{{ note }}</div>
         <div class="kv">{{ selectedNode.category }} · {{ selectedNode.type }}</div>
         <div class="kv mono">{{ selectedNode.purl }}</div>
         <h4>Path from image</h4>
         <ol v-if="route" class="dep-path">
           <li class="mono">{{ result.image }}</li>
-          <li v-for="(n, i) in route.chain" :key="n.ref" :style="{ '--depth': i + 1 }">
-            <span v-if="n.ref === dep.selected" class="mono dep-path-here">{{ n.name }} {{ n.version }}</span>
-            <button v-else type="button" class="link mono" @click="select(n.ref, true)">{{ n.name }} {{ n.version }}</button>
+          <li v-for="row in pathRows" :key="row.n?.ref ?? 'hidden'" :style="{ '--depth': (row.i ?? 2) + 1 }">
+            <button v-if="row.hidden" type="button" class="link" @click="pathOpen = true">… {{ row.hidden }} more steps</button>
+            <span v-else-if="row.n.ref === dep.selected" class="mono dep-path-here">{{ row.n.name }} {{ row.n.version }}</span>
+            <button v-else type="button" class="link mono" @click="step(row.n.ref)">{{ row.n.name }} {{ row.n.version }}</button>
           </li>
         </ol>
         <div v-else class="kv">not reachable from the image's direct dependencies</div>
@@ -315,11 +362,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
         </div>
         <h4>Blast radius</h4>
         <template v-if="radius.hops.size > 1">
-          <div class="kv">
-            {{ radius.hops.size - 1 }} components ({{ radiusShare }}% of the image) require this, {{ radius.direct }} directly and
-            {{ radius.transitive }} through others. {{ radius.findings }}
-            {{ radius.findings === 1 ? "finding sits" : "findings sit" }} in them.
-          </div>
+          <div class="kv">{{ radiusText }}</div>
           <label class="chk"><input type="checkbox" id="dep-radius-only" v-model="radiusOnly" /> Show only these in the graph</label>
         </template>
         <div v-else class="kv">nothing requires this component</div>
@@ -365,7 +408,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
           :key="title"
         >
           <h4>{{ title }} ({{ refs.length }})</h4>
-          <button v-for="[r, x] in links(refs)" :key="r" type="button" class="link" @click="select(r, true)">
+          <button v-for="[r, x] in links(refs)" :key="r" type="button" class="link" @click="step(r)">
             <span>{{ x.name }} {{ x.version }}</span>
             <SevBadges :own="x.ownCounts" :total="x.totalCounts" />
           </button>

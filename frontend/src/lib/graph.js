@@ -24,6 +24,7 @@ export class Graph {
     this.hover = null;
     this.pathIds = new Set(); // the selection's route from the image, drawn at full strength
     this.pathEdges = new Set();
+    this.reachIds = null; // when set, these ids are all drawn at full strength (the blast-radius view)
     this.showLabels = "auto";
     this.raf = 0;
     this.seed = 1;
@@ -84,6 +85,11 @@ export class Graph {
   setPath(ids) {
     this.pathIds = new Set(ids);
     this.pathEdges = new Set(ids.slice(1).map((id, i) => ids[i] + ">" + id));
+    this.draw();
+  }
+
+  setReach(ids) {
+    this.reachIds = ids ? new Set(ids) : null;
     this.draw();
   }
 
@@ -252,7 +258,8 @@ export class Graph {
       this.adj[sel].forEach((i) => focus.add(i));
     }
     const hov = this.hover != null ? this.byId.get(this.hover) : undefined;
-    const active = (i) => sel === undefined || focus.has(i) || this.pathIds.has(this.nodes[i].id);
+    const reach = this.reachIds;
+    const active = (i) => sel === undefined || focus.has(i) || this.pathIds.has(this.nodes[i].id) || !!reach?.has(this.nodes[i].id);
 
     // edges
     for (const [ai, bi] of this.edges) {
@@ -260,7 +267,8 @@ export class Graph {
         q = this.nodes[bi];
       const onPath = this.pathEdges.has(p.id + ">" + q.id);
       const hot = onPath || (sel !== undefined && (ai === sel || bi === sel));
-      ctx.globalAlpha = hot ? 1 : sel !== undefined ? 0.1 : 0.45;
+      const inReach = !!reach && reach.has(p.id) && reach.has(q.id);
+      ctx.globalAlpha = hot ? 1 : sel !== undefined && !inReach ? 0.1 : 0.45;
       ctx.strokeStyle = hot ? accent : mute;
       ctx.fillStyle = ctx.strokeStyle;
       ctx.lineWidth = (onPath ? 2.5 : hot ? 2 : 1) / this.k;
