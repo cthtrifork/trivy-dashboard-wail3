@@ -31,17 +31,19 @@
 .help-head h3 {
   margin: 0;
 }
-.help-tabs {
+/* Jump links, not tabs: glossary and config share one scrolling body. */
+.help-nav {
   display: flex;
   gap: 4px;
   padding: 8px 18px 0;
   border-bottom: 1px solid var(--line);
 }
 .help-body {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: scroll;
-  padding: 4px 18px 18px;
+  padding: 0 18px 12px;
   scrollbar-width: thin;
   scrollbar-color: var(--mute) transparent;
 }
@@ -52,53 +54,388 @@
   background: var(--line);
   border-radius: 5px;
 }
-.help-body h4 {
-  margin: 16px 0 6px;
-  color: var(--mute);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.help-body dl {
-  display: grid;
-  grid-template-columns: minmax(120px, 200px) minmax(0, 1fr);
-  gap: 8px 16px;
-  margin: 0;
-}
-.help-body dd .kv {
-  margin-top: 2px;
-}
-.help-body dt {
-  font-weight: 600;
-  word-break: break-word;
-}
-.help-body dd {
-  margin: 0;
-}
 .help-body code {
   font:
     12px ui-monospace,
     monospace;
   word-break: break-all;
 }
-@media (max-width: 560px) {
-  .help-body dl {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-  .help-body dd {
-    margin-bottom: 10px;
-  }
+.hload {
+  padding-top: 12px;
 }
-.help-body .envstate {
-  margin-right: 6px;
-  font-size: 11px;
-  padding: 1px 6px;
+
+/* Each group is a panel with its own format; `.hbody` holds the format. */
+.hgroup {
+  margin: 8px 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.hgroup > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--text) 5%, var(--bg));
+}
+.hgroup > header b {
+  font-size: 14px;
+}
+.hgroup > header small {
+  color: var(--mute);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.hbody {
+  padding: 7px 12px;
+}
+.hsub {
+  margin: 4px 0 2px;
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.hsub:not(:first-child) {
+  margin-top: 10px;
+}
+.hbody p,
+.hbody dd {
+  margin: 0;
+}
+.hbody dl {
+  margin: 0;
+}
+
+/* Term table */
+.htable {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+}
+.htable dt,
+.htable dd {
+  padding: 3px 0;
+  border-top: 1px solid var(--line);
+}
+.htable dt {
+  padding-right: 12px;
+  font-weight: 600;
+}
+.htable > :nth-child(-n + 2) {
+  border-top: 0;
+}
+
+/* Cards: a grid of boxed terms; "wide" spans the row, good and warn tint a pair. */
+.hcards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.hcards.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.hcards.one {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+}
+.hcard {
+  padding: 6px 10px;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+.hcard.wide {
+  grid-column: 1 / -1;
+}
+.hcard.good {
+  border-color: color-mix(in srgb, var(--ok) 55%, var(--line));
+  background: color-mix(in srgb, var(--ok) 10%, var(--panel));
+}
+.hcard.good h5 {
+  color: var(--ok);
+}
+.hcard.warn {
+  border-color: color-mix(in srgb, var(--HIGH) 55%, var(--line));
+  background: color-mix(in srgb, var(--HIGH) 10%, var(--panel));
+}
+.hcard.warn h5 {
+  color: var(--HIGH);
+}
+.hcard h5,
+.hcols h5 {
+  margin: 0 0 2px;
+  font-size: 14px;
+}
+.hcard h5 code {
+  font-weight: 600;
+}
+
+/* Flags the Options menu controls: the cards and the On/Off control reuse the Options popover's look
+   (.ignore-row card, .opts-seg segmented control) so they read as the settings they describe. */
+.hoptions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hoption {
+  padding: 6px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.hoption-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 3px;
+}
+.hoption-top code {
+  color: var(--accent);
+  font-weight: 600;
+}
+.hdefault {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+.hseg {
+  display: flex;
+  padding: 2px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.hseg i {
+  padding: 1px 10px;
+  color: var(--mute);
+  font-size: 12px;
+  font-style: normal;
+  border-radius: 6px;
+}
+.hseg i.on {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.hcard .kv {
+  margin-top: 3px;
+  word-break: break-all;
+}
+
+/* Columns split by thin dividers */
+.hcols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.hcols > div {
+  padding: 0 10px;
+  border-left: 1px solid var(--line);
+}
+.hcols > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+/* VEX statuses: a marker per status, shapes as well as colours */
+.hstatus {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  align-items: baseline;
+  margin-top: 6px;
+  padding: 0 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.hstatus dt,
+.hstatus dd {
+  padding: 3px 0;
+  border-top: 1px solid var(--line);
+}
+.hstatus > :nth-child(-n + 2) {
+  border-top: 0;
+}
+.hstatus dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mk {
+  flex: none;
+  width: 10px;
+  height: 10px;
+}
+.mk.affected {
+  background: var(--HIGH);
+}
+.mk.not_affected {
+  background: var(--ok);
+  border-radius: 50%;
+}
+.mk.fixed {
+  background: var(--accent);
+  transform: rotate(45deg) scale(0.85);
+}
+.mk.under_investigation {
+  border: 2px solid var(--mute);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.hnote {
+  margin-top: 6px;
+  padding: 5px 10px;
+  border: 1px dashed var(--mute);
+  border-radius: 8px;
+}
+
+/* Collapsed config sections: a one-line summary that opens to the full content */
+.hsum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 3px 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hsum.split {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.hsum:hover .htoggle {
+  text-decoration: underline;
+}
+.hsum + dl,
+.hsum + h5 {
+  margin-top: 6px;
+}
+.htoggle {
+  flex: none;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Quick-reference legends above a group: the severity buckets and the priority tiers */
+.hsev {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.hsev span {
+  flex: 1;
+  padding: 3px 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+.hladder {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.hladder span {
+  padding: 3px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-weight: 600;
+}
+.hladder span:nth-child(1) {
+  border-color: var(--CRITICAL);
+}
+.hladder span:nth-child(2) {
+  border-color: var(--HIGH);
+}
+
+/* Code-led tables: flags, paths, environment variables */
+.hflags,
+.hpaths,
+.henv {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 0 14px;
+}
+.hpaths {
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 0 12px;
+}
+.henv {
+  grid-template-columns: 200px minmax(0, 1fr);
+}
+.hflags dt,
+.hflags dd,
+.hpaths dt,
+.hpaths dd,
+.henv dt,
+.henv dd {
+  padding: 3px 0;
+  border-top: 1px solid var(--line);
+}
+.henv dt,
+.henv dd {
+  padding: 4px 0;
+}
+.hflags > :nth-child(-n + 2),
+.hpaths > :nth-child(-n + 2),
+.henv > :nth-child(-n + 2) {
+  border-top: 0;
+}
+.hflags code {
+  color: var(--accent);
+  font-weight: 600;
+}
+.hpaths dt {
   color: var(--mute);
 }
+.henv code {
+  font-weight: 600;
+}
+.henv dd code {
+  font-weight: 400;
+}
+
+/* Environment variable state: a dot plus the word, so it does not rely on colour alone */
+.envstate {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 6px;
+  padding: 0 7px;
+  height: 17px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--mute);
+}
+.envstate::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: 1.5px solid var(--mute);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
 .envstate.on {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 55%, var(--line));
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+.envstate.on::before {
+  border: 0;
+  background: var(--ok);
 }
