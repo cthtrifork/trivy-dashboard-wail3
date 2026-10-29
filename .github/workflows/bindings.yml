@@ -3,8 +3,8 @@ name: Bindings
 # When a pull request changes Go code, regenerate frontend/bindings with the wails3 CLI at the
 # go.mod version and push the result to the PR branch, so stale bindings never cause rebase
 # conflicts or a failing "Check Wails bindings" step in CI. Same-repository PRs only (a fork's
-# token is read-only). The workflow ignores pushes made by github-actions[bot], which is what
-# stops its own commit from triggering another run.
+# token is read-only). The commit is pushed with the Renovate GitHub App's token so CI runs on it;
+# a second run finds nothing to regenerate and exits, so there is no loop.
 on:
   pull_request:
     paths:
@@ -31,11 +31,22 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      contents: write # push the bindings commit to the PR branch
+      contents: read # the push uses the App token
     steps:
+      # Push with the GitHub App's token, not GITHUB_TOKEN: a push made with GITHUB_TOKEN starts no
+      # workflows, so CI would never report on the bot commit. The App is the one Renovate uses.
+      - name: Get a GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          permission-contents: write # push the commit
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.head_ref }}
+          token: ${{ steps.app-token.outputs.token }}
           persist-credentials: true # needed to push the bindings commit
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
