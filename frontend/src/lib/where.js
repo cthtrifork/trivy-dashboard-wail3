@@ -13,17 +13,13 @@ export function indexNodes(depNodes) {
   return { byPURL, byNV };
 }
 
-// Returns { chain: [node, ...root first, vulnerable package last], others } or null when the package
-// is not in the graph or is itself a direct dependency (an OS package: nothing to show). others counts
-// the other direct dependencies that also lead to it.
-export function findingPath(result, index, v) {
+// The shortest route from a direct dependency of the image down to start (a node), as { chain, others },
+// or null when start does not hang off any root. chain is root first, start last; others counts the
+// other direct dependencies that also lead to it.
+export function routeTo(result, start) {
   const nodes = result?.depNodes;
-  if (!nodes) return null;
-  const start = index.byPURL.get(v.purl) ?? index.byNV.get(`${v.package}@${v.installed}`.toLowerCase());
-  if (!start) return null;
+  if (!nodes || !start) return null;
   const roots = new Set(result.depRoots);
-  if (roots.has(start.ref)) return null;
-
   const next = new Map([[start.ref, null]]); // ref -> the ref one step closer to the package
   const queue = [start.ref];
   let first = null;
@@ -46,4 +42,35 @@ export function findingPath(result, index, v) {
   const chain = [];
   for (let ref = first; ref; ref = next.get(ref)) chain.push(nodes[ref]);
   return { chain, others: reached - 1 };
+}
+
+// Returns { chain: [node, ...root first, vulnerable package last], others } or null when the package
+// is not in the graph or is itself a direct dependency (an OS package: nothing to show).
+export function findingPath(result, index, v) {
+  const start = index.byPURL.get(v.purl) ?? index.byNV.get(`${v.package}@${v.installed}`.toLowerCase());
+  if (!start || new Set(result.depRoots).has(start.ref)) return null;
+  return routeTo(result, start);
+}
+
+// Everything that requires ref, directly or through others: { hops, direct, transitive, findings }.
+// hops maps each such component (and ref itself, at 0) to its distance in requires-edges; findings
+// counts the findings that sit in those components, not in ref.
+export function blastRadius(depNodes, ref) {
+  const hops = new Map([[ref, 0]]);
+  const queue = [ref];
+  for (let i = 0; i < queue.length; i++) {
+    for (const p of depNodes[queue[i]].parents) {
+      if (depNodes[p] && !hops.has(p)) {
+        hops.set(p, hops.get(queue[i]) + 1);
+        queue.push(p);
+      }
+    }
+  }
+  let direct = 0;
+  let findings = 0;
+  for (const [r, h] of hops) {
+    if (h === 1) direct++;
+    if (h) findings += depNodes[r].own.length;
+  }
+  return { hops, direct, transitive: hops.size - 1 - direct, findings };
 }

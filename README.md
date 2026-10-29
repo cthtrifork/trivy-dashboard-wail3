@@ -7,7 +7,7 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
 - **VEX editor** – assess a finding as `affected`, `not_affected`, `fixed` or `under_investigation`, export or import OpenVEX (v0.2.0). Assessments are stored per image repository in `<user config dir>/trivy-scanner/vex.json`; resolved findings are hidden from the shortlist.
 - **Compare** – scan two tags or digests and diff them: severity deltas, vulnerabilities added / removed / unchanged, and package changes.
 - **Vulnerabilities** – severity cards, search, sortable table, details.
-- **Dependencies** – interactive graph of the SBOM dependency graph.
+- **Dependencies** – interactive graph of the SBOM dependency graph. A selected component shows its route from the image and its blast radius (everything that requires it, directly or through others).
 - **SBOM** – CycloneDX components with search and type filters.
 
 Screenshots: [`docs/screenshots`](docs/screenshots).

@@ -206,3 +206,29 @@ button.vpick:focus-visible {
   width: auto;
   align-self: flex-start;
 }
+.dep-path {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+.dep-path li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding-left: min(calc(var(--depth, 0) * 12px), 96px);
+  overflow-wrap: anywhere;
+}
+.dep-path li:not(:first-child)::before {
+  content: "└";
+  color: var(--mute);
+}
+.dep-path .link {
+  width: auto;
+}
+.dep-path-here {
+  font-weight: 600;
+}

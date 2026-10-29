@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 import { depsTarget, result, SEVERITIES, SEV_COLOR, sevStyle, showInPriorities, vex, vulns } from "../store.js";
 import { Graph } from "../lib/graph.js";
 import { STATUS_LABEL, suppresses, tierStyle } from "../lib/format.js";
+import { blastRadius, routeTo } from "../lib/where.js";
 import Chip from "./Chip.vue";
 import SevBadges from "./SevBadges.vue";
 
@@ -33,6 +34,10 @@ const nodes = computed(() => result.value?.depNodes ?? {});
 const selectedNode = computed(() => (dep.selected && nodes.value[dep.selected]) || null);
 const selectedVulns = computed(() => (selectedNode.value ? selectedNode.value.own.map((i) => result.value.vulnerabilities[i]) : []));
 const shownVulns = computed(() => selectedVulns.value.slice(0, LIST_MAX));
+// How the selection got into the image, and how far it reaches back up: both walk the requires-edges.
+const route = computed(() => routeTo(result.value, selectedNode.value));
+const radius = computed(() => (selectedNode.value ? blastRadius(nodes.value, dep.selected) : null));
+const radiusShare = computed(() => (radius.value ? Math.round(((radius.value.hops.size - 1) / count.value) * 100) : 0));
 // A hub such as stdlib can have hundreds of dependants or findings: list the first few.
 const LIST_MAX = 100;
 const more = (n) => (n > LIST_MAX ? n - LIST_MAX : 0);
@@ -89,7 +94,9 @@ function visibleRefs() {
   const all = nodes.value;
   const q = query();
   let refs;
-  if (dep.focus > 0 && dep.selected && all[dep.selected]) {
+  if (dep.focus === "up" && dep.selected && all[dep.selected]) {
+    refs = [...radius.value.hops.keys()];
+  } else if (dep.focus > 0 && dep.selected && all[dep.selected]) {
     const seen = new Map([[dep.selected, 0]]);
     const queue = [dep.selected];
     for (let i = 0; i < queue.length; i++) {
@@ -175,9 +182,15 @@ function renderGraph() {
 
   graph.setData(gnodes, edges);
   graph.select(dep.selected && keep.has(dep.selected) ? dep.selected : null);
+  markRoute();
   shown.value =
     `${refs.length} of ${count.value} components` +
     (truncated ? ` · ${truncated} lower-risk hidden: search, filter or focus a node to see them` : "");
+}
+
+// Keep the selection's route from the image bright in the graph.
+function markRoute() {
+  graph?.setPath(route.value ? [IMAGE_NODE, ...route.value.chain.map((n) => n.ref)] : []);
 }
 
 function describe(id) {
@@ -196,7 +209,7 @@ async function select(ref, center = false) {
       dep.cat = "all";
       if (!total(nodes.value[ref])) dep.vulnOnly = false;
     }
-  } else if (dep.focus > 0) {
+  } else if (dep.focus) {
     dep.focus = 0;
   }
   await nextTick();
@@ -204,7 +217,8 @@ async function select(ref, center = false) {
 }
 
 // Anything that changes which components are drawn; the selection only matters while focusing on it.
-watch(() => [dep.filter, dep.cat, dep.vulnOnly, dep.focus, dep.focus > 0 ? dep.selected : null], renderGraph);
+watch(() => [dep.filter, dep.cat, dep.vulnOnly, dep.focus, dep.focus ? dep.selected : null], renderGraph);
+watch(route, markRoute);
 watch(
   () => dep.labels,
   (on) => {
@@ -258,6 +272,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
         <option :value="1">selection ±1 hop</option>
         <option :value="2">selection ±2 hops</option>
         <option :value="3">selection ±3 hops</option>
+        <option value="up">selection and all that require it</option>
       </select>
     </label>
     <label class="chk"><input type="checkbox" id="dep-labels" v-model="dep.labels" /> All labels</label>
@@ -281,6 +296,30 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
         <h3>{{ selectedNode.name }} {{ selectedNode.version }}</h3>
         <div class="kv">{{ selectedNode.category }} · {{ selectedNode.type }}</div>
         <div class="kv mono">{{ selectedNode.purl }}</div>
+        <h4>Path from image</h4>
+        <ol v-if="route" class="dep-path">
+          <li class="mono">{{ result.image }}</li>
+          <li v-for="(n, i) in route.chain" :key="n.ref" :style="{ '--depth': i + 1 }">
+            <span v-if="n.ref === dep.selected" class="mono dep-path-here">{{ n.name }} {{ n.version }}</span>
+            <button v-else type="button" class="link mono" @click="select(n.ref, true)">{{ n.name }} {{ n.version }}</button>
+          </li>
+        </ol>
+        <div v-else class="kv">not reachable from the image's direct dependencies</div>
+        <div v-if="route?.others" class="kv">
+          Also reached through {{ route.others }} other direct {{ route.others === 1 ? "dependency" : "dependencies" }} of the image.
+        </div>
+        <h4>Blast radius</h4>
+        <template v-if="radius.hops.size > 1">
+          <div class="kv">
+            {{ radius.hops.size - 1 }} components ({{ radiusShare }}% of the image) require this, {{ radius.direct }} directly and
+            {{ radius.transitive }} through others. {{ radius.findings }}
+            {{ radius.findings === 1 ? "finding sits" : "findings sit" }} in them.
+          </div>
+          <button type="button" class="link" @click="dep.focus = dep.focus === 'up' ? 0 : 'up'">
+            {{ dep.focus === "up" ? "Show the whole graph →" : "Show only the selection and what requires it →" }}
+          </button>
+        </template>
+        <div v-else class="kv">nothing requires this component</div>
         <h4>
           Vulnerabilities ({{ selectedVulns.length
           }}{{ total(selectedNode) > selectedVulns.length ? `, ${total(selectedNode)} incl. dependencies` : "" }})

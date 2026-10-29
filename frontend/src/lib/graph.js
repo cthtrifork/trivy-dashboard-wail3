@@ -22,6 +22,8 @@ export class Graph {
     this.autoFit = true;
     this.selected = null;
     this.hover = null;
+    this.pathIds = new Set(); // the selection's route from the image, drawn at full strength
+    this.pathEdges = new Set();
     this.showLabels = "auto";
     this.raf = 0;
     this.seed = 1;
@@ -74,6 +76,14 @@ export class Graph {
   select(id, { center = false } = {}) {
     this.selected = id;
     if (center) this.centerOn(id);
+    this.draw();
+  }
+
+  // ids: the route from the image to the selection, in order. Its nodes and edges stay bright while
+  // the rest of the graph dims behind the selection.
+  setPath(ids) {
+    this.pathIds = new Set(ids);
+    this.pathEdges = new Set(ids.slice(1).map((id, i) => ids[i] + ">" + id));
     this.draw();
   }
 
@@ -242,17 +252,18 @@ export class Graph {
       this.adj[sel].forEach((i) => focus.add(i));
     }
     const hov = this.hover != null ? this.byId.get(this.hover) : undefined;
-    const active = (i) => sel === undefined || focus.has(i);
+    const active = (i) => sel === undefined || focus.has(i) || this.pathIds.has(this.nodes[i].id);
 
     // edges
     for (const [ai, bi] of this.edges) {
       const p = this.nodes[ai],
         q = this.nodes[bi];
-      const hot = sel !== undefined && (ai === sel || bi === sel);
+      const onPath = this.pathEdges.has(p.id + ">" + q.id);
+      const hot = onPath || (sel !== undefined && (ai === sel || bi === sel));
       ctx.globalAlpha = hot ? 1 : sel !== undefined ? 0.1 : 0.45;
       ctx.strokeStyle = hot ? accent : mute;
       ctx.fillStyle = ctx.strokeStyle;
-      ctx.lineWidth = (hot ? 2 : 1) / this.k;
+      ctx.lineWidth = (onPath ? 2.5 : hot ? 2 : 1) / this.k;
       const dx = q.x - p.x,
         dy = q.y - p.y,
         d = Math.hypot(dx, dy) || 1;
@@ -303,7 +314,8 @@ export class Graph {
         else ctx.arc(n.x, n.y, n.r + 3, 0, 7);
         ctx.stroke();
       }
-      if (on && (labelAll || i === sel || i === hov || n.hl || (sel !== undefined && focus.has(i)) || n.always)) labelled.push(n);
+      if (on && (labelAll || i === sel || i === hov || n.hl || (sel !== undefined && focus.has(i)) || this.pathIds.has(n.id) || n.always))
+        labelled.push(n);
     });
 
     ctx.globalAlpha = 1;
