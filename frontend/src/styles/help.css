@@ -173,8 +173,29 @@
 .hcard h5 code {
   font-weight: 600;
 }
-.hcards.flags h5 code {
+
+/* Flags the Options menu controls: flag and state on one line, the explanation below */
+.hopt {
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+}
+.hopt:first-child {
+  border-top: 0;
+}
+.hopt > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+.hopt code {
   color: var(--accent);
+  font-weight: 600;
+}
+.hopt .envstate {
+  flex: none;
+  margin-right: 0;
 }
 .hcard .kv {
   margin-top: 3px;
@@ -274,7 +295,7 @@
 .hpaths,
 .henv {
   display: grid;
-  grid-template-columns: 230px minmax(0, 1fr);
+  grid-template-columns: 270px minmax(0, 1fr);
   gap: 0 14px;
 }
 .hpaths {

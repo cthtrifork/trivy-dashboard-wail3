@@ -113,7 +113,11 @@ const trivyFlags = [
   ["--ignore-unfixed", "Off by default. Choose Fixable only in Options to hide findings without a fix."],
 ];
 const everyScan = trivyFlags.slice(0, 5);
-const inOptions = trivyFlags.slice(5);
+// The leading "On by default." / "Off by default." sentence becomes a badge so the state reads first.
+const optionFlags = trivyFlags.slice(5).map(([flag, desc]) => {
+  const m = /^(On|Off) by default\.\s*(.*)$/.exec(desc);
+  return { flag, on: m?.[1] === "On", state: m ? `${m[1]} by default` : "", text: m ? m[2] : desc };
+});
 
 // The environment variables the Go side reports, grouped by what they control. Anything not listed lands in "Other".
 const ENV_GROUPS = [
@@ -269,12 +273,13 @@ defineExpose({ open });
                 </template>
               </dl>
               <h5 class="hsub">Changed in Options</h5>
-              <div class="hcards one flags">
-                <div v-for="[flag, desc] in inOptions" :key="flag" class="hcard">
-                  <h5>
-                    <code>{{ flag }}</code>
-                  </h5>
-                  <p>{{ desc }}</p>
+              <div class="hopts">
+                <div v-for="f in optionFlags" :key="f.flag" class="hopt">
+                  <div>
+                    <code>{{ f.flag }}</code>
+                    <span v-if="f.state" :class="['envstate', { on: f.on }]">{{ f.state }}</span>
+                  </div>
+                  <p>{{ f.text }}</p>
                 </div>
               </div>
             </div>
