@@ -8,10 +8,7 @@
 .card {
   flex: 1;
   min-width: 110px;
-  background: var(--panel);
-  border: 1px solid var(--line);
   border-left: 4px solid var(--c, var(--line));
-  border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
 }
@@ -45,9 +42,6 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
   position: relative;
 }
 table {

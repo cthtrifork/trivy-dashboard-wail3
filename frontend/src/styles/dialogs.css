@@ -21,15 +21,6 @@
   justify-content: flex-end;
   margin-top: 10px;
 }
-.json-box {
-  height: calc(var(--rows) * 1.45 * 13px + 14px);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  overflow: hidden;
-}
-.file-btn {
-  cursor: pointer;
-}
 .vex-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
