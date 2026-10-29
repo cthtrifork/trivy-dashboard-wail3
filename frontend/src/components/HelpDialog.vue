@@ -260,10 +260,9 @@ defineExpose({ open });
           <section class="hgroup">
             <header>
               <b>Trivy flags</b>
-              <small>App config</small>
+              <small>Passed on every scan</small>
             </header>
             <div class="hbody">
-              <h5 class="hsub">Passed on every scan</h5>
               <dl class="hflags">
                 <template v-for="[flag, desc] in everyScan" :key="flag">
                   <dt>
@@ -272,15 +271,27 @@ defineExpose({ open });
                   <dd>{{ desc }}</dd>
                 </template>
               </dl>
-              <h5 class="hsub">Changed in Options</h5>
-              <div class="hopts">
-                <div v-for="f in optionFlags" :key="f.flag" class="hopt">
-                  <div>
-                    <code>{{ f.flag }}</code>
-                    <span v-if="f.state" :class="['envstate', { on: f.on }]">{{ f.state }}</span>
-                  </div>
-                  <p>{{ f.text }}</p>
+            </div>
+          </section>
+
+          <section class="hgroup">
+            <header>
+              <b>Changed in Options</b>
+              <small>Trivy flags</small>
+            </header>
+            <div class="hbody hoptions">
+              <div v-for="f in optionFlags" :key="f.flag" class="hoption">
+                <div class="hoption-top">
+                  <code>{{ f.flag }}</code>
+                  <span v-if="f.state" class="hdefault">
+                    <span class="hseg" role="img" :aria-label="f.state">
+                      <i :class="{ on: f.on }">On</i>
+                      <i :class="{ on: !f.on }">Off</i>
+                    </span>
+                    <span class="kv">by default</span>
+                  </span>
                 </div>
+                <p>{{ f.text }}</p>
               </div>
             </div>
           </section>

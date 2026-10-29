@@ -174,28 +174,53 @@
   font-weight: 600;
 }
 
-/* Flags the Options menu controls: flag and state on one line, the explanation below */
-.hopt {
-  padding: 5px 0;
-  border-top: 1px solid var(--line);
+/* Flags the Options menu controls: the cards and the On/Off control reuse the Options popover's look
+   (.ignore-row card, .opts-seg segmented control) so they read as the settings they describe. */
+.hoptions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-.hopt:first-child {
-  border-top: 0;
+.hoption {
+  padding: 6px 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
-.hopt > div {
+.hoption-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
 }
-.hopt code {
+.hoption-top code {
   color: var(--accent);
   font-weight: 600;
 }
-.hopt .envstate {
+.hdefault {
+  display: flex;
   flex: none;
-  margin-right: 0;
+  align-items: center;
+  gap: 6px;
+}
+.hseg {
+  display: flex;
+  padding: 2px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.hseg i {
+  padding: 1px 10px;
+  color: var(--mute);
+  font-size: 12px;
+  font-style: normal;
+  border-radius: 6px;
+}
+.hseg i.on {
+  color: var(--on-accent);
+  background: var(--accent);
 }
 .hcard .kv {
   margin-top: 3px;
