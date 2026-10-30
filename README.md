@@ -13,8 +13,8 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
 Screenshots: [`docs/screenshots`](docs/screenshots).
 
 ## Requirements
-- Go 1.26+, [Wails v3 CLI](https://v3.wails.io) (`make wails3-install`)
-- Node 20.19+ or 22.12+ for the Vue frontend (`frontend/`)
+- Go 1.27+, [Wails v3 CLI](https://v3.wails.io) (`make wails3-install`)
+- Node 20.19+ or 22.12+ for the Vue frontend (`frontend/`); CI and the container images use the version in `.tool-versions`
 - Linux: GTK4 + WebKitGTK 6 dev packages; macOS/Windows: native webview
 - `podman` on PATH (override with `PODMAN=/path/to/podman`)
 

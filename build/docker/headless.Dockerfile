@@ -7,7 +7,7 @@ RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts --no-audit --no
 COPY frontend/ ./
 RUN npm run build
 
-FROM mirror.gcr.io/library/golang:1.26-alpine AS build
+FROM mirror.gcr.io/library/golang:1.27-alpine AS build
 ENV GOTOOLCHAIN=local CGO_ENABLED=0
 WORKDIR /src
 COPY go.mod go.sum ./

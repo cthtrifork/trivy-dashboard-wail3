@@ -39,6 +39,8 @@ concurrency:
 env:
   GOTOOLCHAIN: local
   APP: trivy-scanner
+  # renovate: datasource=github-releases depName=aquasecurity/trivy
+  TRIVY_VERSION: v0.76.1
 
 jobs:
   build:
@@ -111,10 +113,15 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.27'
+          go-version-file: .tool-versions
           check-latest: true
           cache: ${{ steps.meta.outputs.publish != 'true' }} # off when publishing: a restored cache could poison the release; on for dry runs # zizmor: ignore[cache-poisoning]
           cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .tool-versions
+          package-manager-cache: false
 
       - name: Toolchain versions
         run: |
@@ -189,6 +196,7 @@ jobs:
           scan-ref: .
           format: cyclonedx
           scanners: license
+          version: ${{ env.TRIVY_VERSION }}
           output: ${{ runner.temp }}/sbom.cdx.json
           skip-dirs: internal/trivy/fixtures,frontend/node_modules,dist
 

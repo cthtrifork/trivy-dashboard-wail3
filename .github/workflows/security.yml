@@ -8,6 +8,7 @@ on:
     paths:
       - '**.go'
       - go.mod
+      - .tool-versions
       - go.sum
       - frontend/package.json
       - frontend/package-lock.json
@@ -17,6 +18,7 @@ on:
     paths:
       - '**.go'
       - go.mod
+      - .tool-versions
       - go.sum
       - frontend/package.json
       - frontend/package-lock.json
@@ -56,7 +58,7 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.27'
+          go-version-file: .tool-versions
           check-latest: true
           cache: true
           cache-dependency-path: go.sum
@@ -98,6 +100,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .tool-versions
+          package-manager-cache: false
 
       # --omit=dev: only what ships in the app (vue, @wailsio/runtime). Vite and the Vue plugin are
       # build tooling, and an advisory there should not fail the weekly run; Renovate and the

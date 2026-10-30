@@ -16,6 +16,9 @@ Read in this order, stopping when you have enough:
 
 ```sh
 make frontend                                      # Vue app -> frontend/dist; required before any build/run, not before vet/test
+make doctor                                        # which required tools are installed, and the Go version CI uses
+make inspect                                       # resolved Makefile settings (ports, paths, tool versions)
+make format                                        # gofmt plus Biome for the Vue app (make fmt / format-frontend run one each)
 make test                                          # what CI runs (go test -race -count=1 ./...); recorded fixtures, no podman needed
 make vet                                           # go vet, with and without -tags production
 make fmt-check                                     # must print nothing
