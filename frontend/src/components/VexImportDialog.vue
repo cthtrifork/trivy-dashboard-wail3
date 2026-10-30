@@ -1,6 +1,6 @@
 <script setup>
 import { computed, defineAsyncComponent, ref } from "vue";
-import { ScanService, result, vex, loadVEX, errText, lsGet, KEYS } from "../store.js";
+import { ScanService, result, vex, loadVEX, errText, lsGet, KEYS, sevAtLeast } from "../store.js";
 
 // CodeMirror is ~half of the bundle; keep it out of the first load.
 const JsonBox = defineAsyncComponent(() => import("./JsonBox.vue"));
@@ -19,11 +19,9 @@ const report = ref(null);
 
 // Generate: how many findings the chosen severity limit covers.
 const genSeverity = ref("");
-const SEV_RANK = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
 const findingCount = computed(() => {
-  const min = SEV_RANK[genSeverity.value] ?? 0;
   const keys = new Set();
-  for (const v of result.value?.vulnerabilities ?? []) if ((SEV_RANK[v.severity] ?? 0) >= min) keys.add(v.key);
+  for (const v of result.value?.vulnerabilities ?? []) if (sevAtLeast(v.severity, genSeverity.value)) keys.add(v.key);
   return keys.size;
 });
 
