@@ -297,7 +297,7 @@ function splitRef(imageRef) {
   return { repo: tagged ? name.slice(0, i) : name, tag: digest || (tagged ? name.slice(i + 1) : "") };
 }
 // joinRef is the inverse: a "sha256:..." tag is a digest and joins with "@".
-const joinRef = (repo, tag) => (!tag ? repo : tag.startsWith("sha256:") ? repo + "@" + tag : repo + ":" + tag);
+export const joinRef = (repo, tag) => (!tag ? repo : tag.startsWith("sha256:") ? repo + "@" + tag : repo + ":" + tag);
 export const imageRepo = ref("");
 export const imageTag = ref("");
 export const repoTags = ref([]); // newest first, as ListTags returns them

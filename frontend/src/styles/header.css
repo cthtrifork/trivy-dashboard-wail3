@@ -164,7 +164,7 @@ header {
 }
 #image-repo {
   width: 100%;
-  padding-right: 40px;
+  padding-right: 68px;
   cursor: text;
   text-overflow: ellipsis;
 }
@@ -178,6 +178,13 @@ header {
   transform: translateY(-50%);
   color: var(--mute);
   pointer-events: none;
+}
+.repo-copy.copy-id {
+  position: absolute;
+  right: 38px;
+  top: 50%;
+  margin: 0;
+  transform: translateY(-50%);
 }
 .repo-wrap:hover .repo-edit {
   color: var(--accent);
