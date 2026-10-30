@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
-import { depsTarget, result, scanning, SEVERITIES, SEV_COLOR, sevStyle, showInPriorities, vex, vulns } from "../store.js";
+import { depsTarget, result, scanning, SEVERITIES, SEV_COLOR, sevAtLeast, sevStyle, showInPriorities, vex, vulns } from "../store.js";
 import { Graph } from "../lib/graph.js";
 import { STATUS_LABEL, detailUrl, openUrl, suppresses, tierStyle } from "../lib/format.js";
 import { blastRadius, routeTo } from "../lib/where.js";
@@ -95,11 +95,6 @@ const worst = (counts) => SEVERITIES.find((s) => counts[s]);
 const cssVar = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const sevWeight = (n) => SEVERITIES.reduce((t, s, i) => t + (n.totalCounts[s] || 0) * [10000, 1000, 100, 10, 5][i], 0);
 // The severity filter keeps components whose worst finding (own or inherited) is at least dep.sev.
-const rankOf = (n) => {
-  const i = SEVERITIES.findIndex((s) => n.totalCounts[s]);
-  return i < 0 ? SEVERITIES.length : i; // index of the worst severity; lower is worse
-};
-const atLeast = (rank) => !dep.sev || rank <= SEVERITIES.indexOf(dep.sev);
 const query = () => dep.filter.trim().toLowerCase();
 
 // Per scan, once: each component's search text and severity weight. Typing and the top-N cut
@@ -114,7 +109,7 @@ const index = computed(() => {
       weight: sevWeight(n),
       vulnerable: total(n) > 0,
       category: n.category,
-      rank: rankOf(n),
+      worst: worst(n.totalCounts),
     };
   });
 });
@@ -166,7 +161,7 @@ function visibleRefs() {
     }
     refs = [...set];
   } else {
-    refs = index.value.filter((e) => (dep.cat === "all" || e.category === dep.cat) && (!dep.vulnOnly || e.vulnerable) && atLeast(e.rank)).map((e) => e.ref);
+    refs = index.value.filter((e) => (dep.cat === "all" || e.category === dep.cat) && (!dep.vulnOnly || e.vulnerable) && sevAtLeast(e.worst, dep.sev)).map((e) => e.ref);
   }
   let truncated = 0;
   if (refs.length > MAX_NODES) {
@@ -265,7 +260,7 @@ async function select(ref, center = false, history = "reset") {
       if (dep.filter) cleared.push("the search");
       if (dep.cat !== "all") cleared.push("the OS/Application filter");
       if (dep.vulnOnly && !total(nodes.value[ref])) cleared.push("Vulnerable paths only");
-      if (dep.sev && !atLeast(rankOf(nodes.value[ref]))) cleared.push("the severity filter");
+      if (dep.sev && !sevAtLeast(worst(nodes.value[ref].totalCounts), dep.sev)) cleared.push("the severity filter");
       if (cleared.length) note.value = `Cleared ${cleared.join(" and ")} so this component shows in the graph.`;
       dep.filter = "";
       dep.cat = "all";

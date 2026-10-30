@@ -7,6 +7,8 @@ import { ScanService } from "../bindings/github.com/cthtrifork/trivy-dashboard-w
 export { ScanService };
 
 export const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
+// Whether sev is at least as severe as min; an empty min allows everything, an unlisted sev nothing.
+export const sevAtLeast = (sev, min) => !min || (SEVERITIES.includes(sev) && SEVERITIES.indexOf(sev) <= SEVERITIES.indexOf(min));
 export const SEV_COLOR = { CRITICAL: "--CRITICAL", HIGH: "--HIGH", MEDIUM: "--MEDIUM", LOW: "--LOW", UNKNOWN: "--UNKNOWN" };
 export const sevStyle = (sev) => ({ "--c": `var(${SEV_COLOR[sev]})`, "--on": `var(--on${SEV_COLOR[sev]})` });
 export const errText = (e) => String(e?.message || e);
