@@ -18,8 +18,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aquasecurity/go-version/pkg/version"
 	"github.com/caarlos0/env/v11"
+	"golang.org/x/mod/semver"
 )
 
 // pinnedTrivyImage is the Trivy image scans run with unless the user picks another version: a tag
@@ -50,11 +50,13 @@ func ResolveTrivyImage(v string) (string, error) {
 	if v == "" {
 		return pinnedTrivyImage, nil
 	}
-	if _, err := version.Parse(strings.TrimPrefix(v, "v")); err != nil || strings.ContainsAny(v, "/:@") {
+	tag := strings.TrimPrefix(v, "v")
+	// "+" build metadata is not valid in an image tag; the other separators never are in semver.
+	if sv := "v" + tag; !semver.IsValid(sv) || semver.Build(sv) != "" {
 		return "", fmt.Errorf("%q is not a valid Trivy version", v)
 	}
 	repo, _, _ := strings.Cut(DefaultTrivyImage, ":")
-	ref := repo + ":" + strings.TrimPrefix(v, "v")
+	ref := repo + ":" + tag
 	if ref == DefaultTrivyImage {
 		return pinnedTrivyImage, nil
 	}
