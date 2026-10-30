@@ -54,6 +54,7 @@ jobs:
           output: head.json
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
+          # renovate: datasource=github-releases depName=aquasecurity/trivy
           version: v0.70.0
           cache: 'false'
 
@@ -67,6 +68,7 @@ jobs:
           output: base.json
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
+          # renovate: datasource=github-releases depName=aquasecurity/trivy
           version: v0.70.0
           cache: 'false'
 

@@ -84,6 +84,7 @@ jobs:
           # Recorded scan output of a third-party image: full of CVE ids by design, not our dependencies.
           skip-dirs: internal/trivy/fixtures
           exit-code: '1'
+          # renovate: datasource=github-releases depName=aquasecurity/trivy
           version: v0.70.0
           cache: 'false'
 
