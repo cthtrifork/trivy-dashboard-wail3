@@ -247,7 +247,7 @@ await shot("13-log");
 // pictures are laid out on a blank page and photographed again.
 if (views !== "deps") {
   await page.setViewportSize({ width: 1400, height: 1100 }); // the popup is taller than the usual window
-  await page.click("#opts summary");
+  await page.click("#opts-btn");
   await page.waitForTimeout(700);
   // Pin sample ignore rules through the editor dialog so the Sources summary shows real counts.
   const pinRules = (id, text) => setEditor(`#${id}`, text);
