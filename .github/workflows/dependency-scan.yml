@@ -4,6 +4,11 @@ name: Dependency scan
 # vulnerabilities the pull request introduces. It runs only when a dependency manifest or lockfile
 # changes. The comment is informational; the blocking check is the Trivy job in security.yml. It uses
 # a paths filter, so do not mark it as a required check.
+#
+# Hardening: the scan job runs Trivy over PR-controlled files with a read-only token and no
+# write permissions; only the separate comment job holds pull-requests: write and it never checks
+# out or runs PR code. Trivy is pinned (action by SHA, binary by version) and the action's cache
+# is off so a poisoned cache cannot reach a later run.
 on:
   pull_request:
     paths:
@@ -27,7 +32,6 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -50,6 +54,8 @@ jobs:
           output: head.json
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
+          version: v0.70.0
+          cache: 'false'
 
       - name: Scan base
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -61,12 +67,34 @@ jobs:
           output: base.json
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
+          version: v0.70.0
+          cache: 'false'
 
       - name: Build report
         run: head/scripts/dependency-scan-report.sh base.json head.json | tee report.md >> "$GITHUB_STEP_SUMMARY"
 
-      # Updates its own earlier comment instead of adding one per push. Pull requests from forks get a
-      # read-only token, so a failure here must not fail the job; the report is in the job summary.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dependency-scan-report
+          path: report.md
+          if-no-files-found: error
+
+  # Separate from the scan so the token that can write comments never sits next to a scanner
+  # reading PR-controlled files. Pull requests from forks get a read-only token, so a failure here
+  # must not fail the run; the report is in the scan job's summary.
+  comment:
+    name: comment on pull request
+    needs: scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dependency-scan-report
+
+      # Updates its own earlier comment instead of adding one per push.
       - name: Comment on pull request
         continue-on-error: true
         env:

@@ -84,6 +84,8 @@ jobs:
           # Recorded scan output of a third-party image: full of CVE ids by design, not our dependencies.
           skip-dirs: internal/trivy/fixtures
           exit-code: '1'
+          version: v0.70.0
+          cache: 'false'
 
   npm-audit:
     name: npm audit (frontend runtime dependencies)
