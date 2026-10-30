@@ -1,7 +1,7 @@
 name: Dependency scan
 
-# Scans the repository with Trivy on the pull request and on its base, and comments the
-# vulnerabilities the pull request introduces and resolves. It runs only when a dependency manifest or lockfile
+# Scans the repository with Trivy and comments the HIGH and CRITICAL vulnerabilities it finds,
+# rendered by .github/trivy/dependency-scan.tpl. It runs only when a dependency manifest or lockfile
 # changes. The comment is informational; the blocking check is the Trivy job in security.yml. It uses
 # a paths filter, so do not mark it as a required check.
 #
@@ -40,42 +40,39 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          path: head
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          ref: ${{ github.event.pull_request.base.sha }}
-          path: base
 
       - name: Scan pull request
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
-          scan-ref: head
+          scan-ref: .
           scanners: vuln
-          format: json
-          output: head.json
+          severity: HIGH,CRITICAL
+          format: template
+          template: '@.github/trivy/dependency-scan.tpl'
+          output: report.md
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
           version: ${{ env.TRIVY_VERSION }}
           cache: 'false'
 
-      - name: Scan base
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          scan-type: fs
-          scan-ref: base
-          scanners: vuln
-          format: json
-          output: base.json
-          skip-dirs: internal/trivy/fixtures
-          exit-code: '0'
-          version: ${{ env.TRIVY_VERSION }}
-          cache: 'false'
+      # Trivy has no template linter, but `trivy convert` renders a template from recorded JSON, so a
+      # broken template (or one that no longer produces a table) fails here, not silently in a comment.
+      - name: Validate report template
+        run: |
+          trivy convert --format template --template @.github/trivy/dependency-scan.tpl \
+            --output rendered.md internal/trivy/fixtures/traefik_3.7.13.json
+          grep -q '^| Severity | Package ' rendered.md
 
-      - name: Build report
-        run: head/scripts/dependency-scan-report.sh base.json head.json | tee report.md >> "$GITHUB_STEP_SUMMARY"
+      # GitHub rejects comments over 65536 characters.
+      - name: Limit report size
+        run: |
+          if [ "$(wc -c < report.md)" -gt 60000 ]; then
+            head -c 60000 report.md > report.tmp
+            printf '\n\n_Report truncated; see the Trivy scan in the job log or security workflow._\n' >> report.tmp
+            mv report.tmp report.md
+          fi
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
