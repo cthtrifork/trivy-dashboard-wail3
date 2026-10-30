@@ -10,6 +10,7 @@ on:
     paths:
       - '**.go'
       - go.mod
+      - .tool-versions
       - go.sum
       - .github/workflows/bindings.yml
 
@@ -49,16 +50,27 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           persist-credentials: true # needed to push the bindings commit
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - id: go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.27' # go.mod requires 1.26.x (Wails v3)
+          go-version-file: .tool-versions
           check-latest: true
           cache: true
           cache-dependency-path: go.sum
 
+      - id: wails3
+        run: echo "version=$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v3)" >> "$GITHUB_OUTPUT"
+
+      # The wails3 CLI takes about 40 s to compile, so keep the built binary. The key is the Wails version
+      # (the CLI follows go.mod) and the Go version it was built with.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/bin
+          key: wails3-${{ steps.go.outputs.go-version }}-${{ steps.wails3.outputs.version }}
+
       - name: Generate bindings
         run: |
-          GOBIN="$RUNNER_TEMP/bin" make wails3-install
+          [ -x "$RUNNER_TEMP/bin/wails3" ] || GOBIN="$RUNNER_TEMP/bin" make wails3-install
           PATH="$RUNNER_TEMP/bin:$PATH" make bindings
 
       - name: Commit and push

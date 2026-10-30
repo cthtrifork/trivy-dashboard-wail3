@@ -70,17 +70,31 @@
       groupName: "dev tools",
     },
     {
-      // One Go version everywhere: go-version in the workflows (found by the github-actions manager),
-      // go in go.mod, and the golang images of the Dockerfiles. Reviewed by hand, never automerged:
+      // golangci-lint: its version (the Makefile pin and the `version:` of the action in ci.yml are one
+      // dependency, golangci/golangci-lint) and golangci-lint-action itself move in one PR. Later than
+      // "dev tools", so it wins for the pin.
+      matchPackageNames: ["golangci/golangci-lint", "golangci/golangci-lint-action"],
+      groupName: "golangci-lint",
+    },
+    {
+      // One Go version everywhere: golang in .tool-versions (found by the asdf manager, which setup-go reads),
+      // go in go.mod, and the golang images of the Dockerfiles, in one PR. Reviewed by hand, never automerged:
       // a new toolchain can change build output.
       matchDepNames: ["go", "golang", "docker.io/library/golang", "mirror.gcr.io/library/golang"],
       groupName: "go toolchain",
       automerge: false,
     },
     {
-      // Kept in step with the Go module by hand (the wails3 CLI and the runtime must match).
-      matchPackageNames: ["@wailsio/runtime"],
-      enabled: false,
+      // Node: nodejs in .tool-versions (asdf manager; setup-node reads it) and the node images of the
+      // Dockerfiles, in one PR. Reviewed by hand: a new Node major can change the build.
+      matchDepNames: ["nodejs", "node", "docker.io/library/node", "mirror.gcr.io/library/node"],
+      groupName: "node",
+      automerge: false,
+    },
+    {
+      // The wails3 CLI follows the Go module, and the npm runtime must be the same version: one PR.
+      matchPackageNames: ["github.com/wailsapp/wails/v3", "@wailsio/runtime"],
+      groupName: "wails",
     },
     {
       // The runner image is pinned on purpose: it fixes the glibc and WebKitGTK baseline of the

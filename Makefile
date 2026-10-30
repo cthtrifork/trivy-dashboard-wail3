@@ -19,7 +19,7 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend govulncheck tools format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots lighthouse \
+.PHONY: help doctor inspect test check fmt format fmt-check mod-check lint lint-go lint-frontend govulncheck tools format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots lighthouse \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -34,11 +34,13 @@ test: ## Run the tests as CI does (fixtures, no podman needed)
 fmt: ## Format the Go code
 	gofmt -w .
 
+format: fmt format-frontend ## Format the Go code and the Vue app (mkpm's test, lint, format trio)
+
 fmt-check: ## Fail if any Go file needs gofmt
 	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "These files need gofmt:"; echo "$$unformatted"; exit 1; fi
 
 # Dev tool versions. Renovate keeps them current through the `# renovate:` comments (renovate.json5).
-# renovate: datasource=go depName=github.com/golangci/golangci-lint/v2
+# renovate: datasource=github-releases depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION := v2.15.0
 # renovate: datasource=go depName=golang.org/x/vuln
 GOVULNCHECK_VERSION := v1.9.0
@@ -46,6 +48,32 @@ GOVULNCHECK_VERSION := v1.9.0
 GOIMPORTS_VERSION := v0.52.0
 # renovate: datasource=npm depName=lighthouse
 LIGHTHOUSE_VERSION := 13.6.0
+
+# Like mkpm's binary check: say which tools are missing, and which Go version CI uses, before a build fails.
+doctor: ## Check that the tools the project needs are installed (podman and wails3 are optional)
+	@missing=0; \
+	for t in go node npm; do \
+	  if command -v $$t >/dev/null 2>&1; then echo "  ok        $$t"; else echo "  MISSING   $$t"; missing=1; fi; \
+	done; \
+	for t in podman wails3; do \
+	  if command -v $$t >/dev/null 2>&1; then echo "  ok        $$t"; else echo "  optional  $$t (not installed)"; fi; \
+	done; \
+	echo "  go: $$(go env GOVERSION 2>/dev/null) here, CI uses golang $$(awk '$$1 == "golang" {print $$2}' .tool-versions) from .tool-versions"; \
+	exit $$missing
+
+# mkpm's `inspect`: what the overridable settings and tool pins resolve to.
+inspect: ## Print the resolved Makefile settings (paths, ports, tool versions)
+	@echo "VERSION:      $(VERSION)"
+	@echo "OUT:          $(OUT)"
+	@echo "PODMAN:       $(PODMAN)"
+	@echo "IMAGE:        $(IMAGE)"
+	@echo "NAME:         $(NAME)"
+	@echo "PORT:         $(PORT)"
+	@echo "CACHE:        $(CACHE)"
+	@echo "SOCKET:       $(SOCKET)"
+	@echo "RACE:         $(RACE)"
+	@echo "VET_TAGS:     $(VET_TAGS)"
+	@echo "golangci-lint $(GOLANGCI_LINT_VERSION), govulncheck $(GOVULNCHECK_VERSION), goimports $(GOIMPORTS_VERSION), lighthouse $(LIGHTHOUSE_VERSION)"
 
 mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
 	go mod tidy -diff
