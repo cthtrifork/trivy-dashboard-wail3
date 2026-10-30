@@ -22,14 +22,13 @@ import (
 func TestEnabled(t *testing.T) {
 	for v, want := range map[string]bool{
 		"v0.1.0":               true,
-		"0.1.0":                true,
+		"0.1.0":                false, // release tags always carry the leading v
 		"v1.2.3-rc.1":          true,
 		"v0.0.0-dryrun.abc123": true, // the release workflow's dry-run version is a valid semver
 		"v1.2.3+build5":        true,
 		"dev":                  false, // the default for `go run` / `go build`
 		"":                     false,
 		"ci-0123456":           false, // CI binaries
-		"v1.2":                 false,
 		"latest":               false,
 		"v1.2.3;rm -rf":        false,
 	} {

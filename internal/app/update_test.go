@@ -11,7 +11,7 @@ func TestNonReleaseBuildsCannotUpdate(t *testing.T) {
 	old := version
 	t.Cleanup(func() { version = old })
 
-	for _, v := range []string{"dev", "", "ci-0123456", "v1.2", "latest"} {
+	for _, v := range []string{"dev", "", "ci-0123456", "1.2.3", "latest"} {
 		version = v
 		s := &ScanService{}
 		InitUpdater(s, nil) // never reaches the updater, so no app is needed

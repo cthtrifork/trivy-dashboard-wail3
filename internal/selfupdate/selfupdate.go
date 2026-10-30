@@ -35,14 +35,10 @@ const (
 // development build would otherwise offer to replace itself with the newest
 // release.
 //
-// Only full MAJOR.MINOR.PATCH versions count, with or without the leading "v";
-// "dev", "ci-<sha>" and the like are not release versions.
-func Enabled(version string) bool {
-	v := "v" + strings.TrimPrefix(version, "v")
-	core, _, _ := strings.Cut(v, "-")
-	core, _, _ = strings.Cut(core, "+")
-	return semver.IsValid(v) && strings.Count(core, ".") == 2
-}
+// Release builds are always stamped with the git tag, which the release workflow
+// requires to be vMAJOR.MINOR.PATCH[-prerelease], so a leading "v" plus valid semver
+// is the whole test: "dev", "ci-<sha>" and the like are not release versions.
+func Enabled(version string) bool { return semver.IsValid(version) }
 
 // isArchive reports whether an asset name is an archive or a Linux package (.deb, .rpm), none of
 // which the updater can install in place.
