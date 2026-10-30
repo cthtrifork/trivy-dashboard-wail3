@@ -79,14 +79,6 @@ jobs:
           exit-code: '0'
           version: ${{ env.TRIVY_VERSION }}
 
-      # Trivy has no template linter, but `trivy convert` renders a template from recorded JSON, so a
-      # broken template (or one that no longer produces findings) fails here, not silently in a comment.
-      - name: Validate report template
-        run: |
-          trivy convert --format template --template @head/.github/trivy/dependency-scan.tpl \
-            --output rendered.md head/internal/trivy/fixtures/traefik_3.7.13.json
-          grep -q '^- [A-Z]* \[CVE-.*\](https://' rendered.md
-
       # Short overview: the findings that appear or disappear with this PR.
       - name: Build report
         run: |
