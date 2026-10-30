@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
-import { ScanService, mode, errText } from "../store.js";
+import { ScanService } from "../lib/api.js";
+import { mode, errText } from "../store.js";
 
 const dlg = ref(null);
 const body = ref(null);

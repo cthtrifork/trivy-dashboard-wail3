@@ -1,6 +1,7 @@
 <script setup>
 import { computed, defineAsyncComponent, ref } from "vue";
-import { ScanService, result, vex, loadVEX, errText, lsGet, KEYS, sevAtLeast } from "../store.js";
+import { ScanService } from "../lib/api.js";
+import { result, vex, loadVEX, errText, lsGet, KEYS, sevAtLeast } from "../store.js";
 
 // CodeMirror is ~half of the bundle; keep it out of the first load.
 const JsonBox = defineAsyncComponent(() => import("./JsonBox.vue"));

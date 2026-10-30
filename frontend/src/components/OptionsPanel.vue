@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from "vue";
+import { ScanService } from "../lib/api.js";
 import {
-  ScanService,
   opts,
   trivyImageSetting,
   trivyTags,
