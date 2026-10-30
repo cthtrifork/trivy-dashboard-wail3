@@ -1,4 +1,4 @@
-{{- /* One line per finding: id, package, installed version, severity. The workflow sorts and diffs these. */ -}}
+{{- /* One Markdown list item per finding. The workflow sorts the lines and diffs base against PR. */ -}}
 {{- range . }}{{ range .Vulnerabilities -}}
-{{ .VulnerabilityID }}	{{ .PkgName }}	{{ .InstalledVersion }}	{{ .Severity }}
+- {{ .Severity }} [{{ .VulnerabilityID }}](https://avd.aquasec.com/nvd/{{ .VulnerabilityID | lower }}) `{{ .PkgName }}` {{ .InstalledVersion }}
 {{ end }}{{ end -}}
