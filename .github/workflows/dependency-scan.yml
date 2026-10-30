@@ -7,8 +7,9 @@ name: Dependency scan
 #
 # Hardening: the scan job runs Trivy over PR-controlled files with a read-only token and no
 # write permissions; only the separate comment job holds pull-requests: write and it never checks
-# out or runs PR code. Trivy is pinned (action by SHA, binary by version) and the action's cache
-# is off so a poisoned cache cannot reach a later run.
+# out or runs PR code. Trivy is pinned (action by SHA, binary by version). The vulnerability DB comes
+# from the daily cache in trivy-cache.yml; a pull request's own caches are scoped to that PR, so
+# they cannot reach the default branch.
 on:
   pull_request:
     paths:
@@ -28,6 +29,8 @@ concurrency:
 env:
   # renovate: datasource=github-releases depName=aquasecurity/trivy
   TRIVY_VERSION: v0.70.0
+  # The DB comes from the cache that trivy-cache.yml refreshes daily.
+  TRIVY_SKIP_DB_UPDATE: 'true'
 
 jobs:
   scan:
@@ -54,7 +57,6 @@ jobs:
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
           version: ${{ env.TRIVY_VERSION }}
-          cache: 'false'
 
       # Trivy has no template linter, but `trivy convert` renders a template from recorded JSON, so a
       # broken template (or one that no longer produces a table) fails here, not silently in a comment.
