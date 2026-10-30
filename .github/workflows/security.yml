@@ -33,6 +33,8 @@ concurrency:
 
 env:
   GOTOOLCHAIN: local
+  # renovate: datasource=github-releases depName=aquasecurity/trivy
+  TRIVY_VERSION: v0.70.0
 
 jobs:
   govulncheck:
@@ -84,8 +86,7 @@ jobs:
           # Recorded scan output of a third-party image: full of CVE ids by design, not our dependencies.
           skip-dirs: internal/trivy/fixtures
           exit-code: '1'
-          # renovate: datasource=github-releases depName=aquasecurity/trivy
-          version: v0.70.0
+          version: ${{ env.TRIVY_VERSION }}
           cache: 'false'
 
   npm-audit:

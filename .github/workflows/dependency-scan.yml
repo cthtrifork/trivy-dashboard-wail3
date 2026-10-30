@@ -25,6 +25,10 @@ concurrency:
   group: dependency-scan-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+env:
+  # renovate: datasource=github-releases depName=aquasecurity/trivy
+  TRIVY_VERSION: v0.70.0
+
 jobs:
   scan:
     name: trivy (dependency changes)
@@ -54,8 +58,7 @@ jobs:
           output: head.json
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
-          # renovate: datasource=github-releases depName=aquasecurity/trivy
-          version: v0.70.0
+          version: ${{ env.TRIVY_VERSION }}
           cache: 'false'
 
       - name: Scan base
@@ -68,8 +71,7 @@ jobs:
           output: base.json
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
-          # renovate: datasource=github-releases depName=aquasecurity/trivy
-          version: v0.70.0
+          version: ${{ env.TRIVY_VERSION }}
           cache: 'false'
 
       - name: Build report
