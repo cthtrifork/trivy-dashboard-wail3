@@ -69,6 +69,16 @@ await page.goto(url);
 await page.waitForSelector("#mode-banner:not([hidden])", { timeout: 15000 });
 expect((await text("#mode-banner")).includes("Demo mode"), "demo banner should be visible");
 
+// ---- an image reference typed halfway: the reason shows and Scan is off ----
+const typedImage = await page.inputValue("#image");
+await page.fill("#image", "docker.io/library/traefik:");
+await page.waitForSelector("#image-error", { timeout: 5000 });
+expect((await text("#image-error")).includes("Not a valid image reference"), "an empty tag should be rejected with a reason");
+expect(await page.isDisabled("#scan-btn"), "Scan should be disabled for an invalid reference");
+await shot("00-invalid-image-ref");
+await page.fill("#image", typedImage);
+await page.waitForSelector("#image-error", { state: "detached", timeout: 5000 });
+
 // ---- scan the recorded base image ----
 await page.click("#scan-btn");
 await page.waitForFunction(() => !document.querySelector("#scan-btn").disabled && document.querySelector("#vuln-count").textContent !== "0", null, { timeout: 30000 });

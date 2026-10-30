@@ -13,6 +13,11 @@ import {
   ensureTags,
   setTag,
   clearAll,
+  looksLikeRef,
+  imageError,
+  composing,
+  startCompose,
+  backToView,
   scanState,
   scanning,
   comparing,
@@ -72,9 +77,43 @@ function clearView() {
   clearAll();
   nextTick(() => document.getElementById("image")?.focus());
 }
+// Composing: the single box returns, focused, while the shown results stay (dimmed). The repository
+// field enters it on click, and so does pasting a full reference into the repository or tag field.
+function focusImage() {
+  nextTick(() => {
+    const el = document.getElementById("image");
+    el?.focus();
+    el?.select();
+  });
+}
+function compose(ref) {
+  startCompose(ref);
+  closeHistory();
+  focusImage();
+}
+// Pasted text loses the spaces and line breaks around it, which a copied reference often carries.
+function insertTrimmed(ev) {
+  const text = ev.clipboardData?.getData("text") ?? "";
+  if (text === text.trim()) return;
+  ev.preventDefault();
+  const el = ev.target;
+  if (el.readOnly) return;
+  el.setRangeText(text.trim(), el.selectionStart, el.selectionEnd, "end");
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function pasteRef(ev) {
+  const text = (ev.clipboardData?.getData("text") ?? "").trim();
+  if (!looksLikeRef(text)) return insertTrimmed(ev);
+  ev.preventDefault();
+  compose(text);
+}
+function back() {
+  backToView();
+  closeHistory();
+}
 function imageKey(ev) {
   const n = history.value.length;
-  if (ev.key === "Escape") return closeHistory();
+  if (ev.key === "Escape") return showHistory.value || !composing.value ? closeHistory() : back();
   if (!n || (ev.key !== "ArrowDown" && ev.key !== "ArrowUp" && ev.key !== "Enter" && ev.key !== "Tab")) return;
   if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
     ev.preventDefault();
@@ -138,7 +177,19 @@ onMounted(() => {
       </div>
       <div class="scan-row">
         <div v-if="split" class="image-wrap image-split">
-          <input id="image-repo" :value="imageRepo" readonly tabindex="-1" aria-label="Image repository" :title="imageRepo" />
+          <div class="repo-wrap">
+            <input
+              id="image-repo"
+              :value="imageRepo"
+              readonly
+              aria-label="Image repository, click to scan a different image"
+              :title="imageRepo + '\nClick to scan a different image'"
+              @focus="compose()"
+              @click="compose()"
+              @paste="pasteRef"
+            />
+            <span class="repo-edit" aria-hidden="true">✎</span>
+          </div>
           <TagInput
             id="image-tag"
             :model-value="imageTag"
@@ -147,6 +198,7 @@ onMounted(() => {
             :class="{ changed: scanState === 'changed' }"
             @update:model-value="setTag"
             @open="ensureTags(imageRepo)"
+            @paste="pasteRef"
           />
           <button type="button" class="ghost clear-btn" title="Clear the results and go back to the single image field" :disabled="scanning" @click="clearView">
             Clear
@@ -165,10 +217,14 @@ onMounted(() => {
             autocomplete="off"
             spellcheck="false"
             required
+            :aria-invalid="!!imageError"
+            :aria-describedby="imageError ? 'image-error' : undefined"
+            :class="{ invalid: imageError }"
             @focus="histOpen = true"
             @input="onImageInput"
             @blur="closeHistory"
             @keydown="imageKey"
+            @paste="insertTrimmed"
           />
           <div id="recent-list" v-show="showHistory" role="listbox" aria-label="Recent images">
             <div class="recent-head" aria-hidden="true">Recent images</div>
@@ -195,11 +251,12 @@ onMounted(() => {
           id="scan-btn"
           type="submit"
           :class="{ rescan: scanState === 'current' }"
-          :disabled="scanning"
+          :disabled="scanning || !!imageError"
           :title="scanState === 'current' ? 'Scan this image again, e.g. when a floating tag has moved' : ''"
         >
           {{ scanState === "current" ? "Rescan" : "Scan" }}
         </button>
+        <button v-if="composing && !scanning" id="back-btn" type="button" class="ghost" @click="back">← Back to {{ result.image }}</button>
         <div id="vex-split" :class="{ solo: !vex.size }">
           <button
             v-if="vex.size"
@@ -232,7 +289,11 @@ onMounted(() => {
         </div>
         <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
       </div>
-      <p v-if="split && !scanning && scanState !== 'new'" id="scan-state" :class="scanState" role="status">
+      <p v-if="imageError" id="image-error" role="alert">✗ {{ imageError }}</p>
+      <p v-else-if="composing && !scanning" id="scan-state" class="changed" role="status">
+        ● Still showing the scan of {{ result.image }}. Scan to replace it, or press Esc to go back.
+      </p>
+      <p v-else-if="split && !scanning && scanState !== 'new'" id="scan-state" :class="scanState" role="status">
         <template v-if="scanState === 'current'">✓ Showing the scan of {{ result.image }}. Rescan to check it again.</template>
         <template v-else-if="scanState === 'settings'">● Options changed since this scan. Press Scan to apply them.</template>
         <template v-else>● Not scanned yet: the results below are for {{ result.image }}. Press Scan for {{ image }}.</template>
@@ -262,7 +323,7 @@ onMounted(() => {
     <button type="button" :class="['tab', 'right', { active: tab === 'log' }]" data-tab="log" @click="tab = 'log'">Log</button>
   </nav>
 
-  <main>
+  <main :class="{ dim: composing }">
     <section id="tab-prio" class="panel" :class="{ active: tab === 'prio' }">
       <PrioritiesPanel ref="prio" />
     </section>

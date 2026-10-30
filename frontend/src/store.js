@@ -389,6 +389,40 @@ export const scanState = computed(() => {
   return settingsChanged.value ? "settings" : "current";
 });
 
+// imageError is why the typed reference cannot be scanned ("" when it can). It comes from the same Go
+// parser every scan uses, asked once typing pauses and cleared at the next keystroke.
+export const imageError = ref("");
+let imageCheck;
+watch(image, (img) => {
+  clearTimeout(imageCheck);
+  imageError.value = "";
+  if (!img.trim()) return;
+  imageCheck = setTimeout(async () => {
+    try {
+      const why = await ScanService.ValidateImage(img);
+      if (image.value === img) imageError.value = why;
+    } catch {
+      /* the scan itself reports a reference it cannot use */
+    }
+  }, 500);
+});
+// looksLikeRef tells a pasted full image reference from a tag: tags never contain "/" or "@".
+export const looksLikeRef = (s) => /[/@]/.test(s.trim());
+// Composing: the single image box is back while the old results stay on screen, so a new image can be
+// typed or pasted without losing them. Back returns to the split view of the shown scan.
+export const composing = computed(() => !split.value && !!result.value);
+export function startCompose(ref) {
+  if (!result.value) return;
+  split.value = false;
+  image.value = ref === undefined ? joinRef(imageRepo.value, imageTag.value) : ref.trim();
+}
+export function backToView() {
+  if (!result.value) return;
+  const { repo, tag } = splitRef(result.value.image);
+  enterSplit(repo, tag);
+  image.value = result.value.image;
+}
+
 // clearAll empties the shown findings and goes back to the single image box (which keeps the reference).
 export function clearAll() {
   split.value = false;
@@ -427,6 +461,7 @@ export async function loadVEX() {
 
 export async function runScan() {
   if (scanning.value) return; // a scan or compare is already running; its result and log must not interleave
+  if (imageError.value) return setStatus(imageError.value, { err: true });
   scanning.value = true;
   compareData.value = null;
   const { repo, tag } = splitRef(image.value);

@@ -156,12 +156,44 @@ header {
   font-size: 17px;
   font-family: ui-monospace, monospace;
 }
-#image-repo {
+/* The repository is read only but invites a click: it opens the single box to scan another image. */
+.repo-wrap {
+  position: relative;
   flex: 1;
   min-width: 0;
-  opacity: 0.75;
-  cursor: default;
+}
+#image-repo {
+  width: 100%;
+  padding-right: 40px;
+  cursor: text;
   text-overflow: ellipsis;
+}
+#image-repo:hover {
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+.repo-edit {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--mute);
+  pointer-events: none;
+}
+.repo-wrap:hover .repo-edit {
+  color: var(--accent);
+}
+.scan-row #back-btn {
+  padding: 0 18px;
+  font-size: 14px;
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Composing: the results are still the old image's, so they step back until a scan replaces them. */
+main.dim {
+  opacity: 0.45;
+  transition: opacity 0.15s;
 }
 .tag-wrap {
   position: relative;
@@ -238,4 +270,14 @@ header {
 #scan-state.changed,
 #scan-state.settings {
   color: var(--accent);
+}
+
+/* An image reference that cannot be scanned: the box is marked and the reason is given under it. */
+#image.invalid {
+  box-shadow: 0 0 0 2px var(--CRITICAL);
+}
+#image-error {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: var(--CRITICAL);
 }

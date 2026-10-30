@@ -89,6 +89,16 @@ jobs:
           SCREENSHOT_VIEWS: core # everything but the dependency graph, see the header
         run: make screenshots
 
+      - name: Upload 00-invalid-image-ref
+        id: shot-00-invalid-image-ref
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: docs/screenshots/00-invalid-image-ref.png
+          archive: false # one file per artifact, so it can be embedded; the file name is the artifact name
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload 01-priorities
         id: shot-01-priorities
         if: github.event_name == 'pull_request'
