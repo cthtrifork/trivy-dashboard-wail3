@@ -82,7 +82,9 @@ jobs:
           fi
 
       - name: Check formatting
-        run: make fmt-check
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then echo "These files need gofmt:"; echo "$unformatted"; exit 1; fi
 
       # Config in .yamllint.yml.
       - name: Lint YAML
@@ -94,7 +96,9 @@ jobs:
           PATH="$HOME/.local/bin:$PATH" yamllint --strict $(git ls-files '*.yml' '*.yaml')
 
       - name: Check go.mod is tidy and modules verify
-        run: make mod-check
+        run: |
+          go mod tidy -diff
+          go mod verify
 
       # Config in .golangci.yml. Headless: this job has no GTK, so lint the server-tag build (CGO off, like
       # the headless build); the args mirror `make lint-go`. Renovate reads the version below itself and the
