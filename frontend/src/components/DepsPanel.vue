@@ -1,10 +1,11 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
-import { depsTarget, result, SEVERITIES, SEV_COLOR, sevStyle, showInPriorities, vex, vulns } from "../store.js";
+import { depsTarget, result, scanning, SEVERITIES, SEV_COLOR, sevStyle, showInPriorities, vex, vulns } from "../store.js";
 import { Graph } from "../lib/graph.js";
 import { STATUS_LABEL, suppresses, tierStyle } from "../lib/format.js";
 import { blastRadius, routeTo } from "../lib/where.js";
 import Chip from "./Chip.vue";
+import ScanPending from "./ScanPending.vue";
 import SevBadges from "./SevBadges.vue";
 
 const IMAGE_NODE = "__image__";
@@ -329,6 +330,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
   <div id="dep-split">
     <div class="graph-wrap" id="dep-graph">
       <canvas id="dep-canvas" ref="canvas"></canvas>
+      <ScanPending v-if="!result && scanning" kind="graph" class="dep-pending" />
       <div id="dep-hover">{{ hover }}</div>
       <div id="dep-legend">
         <span><i class="lg sq"></i>OS package</span><span><i class="lg"></i>library / app</span>
@@ -337,7 +339,8 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
       </div>
     </div>
     <div class="table-wrap" id="dep-detail">
-      <div v-if="!result" class="empty">Run a scan to explore dependencies. Click a node to inspect it.</div>
+      <div v-if="!result && scanning" class="empty">Scanning… the dependency graph appears when the scan finishes.</div>
+      <div v-else-if="!result" class="empty">Run a scan to explore dependencies. Click a node to inspect it.</div>
       <div v-else-if="!selectedNode" class="empty">Click a node to inspect it.</div>
       <template v-else>
         <button v-if="trail.length" type="button" class="link" @click="back">

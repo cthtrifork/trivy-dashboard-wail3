@@ -25,6 +25,7 @@ import {
 import { pct } from "../lib/format.js";
 import TagInput from "./TagInput.vue";
 import Chip from "./Chip.vue";
+import ScanPending from "./ScanPending.vue";
 import { useVirtualList } from "../lib/virtual.js";
 
 const CHG_COLOR = {
@@ -119,7 +120,8 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
     <button id="cmp-cancel" type="button" v-show="comparing" @click="cancel">Cancel</button>
   </form>
   <div id="cmp-out" class="scroll">
-    <div v-if="!data" class="empty">
+    <ScanPending v-if="!data && comparing" kind="table" :cols="5" />
+    <div v-else-if="!data" class="empty">
       Pick a target tag to compare the scanned image against and see what changed: vulnerabilities added and removed, and package changes.
     </div>
     <template v-else>

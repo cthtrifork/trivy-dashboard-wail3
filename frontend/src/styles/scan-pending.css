@@ -1,0 +1,115 @@
+/* ScanPending: skeleton shown in each view while the first scan is running. */
+.sp {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.sp-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  color: var(--mute);
+  font-size: 12px;
+}
+.sp-log {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-bar,
+.sp-bar-dot circle {
+  background: var(--line);
+  fill: var(--line);
+  border-radius: 4px;
+  animation: sp-pulse 1.6s ease-in-out infinite;
+}
+@keyframes sp-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.sp-bar {
+  display: block;
+  height: 12px;
+}
+.sp-row,
+.sp-trow {
+  display: grid;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+/* Same columns as .prow-main, with the neutral inset bar a real row has in its severity colour. */
+.sp-row {
+  grid-template-columns: 92px 128px minmax(0, 1fr) 150px 90px;
+  min-height: 46px;
+  box-shadow: inset 4px 0 0 var(--line);
+}
+.sp-trow {
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  min-height: 38px;
+}
+.sp-two {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sp-small {
+  height: 9px;
+}
+.sp-pill {
+  width: 68px;
+  height: 20px;
+  border-radius: 10px;
+}
+.sp-pill.sp-wide {
+  width: 96px;
+}
+.sp-meter {
+  width: 100px;
+  height: 6px;
+  border-radius: 3px;
+}
+.sp-fix {
+  width: 48px;
+}
+.sp-graph {
+  flex: 1;
+  min-height: 0;
+  max-height: 260px;
+  padding: 16px;
+}
+.sp-bar-line line {
+  stroke: var(--line);
+  stroke-width: 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-bar,
+  .sp-bar-dot circle,
+  .sp-note.spin::before {
+    animation: none;
+  }
+}
+@media (max-width: 760px) {
+  .sp-row {
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+  .sp-row > :nth-child(2),
+  .sp-row > :nth-child(4),
+  .sp-row > :nth-child(5) {
+    display: none;
+  }
+}
+.dep-pending {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+}
