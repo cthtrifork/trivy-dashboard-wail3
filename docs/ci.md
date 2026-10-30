@@ -74,3 +74,7 @@ Screenshots are not committed from a feature branch, with one exception (the dep
 `bindings.yml` keeps `frontend/bindings` in step with the Go code: when a same-repository pull request changes Go code, it regenerates the bindings with the `wails3` CLI at the go.mod version and, if anything changed, pushes a `Regenerate Wails bindings` commit to the PR branch. The commit is pushed with the Renovate GitHub App's token (not `GITHUB_TOKEN`, whose pushes start no workflows), so CI runs on it; the second bindings run finds nothing to regenerate and exits. The CI bindings check stays as the backstop.
 
 `security.yml` also runs `make audit-frontend` (`npm audit --omit=dev --audit-level=high` in `frontend/`; weekly, and when the frontend lockfile changes): runtime dependencies only, HIGH and above. It is deliberately not part of `ci.yml`, so a newly published advisory cannot block unrelated pull requests.
+
+## Dependency scan on pull requests
+
+`dependency-scan.yml` runs when `go.mod`, `go.sum`, the frontend manifest/lockfile or `build/docker/**` change. It scans the PR and its base with Trivy (`fs`, vulnerabilities) and `scripts/dependency-scan-report.sh` diffs the two, so only vulnerabilities the PR introduces are reported. The result is posted as a single PR comment that is updated on each push, and written to the job summary (PRs from forks have a read-only token, so only the summary is available there). It is informational and never fails the PR; the blocking check stays the Trivy job in `security.yml`.

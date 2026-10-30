@@ -1,0 +1,85 @@
+name: Dependency scan
+
+# Scans the repository with Trivy on the pull request and on its base, and comments the
+# vulnerabilities the pull request introduces. It runs only when a dependency manifest or lockfile
+# changes. The comment is informational; the blocking check is the Trivy job in security.yml. It uses
+# a paths filter, so do not mark it as a required check.
+on:
+  pull_request:
+    paths:
+      - go.mod
+      - go.sum
+      - frontend/package.json
+      - frontend/package-lock.json
+      - build/docker/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-scan-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: trivy (dependency changes)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: head
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - name: Scan pull request
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: head
+          scanners: vuln
+          format: json
+          output: head.json
+          skip-dirs: internal/trivy/fixtures
+          exit-code: '0'
+
+      - name: Scan base
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: base
+          scanners: vuln
+          format: json
+          output: base.json
+          skip-dirs: internal/trivy/fixtures
+          exit-code: '0'
+
+      - name: Build report
+        run: head/scripts/dependency-scan-report.sh base.json head.json | tee report.md >> "$GITHUB_STEP_SUMMARY"
+
+      # Updates its own earlier comment instead of adding one per push. Pull requests from forks get a
+      # read-only token, so a failure here must not fail the job; the report is in the job summary.
+      - name: Comment on pull request
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          marker='<!-- trivy-dependency-scan -->'
+          { echo "$marker"; cat report.md; } > comment.md
+          id=$(gh api --paginate "repos/$GH_REPO/issues/$PR/comments" \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | head -n1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GH_REPO/issues/comments/$id" -F body=@comment.md >/dev/null
+          else
+            gh api -X POST "repos/$GH_REPO/issues/$PR/comments" -F body=@comment.md >/dev/null
+          fi
