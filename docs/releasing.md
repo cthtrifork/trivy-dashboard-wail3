@@ -38,7 +38,7 @@ The workflow then:
 
 `release.yml` publishes with `gh release create --generate-notes`, so the notes are built from the PRs merged since the previous tag and laid out by [`.github/release.yml`](../.github/release.yml). Two things make them readable: a title written for users, and a label that picks the section. Both come from the PR title, so nobody tags PRs by hand.
 
-**Title: `type(scope)!: summary`.** The `scope` and `!` are optional. Max 72 characters, no trailing period. Write the effect a user sees (`fix: keep the last scan on disk across a restart`), not the diff (`fix: change persist.go`). Squash merges use the title as the commit subject, so the history reads the same way.
+**Title: `type(scope)!: summary`** ([Conventional Commits](https://www.conventionalcommits.org/)). The `scope` and `!` are optional. Write the effect a user sees (`fix: keep the last scan on disk across a restart`), not the diff (`fix: change persist.go`). Squash merges use the title as the commit subject, so the history reads the same way.
 
 | Type | Label | Release-note section |
 |---|---|---|
@@ -55,9 +55,9 @@ The workflow then:
 
 A PR with no matching label lands in *Other changes*. Add `skip-changelog` to keep a PR out of the notes entirely.
 
-**Enforcement.** The *PR title* workflow (`pr-title.yml`) fails a PR whose title does not match, and creates and sets the label (removing a stale one when the title is edited). The rules and the table live in `scripts/pr-title.sh`; try one with `scripts/pr-title.sh check "fix: ..."`. Fork PRs are checked but not labelled (the token is read-only). The `bot/*` screenshots preview PR is skipped. Renovate PRs are titled `deps: update ...` (`semanticCommits` in `renovate.json5`) and keep their own `dependencies` and `security` labels. To make the check block merging, add **check title** as a required status check in the branch rules (repository settings; not something a workflow can do).
+**Enforcement.** The *PR title* workflow (`pr-title.yml`) fails a PR whose title does not match (`amannn/action-semantic-pull-request`) and sets the label from the type (`release-drafter`'s autolabeler, rules in `.github/release-drafter.yml`, which also removes a stale label when the title is edited and creates a label that does not exist yet). Fork PRs are checked but not labelled (the token is read-only). The `bot/*` screenshots preview PR is skipped. Renovate PRs are titled `deps: update ...`, or `security: ...` for vulnerability fixes (`semanticCommits` in `renovate.json5`), so they get the same labels. To make the check block merging, add **check title** as a required status check in the branch rules (repository settings; not something a workflow can do).
 
-When you change a type, label or section, change `scripts/pr-title.sh`, `.github/release.yml` and the table above together.
+When you change a type, label or section, change the `types` in `pr-title.yml`, the rules in `.github/release-drafter.yml`, `.github/release.yml` and the table above together.
 
 ## One-time setup: the package signing key
 

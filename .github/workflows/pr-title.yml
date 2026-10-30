@@ -1,11 +1,12 @@
 name: PR title
 
-# Enforces the PR title convention `type(scope)!: summary` and tags the PR with the matching label.
-# Squash merges use the title as the commit subject and the release notes (.github/release.yml) group
-# PRs by label, so a good title and the right label are what make the notes readable.
-#   - scripts/pr-title.sh holds the rules and the type -> label table.
-#   - The check runs for every PR, forks included (it only reads the title). Labelling needs write
-#     access, so it is skipped for fork PRs.
+# Enforces the PR title convention (Conventional Commits: `type(scope)!: summary`) and labels the PR
+# from it. Squash merges use the title as the commit subject and the release notes (.github/release.yml)
+# group PRs by label, so a good title and the right label are what make the notes readable.
+#   - check title: amannn/action-semantic-pull-request validates the title. Runs for every PR.
+#   - label: release-drafter's autolabeler adds the label from the title (rules and the type -> label
+#     table in .github/release-drafter.yml) and, with sync-labels, drops a stale one when the title is
+#     edited. Labelling needs write access, so it is skipped for fork PRs.
 #   - Skipped: bot/* branches (the never-merged screenshots preview PR).
 #   - Make "check title" a required status check in the branch rules to enforce it on merge.
 on:
@@ -26,64 +27,34 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      contents: read
+      pull-requests: read # read the PR title
+    steps:
+      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          # Keep in step with .github/release-drafter.yml and docs/releasing.md.
+          types: |
+            feat
+            fix
+            security
+            perf
+            refactor
+            docs
+            test
+            chore
+            revert
+            ci
+            build
+            deps
+
+  label:
+    name: label PR
+    if: ${{ !startsWith(github.head_ref, 'bot/') && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read # the autolabeler reads .github/release-drafter.yml
       pull-requests: write # add and remove labels
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Check the title
-        id: check
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          set -euo pipefail
-          if ! labels="$(scripts/pr-title.sh check "$PR_TITLE" 2> err.txt)"; then
-            msg="$(cat err.txt)"
-            echo "::error title=PR title::${msg//$'\n'/%0A}"
-            {
-              echo "### PR title does not follow the convention"
-              echo
-              echo '```'
-              echo "$msg"
-              echo '```'
-              echo
-              echo "Rename the PR; this check runs again when the title changes. See docs/releasing.md."
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          echo "labels=$(paste -sd, <<<"$labels")" >> "$GITHUB_OUTPUT"
-
-      - name: Label the PR
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-          WANT: ${{ steps.check.outputs.labels }}
-          BOT_AUTHOR: ${{ github.event.pull_request.user.type == 'Bot' }}
-        run: |
-          set -euo pipefail
-          # Make sure every managed label exists (first run, or someone deleted one).
-          scripts/pr-title.sh labels | while IFS=$'\t' read -r name color description; do
-            gh label create "$name" --color "$color" --description "$description" --force > /dev/null
-          done
-
-          IFS=, read -ra want <<<"$WANT"
-          mapfile -t have < <(gh api "repos/$GH_REPO/issues/$PR/labels" --paginate --jq '.[].name')
-
-          # Drop managed labels the title no longer earns (title edited from fix: to feat:). `dependencies`
-          # and `security` are also set by Renovate, so they are only touched on PRs by people.
-          managed=(feature bug performance refactor documentation maintenance ci build breaking-change)
-          if [ "$BOT_AUTHOR" != true ]; then managed+=(dependencies security); fi
-          for label in "${have[@]}"; do
-            [[ " ${managed[*]} " == *" $label "* ]] || continue
-            [[ " ${want[*]} " == *" $label "* ]] && continue
-            gh api -X DELETE "repos/$GH_REPO/issues/$PR/labels/$label" > /dev/null
-          done
-
-          args=()
-          for label in "${want[@]}"; do args+=(-f "labels[]=$label"); done
-          gh api -X POST "repos/$GH_REPO/issues/$PR/labels" "${args[@]}" > /dev/null
-          echo "Labels: ${want[*]}" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: release-drafter/release-drafter/autolabeler@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0

@@ -1,5 +1,5 @@
 # Layout of the generated release notes (`gh release create --generate-notes` in release.yml reads this).
-# Sections are filled by PR label; the labels come from the PR title type (scripts/pr-title.sh, pr-title.yml).
+# Sections are filled by PR label; the labels come from the PR title type (release-drafter.yml, pr-title.yml).
 # A PR lands in the first section whose labels it has, so breaking changes and security fixes come first.
 changelog:
   exclude:

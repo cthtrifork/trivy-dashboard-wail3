@@ -55,7 +55,7 @@ Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces 
 
 ## PR titles and release notes
 
-`pr-title.yml` checks that a PR title follows `type(scope)!: summary` and labels the PR from the type, using the table in `scripts/pr-title.sh`; `.github/release.yml` turns those labels into sections of the generated release notes. It uses `gh` and the workflow's own token (`pull-requests: write`, no third-party action to pin), runs for fork PRs as a read-only title check, and skips `bot/*` branches. Details and the type table: [releasing](releasing.md#release-notes).
+`pr-title.yml` checks that a PR title follows `type(scope)!: summary` and labels the PR from the type, with [`amannn/action-semantic-pull-request`](https://github.com/amannn/action-semantic-pull-request), and labels it with the autolabeler of [`release-drafter`](https://github.com/release-drafter/release-drafter) (rules in `.github/release-drafter.yml`; only the autolabeler runs, releases are still cut by `tag-release.yml`). `.github/release.yml` turns those labels into sections of the generated release notes. Both actions are SHA-pinned like the rest, use the workflow's own token, run for fork PRs as a read-only title check (labelling needs write access), and skip `bot/*` branches. Details and the type table: [releasing](releasing.md#release-notes).
 
 ## Actions lint
 

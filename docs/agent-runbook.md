@@ -12,7 +12,7 @@ git remote set-branches --add origin claude/<topic>; git fetch --depth=1 origin 
 gh api repos/cthtrifork/trivy-dashboard-wail3/pulls -f title='…' -f head=claude/<topic> -f base=main -f body='…' --jq .html_url
 ```
 
-The PR title follows `type(scope)!: summary` (`docs/releasing.md`, *Release notes*); `scripts/pr-title.sh check "<title>"` validates one, and the *PR title* workflow labels the PR from it.
+The PR title follows `type(scope)!: summary` (`docs/releasing.md`, *Release notes*); the *PR title* workflow validates it and labels the PR from it.
 
 Commit messages and PR bodies end with the attribution lines from the session's system reminder. Follow `.github/pull_request_template.md`.
 

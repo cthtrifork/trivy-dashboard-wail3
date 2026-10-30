@@ -1,0 +1,34 @@
+# Used only by the autolabeler in .github/workflows/pr-title.yml: it labels a PR from its title type,
+# and .github/release.yml turns the labels into release-note sections. (Release Drafter itself is not
+# run; releases are cut by tag-release.yml.) Keep the types in step with the `types` list in
+# pr-title.yml and the table in docs/releasing.md.
+#
+# sync-labels removes a managed label the title no longer earns (title edited from fix: to feat:). That
+# includes `dependencies` and `security`, which Renovate also sets, so its PRs are titled to match:
+# `deps:` for updates, `security:` for vulnerability fixes (renovate.json5).
+sync-labels: true
+
+autolabeler:
+  - labels: [feature]
+    title: ['/^feat(\([^)]*\))?!?:/']
+  - labels: [bug]
+    title: ['/^fix(\([^)]*\))?!?:/']
+  - labels: [security]
+    title: ['/^security(\([^)]*\))?!?:/']
+  - labels: [performance]
+    title: ['/^perf(\([^)]*\))?!?:/']
+  - labels: [refactor]
+    title: ['/^refactor(\([^)]*\))?!?:/']
+  - labels: [documentation]
+    title: ['/^docs(\([^)]*\))?!?:/']
+  - labels: [maintenance]
+    title: ['/^(test|chore|revert)(\([^)]*\))?!?:/']
+  - labels: [ci]
+    title: ['/^ci(\([^)]*\))?!?:/']
+  - labels: [build]
+    title: ['/^build(\([^)]*\))?!?:/']
+  - labels: [dependencies]
+    title: ['/^deps(\([^)]*\))?!?:/']
+  # `!` before the colon marks a breaking change, whatever the type.
+  - labels: [breaking-change]
+    title: ['/^[a-z]+(\([^)]*\))?!:/']
