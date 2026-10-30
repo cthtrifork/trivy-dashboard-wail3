@@ -1,4 +1,4 @@
-import { ScanService } from "../store.js";
+import { ScanService } from "./api.js";
 
 // Every copy in the app goes through here. The native clipboard comes first;
 // server mode has none (ScanService.CopyText errors there), so use the browser's.
