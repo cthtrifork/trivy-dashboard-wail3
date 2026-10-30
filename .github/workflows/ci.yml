@@ -127,7 +127,8 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
-          files="$(git diff --name-only "$BASE_SHA...HEAD" -- docs/screenshots)"
+          # Added, modified or renamed only: a PR that deletes screenshots is fine.
+          files="$(git diff --name-only --diff-filter=AMR "$BASE_SHA...HEAD" -- docs/screenshots)"
           if [ -n "$files" ]; then
             echo "::error::Screenshots are not committed to this repository (docs/ci.md, Screenshots). Do not merge this PR; remove docs/screenshots from it."
             echo "$files"
