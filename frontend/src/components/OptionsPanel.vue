@@ -148,13 +148,24 @@ const updateAction = computed(() => {
       return { label: "Check for updates…", run: checkForUpdates };
   }
 });
-
+// The popover is a native `popover="auto"`: the browser closes it on Esc or a click outside and returns focus to the button.
+// It sits in the top layer, so it is placed under the button by hand each time it opens.
+const button = ref(null);
+const popover = ref(null);
+const isOpen = ref(false);
+const onToggle = (ev) => {
+  isOpen.value = ev.newState === "open";
+  if (!isOpen.value) return;
+  const r = button.value.getBoundingClientRect();
+  popover.value.style.top = `${r.bottom + 12}px`;
+  popover.value.style.right = `${document.documentElement.clientWidth - r.right}px`;
+};
 </script>
 
 <template>
-<details id="opts">
-  <summary>Options<span v-if="activeCount" class="opts-count"> · {{ activeCount }} active</span
-  ><span v-if="settingsChanged" class="opts-count"> · rescan to apply</span></summary>
+<button id="opts-btn" ref="button" type="button" class="opts-btn" :class="{ open: isOpen }" popovertarget="opts" :aria-expanded="isOpen">Options<span v-if="activeCount" class="opts-count"> · {{ activeCount }} active</span
+  ><span v-if="settingsChanged" class="opts-count"> · rescan to apply</span></button>
+<div id="opts" ref="popover" popover="auto" class="opts-pop" @toggle="onToggle">
   <div class="opts-body">
     <div class="opts-tabs" role="tablist" aria-label="Options">
       <button
@@ -278,6 +289,6 @@ const updateAction = computed(() => {
       <span class="kv">{{ appInfo?.enabled ? "Updates download from GitHub releases and are verified with SHA-256 before they are installed." : appInfo?.reason }}</span>
     </div>
   </div>
-</details>
-<IgnoreRulesDialog ref="ignoreDialog" />
+  <IgnoreRulesDialog ref="ignoreDialog" />
+</div>
 </template>
