@@ -264,12 +264,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Show screenshots in a PR comment
+      - name: Build the screenshots comment
+        id: comment-body
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           STEPS: ${{ toJSON(steps) }}
         run: |
@@ -283,7 +281,6 @@ jobs:
 
           body="$(mktemp)"
           {
-            echo "<!-- screenshots-preview -->"
             echo "### Screenshots"
             echo
             echo "Rendered from the recorded fixtures at ${HEAD_SHA::7}. Not committed to this branch; after merge a bot PR from \`main\` updates \`docs/screenshots\`. Images are run artifacts: you must be logged in to see them, and they expire after 14 days."
@@ -299,14 +296,15 @@ jobs:
               done
           } > "$body"
 
-          id="$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
-            --jq '.[] | select(.body | contains("<!-- screenshots-preview -->")) | .id' | sed -n '1p')"
-          if [ -n "$id" ]; then
-            gh api -X PATCH "repos/${REPO}/issues/comments/${id}" -F body=@"$body" >/dev/null
-          else
-            gh pr comment "$PR" --body-file "$body"
-          fi
+          echo "path=$body" >> "$GITHUB_OUTPUT"
           echo "Screenshots are in the PR comment and in the run's artifacts." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show screenshots in a PR comment
+        if: steps.comment-body.outcome == 'success'
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: screenshots-preview
+          path: ${{ steps.comment-body.outputs.path }}
 
       - name: Summarise (fork pull request)
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository

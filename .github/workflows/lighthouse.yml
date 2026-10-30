@@ -93,14 +93,12 @@ jobs:
       - name: Job summary
         if: ${{ !cancelled() }}
         run: |
-          [ -f lighthouse/summary.md ] && grep -v '^<!-- lighthouse-score -->$' lighthouse/summary.md >> "$GITHUB_STEP_SUMMARY"
+          [ -f lighthouse/summary.md ] && cat lighthouse/summary.md >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Show the scores in a PR comment
+      - name: Build the scores comment
+        id: comment-body
         if: ${{ !cancelled() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
         env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -111,10 +109,11 @@ jobs:
             echo
             echo "<sub>${HEAD_SHA::7} · [run](${RUN_URL})</sub>"
           } > "$body"
-          id="$(gh api "repos/${REPO}/issues/${PR}/comments" --paginate \
-            --jq '.[] | select(.body | contains("<!-- lighthouse-score -->")) | .id' | sed -n '1p')"
-          if [ -n "$id" ]; then
-            gh api -X PATCH "repos/${REPO}/issues/comments/${id}" -F body=@"$body" >/dev/null
-          else
-            gh pr comment "$PR" --body-file "$body"
-          fi
+          echo "path=$body" >> "$GITHUB_OUTPUT"
+
+      - name: Show the scores in a PR comment
+        if: steps.comment-body.outcome == 'success' && hashFiles('lighthouse/summary.md') != ''
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: lighthouse-score
+          path: ${{ steps.comment-body.outputs.path }}
