@@ -14,7 +14,9 @@ import {
   setTag,
   clearAll,
   looksLikeRef,
-  useRef,
+  composing,
+  startCompose,
+  backToView,
   scanState,
   scanning,
   comparing,
@@ -74,23 +76,33 @@ function clearView() {
   clearAll();
   nextTick(() => document.getElementById("image")?.focus());
 }
-// A full image reference pasted into the split view (repository or tag field) replaces the image:
-// the view returns to the single box with it, ready to scan.
-function pasteRef(ev) {
-  const text = ev.clipboardData?.getData("text") ?? "";
-  if (!looksLikeRef(text)) return;
-  ev.preventDefault();
-  useRef(text);
-  closeHistory();
+// Composing: the single box returns, focused, while the shown results stay (dimmed). The repository
+// field enters it on click, and so does pasting a full reference into the repository or tag field.
+function focusImage() {
   nextTick(() => {
     const el = document.getElementById("image");
     el?.focus();
     el?.select();
   });
 }
+function compose(ref) {
+  startCompose(ref);
+  closeHistory();
+  focusImage();
+}
+function pasteRef(ev) {
+  const text = ev.clipboardData?.getData("text") ?? "";
+  if (!looksLikeRef(text)) return;
+  ev.preventDefault();
+  compose(text);
+}
+function back() {
+  backToView();
+  closeHistory();
+}
 function imageKey(ev) {
   const n = history.value.length;
-  if (ev.key === "Escape") return closeHistory();
+  if (ev.key === "Escape") return showHistory.value || !composing.value ? closeHistory() : back();
   if (!n || (ev.key !== "ArrowDown" && ev.key !== "ArrowUp" && ev.key !== "Enter" && ev.key !== "Tab")) return;
   if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
     ev.preventDefault();
@@ -154,7 +166,19 @@ onMounted(() => {
       </div>
       <div class="scan-row">
         <div v-if="split" class="image-wrap image-split">
-          <input id="image-repo" :value="imageRepo" readonly tabindex="-1" aria-label="Image repository" :title="imageRepo" @paste="pasteRef" />
+          <div class="repo-wrap">
+            <input
+              id="image-repo"
+              :value="imageRepo"
+              readonly
+              aria-label="Image repository, click to scan a different image"
+              :title="imageRepo + '\nClick to scan a different image'"
+              @focus="compose()"
+              @click="compose()"
+              @paste="pasteRef"
+            />
+            <span class="repo-edit" aria-hidden="true">✎</span>
+          </div>
           <TagInput
             id="image-tag"
             :model-value="imageTag"
@@ -217,6 +241,7 @@ onMounted(() => {
         >
           {{ scanState === "current" ? "Rescan" : "Scan" }}
         </button>
+        <button v-if="composing && !scanning" id="back-btn" type="button" class="ghost" @click="back">← Back to {{ result.image }}</button>
         <div id="vex-split" :class="{ solo: !vex.size }">
           <button
             v-if="vex.size"
@@ -249,7 +274,10 @@ onMounted(() => {
         </div>
         <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
       </div>
-      <p v-if="split && !scanning && scanState !== 'new'" id="scan-state" :class="scanState" role="status">
+      <p v-if="composing && !scanning" id="scan-state" class="changed" role="status">
+        ● Still showing the scan of {{ result.image }}. Scan to replace it, or press Esc to go back.
+      </p>
+      <p v-else-if="split && !scanning && scanState !== 'new'" id="scan-state" :class="scanState" role="status">
         <template v-if="scanState === 'current'">✓ Showing the scan of {{ result.image }}. Rescan to check it again.</template>
         <template v-else-if="scanState === 'settings'">● Options changed since this scan. Press Scan to apply them.</template>
         <template v-else>● Not scanned yet: the results below are for {{ result.image }}. Press Scan for {{ image }}.</template>
@@ -279,7 +307,7 @@ onMounted(() => {
     <button type="button" :class="['tab', 'right', { active: tab === 'log' }]" data-tab="log" @click="tab = 'log'">Log</button>
   </nav>
 
-  <main>
+  <main :class="{ dim: composing }">
     <section id="tab-prio" class="panel" :class="{ active: tab === 'prio' }">
       <PrioritiesPanel ref="prio" />
     </section>

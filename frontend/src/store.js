@@ -391,11 +391,19 @@ export const scanState = computed(() => {
 
 // looksLikeRef tells a pasted full image reference from a tag: tags never contain "/" or "@".
 export const looksLikeRef = (s) => /[/@]/.test(s.trim());
-// useRef goes back to the single image box holding ref, keeping the shown results, so pasting another
-// image while the split view is up works instead of being ignored.
-export function useRef(ref) {
+// Composing: the single image box is back while the old results stay on screen, so a new image can be
+// typed or pasted without losing them. Back returns to the split view of the shown scan.
+export const composing = computed(() => !split.value && !!result.value);
+export function startCompose(ref) {
+  if (!result.value) return;
   split.value = false;
-  image.value = ref.trim();
+  image.value = ref === undefined ? joinRef(imageRepo.value, imageTag.value) : ref.trim();
+}
+export function backToView() {
+  if (!result.value) return;
+  const { repo, tag } = splitRef(result.value.image);
+  enterSplit(repo, tag);
+  image.value = result.value.image;
 }
 
 // clearAll empties the shown findings and goes back to the single image box (which keeps the reference).
