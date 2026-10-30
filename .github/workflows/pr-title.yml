@@ -1,11 +1,11 @@
 name: PR title
 
 # Enforces the PR title convention (Conventional Commits: `type(scope)!: summary`) and labels the PR
-# from it. Squash merges use the title as the commit subject and the release notes (.github/release.yml)
-# group PRs by label, so a good title and the right label are what make the notes readable.
+# from it. Squash merges use the title as the commit subject and the release notes (.github/release-drafter.yml)
+# group PRs by title type, so a good title is what makes the notes readable.
 #   - check title: amannn/action-semantic-pull-request validates the title. Runs for every PR.
 #   - label: release-drafter's autolabeler adds the label from the title (rules and the type -> label
-#     table in .github/pr-labels.yml) and, with sync-labels, drops a stale one when the title is
+#     table in .github/release-drafter.yml) and, with sync-labels, drops a stale one when the title is
 #     edited. Labelling needs write access, so it is skipped for fork PRs.
 #   - Skipped: bot/* branches (the never-merged screenshots preview PR).
 #   - Make "check title" a required status check in the branch rules to enforce it on merge.
@@ -35,7 +35,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          # Keep in step with .github/pr-labels.yml and docs/releasing.md.
+          # Keep in step with .github/release-drafter.yml and docs/releasing.md.
           types: |
             feat
             fix
@@ -56,11 +56,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      contents: read # the autolabeler reads .github/pr-labels.yml
+      contents: read # the autolabeler reads .github/release-drafter.yml
       pull-requests: write # add and remove labels
     steps:
-      # Only the autolabeler of release-drafter is used (releases are cut by tag-release.yml); the rules
-      # live in .github/pr-labels.yml, a path relative to .github.
       - uses: release-drafter/release-drafter/autolabeler@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
-        with:
-          config-name: pr-labels.yml
