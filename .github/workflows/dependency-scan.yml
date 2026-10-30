@@ -129,12 +129,22 @@ jobs:
         with:
           name: dependency-scan-report
 
-      # --edit-last updates this token's previous comment on the pull request and --create-if-none
-      # posts one the first time, so there is a single comment however many times the PR is pushed.
+      # One sticky comment, found by a hidden marker (as lighthouse.yml and screenshots.yml do). Not
+      # `gh pr comment --edit-last`: that edits the token's newest comment on the pull request, and those
+      # two workflows comment as the same bot, so it overwrote their comments, which they then created
+      # again, leaving several copies of this report.
       - name: Comment on pull request
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
-        run: gh pr comment "$PR" --body-file report.md --edit-last --create-if-none
+        run: |
+          { echo '<!-- trivy-dependency-scan -->'; cat report.md; } > body.md
+          id="$(gh api "repos/${GH_REPO}/issues/${PR}/comments" --paginate \
+            --jq '.[] | select(.body | contains("<!-- trivy-dependency-scan -->")) | .id' | sed -n '1p')"
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/${GH_REPO}/issues/comments/${id}" -F body=@body.md >/dev/null
+          else
+            gh pr comment "$PR" --body-file body.md
+          fi
