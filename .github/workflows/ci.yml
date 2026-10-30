@@ -84,6 +84,16 @@ jobs:
       - name: Check formatting
         run: make fmt-check
 
+      # Config in .yamllint.yml. The second script catches a blank line inside a step (between `uses:`
+      # and `with:`, say), which yamllint allows and which reads as a mistake.
+      - name: Lint YAML
+        env:
+          # renovate: datasource=pypi depName=yamllint
+          YAMLLINT_VERSION: 1.38.0
+        run: |
+          python3 -m pip install --user "yamllint==${YAMLLINT_VERSION}"
+          PATH="$HOME/.local/bin:$PATH" make lint-yaml
+
       - name: Check go.mod is tidy and modules verify
         run: make mod-check
 
@@ -108,9 +118,7 @@ jobs:
           persist-credentials: false
 
       - uses: $/.github/actions/linux-build-deps
-
         with:
-
           packages: build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
         timeout-minutes: 10
 
@@ -144,9 +152,7 @@ jobs:
           persist-credentials: false
 
       - uses: $/.github/actions/linux-build-deps
-
         with:
-
           packages: build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev libwayland-dev
         timeout-minutes: 10
 

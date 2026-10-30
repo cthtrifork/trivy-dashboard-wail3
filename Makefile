@@ -79,10 +79,14 @@ mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
 	go mod tidy -diff
 	go mod verify
 
-lint: lint-go lint-frontend ## golangci-lint plus the frontend's Biome lint and format check (as CI runs them)
+lint: lint-go lint-frontend lint-yaml ## golangci-lint, the frontend's Biome lint and format check, and yamllint (as CI runs them)
 
 lint-go: ## golangci-lint on the server-tag build (CGO off, no GTK needed)
 	CGO_ENABLED=0 go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --build-tags server ./...
+
+lint-yaml: ## yamllint (.yamllint.yml) on every tracked YAML file, plus a check for blank lines inside workflow steps (needs `pip install yamllint`)
+	yamllint --strict $$(git ls-files '*.yml' '*.yaml')
+	scripts/check-yaml-gaps.sh
 
 govulncheck: ## govulncheck on the whole module (the GUI package needs the GTK headers to type-check)
 	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
