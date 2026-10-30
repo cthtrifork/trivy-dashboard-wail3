@@ -99,7 +99,7 @@ run-mcp-server: frontend ## Headless app with the MCP server; only app_info, win
 demo: frontend ## Run the desktop app on recorded data (dev build only)
 	TRIVY_SCANNER_FAKE_PODMAN=1 go run .
 
-screenshots: ## Regenerate docs/screenshots (needs Node and Playwright)
+screenshots: ## Render docs/screenshots, gitignored (needs Node and Playwright)
 	scripts/screenshots.sh
 
 ## Headless server in podman (no Go on the host; see docs/headless.md) ------
