@@ -11,7 +11,7 @@
 
   // PR titles follow the repository convention `type: summary` (.github/workflows/pr-title.yml), so a Renovate PR
   // reads `deps: update dependency knip to v6.44.0` and passes the PR title check. The title type also
-  // picks the label (.github/release-drafter.yml), so vulnerability fixes are titled `security:`.
+  // picks the label (.github/pr-labels.yml), so vulnerability fixes are titled `security:`.
   semanticCommits: "enabled",
   semanticCommitType: "deps",
   semanticCommitScope: null,

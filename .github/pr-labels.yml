@@ -1,6 +1,6 @@
-# Used only by the autolabeler in .github/workflows/pr-title.yml: it labels a PR from its title type,
-# and .github/release.yml turns the labels into release-note sections. (Release Drafter itself is not
-# run; releases are cut by tag-release.yml.) Keep the types in step with the `types` list in
+# Rules for the autolabeler (release-drafter/release-drafter/autolabeler) in .github/workflows/pr-title.yml:
+# it labels a PR from its title type, and .github/release.yml turns the labels into release-note sections.
+# Release Drafter itself is not run; releases are cut by tag-release.yml. Keep the types in step with the `types` list in
 # pr-title.yml and the table in docs/releasing.md.
 #
 # sync-labels removes a managed label the title no longer earns (title edited from fix: to feat:). That

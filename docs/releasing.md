@@ -55,9 +55,9 @@ The workflow then:
 
 A PR with no matching label lands in *Other changes*. Add `skip-changelog` to keep a PR out of the notes entirely.
 
-**Enforcement.** The *PR title* workflow (`pr-title.yml`) fails a PR whose title does not match (`amannn/action-semantic-pull-request`) and sets the label from the type (`release-drafter`'s autolabeler, rules in `.github/release-drafter.yml`, which also removes a stale label when the title is edited and creates a label that does not exist yet). Fork PRs are checked but not labelled (the token is read-only). The `bot/*` screenshots preview PR is skipped. Renovate PRs are titled `deps: update ...`, or `security: ...` for vulnerability fixes (`semanticCommits` in `renovate.json5`), so they get the same labels. To make the check block merging, add **check title** as a required status check in the branch rules (repository settings; not something a workflow can do).
+**Enforcement.** The *PR title* workflow (`pr-title.yml`) fails a PR whose title does not match (`amannn/action-semantic-pull-request`) and sets the label from the type (`release-drafter`'s autolabeler, rules in `.github/pr-labels.yml`, which also removes a stale label when the title is edited and creates a label that does not exist yet). Fork PRs are checked but not labelled (the token is read-only). The `bot/*` screenshots preview PR is skipped. Renovate PRs are titled `deps: update ...`, or `security: ...` for vulnerability fixes (`semanticCommits` in `renovate.json5`), so they get the same labels. To make the check block merging, add **check title** as a required status check in the branch rules (repository settings; not something a workflow can do).
 
-When you change a type, label or section, change the `types` in `pr-title.yml`, the rules in `.github/release-drafter.yml`, `.github/release.yml` and the table above together.
+When you change a type, label or section, change the `types` in `pr-title.yml`, the rules in `.github/pr-labels.yml`, `.github/release.yml` and the table above together.
 
 ## One-time setup: the package signing key
 
