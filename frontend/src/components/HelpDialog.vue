@@ -180,14 +180,10 @@ async function load() {
   }
 }
 
-// One scrolling body: the header links jump to a section, and follow the scroll position.
+// Two tabs, one visible at a time: each panel scrolls on its own and nothing scrolls between them.
 function go(id) {
-  const el = body.value?.querySelector(`#help-${id}`);
-  if (el) body.value.scrollTo({ top: el.offsetTop - 4 });
-}
-function onScroll() {
-  const el = body.value?.querySelector("#help-config");
-  section.value = el && body.value.scrollTop + 40 >= el.offsetTop ? "config" : "glossary";
+  section.value = id;
+  body.value.scrollTop = 0;
 }
 
 function open() {
@@ -206,12 +202,12 @@ defineExpose({ open });
       <h3>Help</h3>
       <button type="button" class="ghost" id="help-close" @click="dlg.close()" aria-label="Close">✕</button>
     </div>
-    <nav class="help-nav" aria-label="Help sections">
-      <button type="button" :class="['tab', { active: section === 'glossary' }]" @click="go('glossary')">Glossary</button>
-      <button type="button" :class="['tab', { active: section === 'config' }]" @click="go('config')">App config</button>
-    </nav>
-    <div ref="body" class="help-body" @scroll.passive="onScroll">
-      <div id="help-glossary">
+    <div class="help-nav" role="tablist" aria-label="Help sections">
+      <button type="button" role="tab" :aria-selected="section === 'glossary'" :class="['tab', { active: section === 'glossary' }]" @click="go('glossary')">Glossary</button>
+      <button type="button" role="tab" :aria-selected="section === 'config'" :class="['tab', { active: section === 'config' }]" @click="go('config')">App config</button>
+    </div>
+    <div ref="body" class="help-body">
+      <div v-show="section === 'glossary'" id="help-glossary" role="tabpanel">
         <section v-for="g in glossary" :key="g.title" class="hgroup">
           <header>
             <b>{{ g.title }}</b>
@@ -263,7 +259,7 @@ defineExpose({ open });
         </section>
       </div>
 
-      <div id="help-config">
+      <div v-show="section === 'config'" id="help-config" role="tabpanel">
         <p v-if="cfgErr" class="vexerr">{{ cfgErr }}</p>
         <p v-else-if="!cfg" class="kv hload">Loading…</p>
         <template v-else>
