@@ -65,6 +65,9 @@ jobs:
         id: draft
         if: inputs.tag == '' && inputs.bump == 'auto'
         uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
+        with:
+          # The commit this run checked out and will tag, not whatever main has become since.
+          commitish: ${{ github.sha }}
 
       - name: Create the tag
         id: tag

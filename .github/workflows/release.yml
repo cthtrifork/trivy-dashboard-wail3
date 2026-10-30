@@ -356,17 +356,19 @@ jobs:
             curl -fsS -X POST \
               -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/octet-stream" \
               --data-binary "@$f" \
-              "${UPLOAD_URL%\{*}}?name=$(printf '%s' "$name" | jq -sRr @uri)" > /dev/null
+              "${UPLOAD_URL%\{*}?name=$(printf '%s' "$name" | jq -sRr @uri)" > /dev/null
             echo "Uploaded $name"
           done
 
-          # The notes are written again from this run's own output: Release Drafter also runs on every push
-          # to main (release-drafter.yml) and may have rewritten the draft while the assets uploaded.
+          # Release Drafter also runs on every push to main (release-drafter.yml) and may have retargeted this
+          # same draft to a newer version while the assets uploaded. So the publish call sets everything that
+          # identifies the release again, from this run: tag, target (unused, the tag exists), name and notes.
           latest=true
           [ "$PRERELEASE" = true ] && latest=false
+          sha="$(gh api "repos/$GH_REPO/commits/$TAG" --jq .sha)"
           gh api -X PATCH "repos/$GH_REPO/releases/$RELEASE_ID" --silent \
             -F draft=false -F prerelease="$PRERELEASE" -f make_latest="$latest" \
-            -f name="$TAG" -f body="$NOTES"
+            -f tag_name="$TAG" -f target_commitish="$sha" -f name="$TAG" -f body="$NOTES"
           echo "Published $TAG"
 
   # The headless image (build/docker/headless.Dockerfile, docs/headless.md) goes out with the other
