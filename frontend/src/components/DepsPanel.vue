@@ -12,7 +12,7 @@ import SevBadges from "./SevBadges.vue";
 const IMAGE_NODE = "__image__";
 const MAX_NODES = 400;
 
-const dep = reactive({ filter: "", cat: "all", vulnOnly: true, focus: 0, selected: null, vuln: null, labels: false });
+const dep = reactive({ filter: "", cat: "all", vulnOnly: true, sev: "", focus: 0, selected: null, vuln: null, labels: false });
 // The search box redraws the graph, so wait for a pause in typing before applying it.
 const typed = ref("");
 let typing = 0;
@@ -94,6 +94,12 @@ const total = (n) => SEVERITIES.reduce((t, s) => t + (n.totalCounts[s] || 0), 0)
 const worst = (counts) => SEVERITIES.find((s) => counts[s]);
 const cssVar = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const sevWeight = (n) => SEVERITIES.reduce((t, s, i) => t + (n.totalCounts[s] || 0) * [10000, 1000, 100, 10, 5][i], 0);
+// The severity filter keeps components whose worst finding (own or inherited) is at least dep.sev.
+const rankOf = (n) => {
+  const i = SEVERITIES.findIndex((s) => n.totalCounts[s]);
+  return i < 0 ? SEVERITIES.length : i; // index of the worst severity; lower is worse
+};
+const atLeast = (rank) => !dep.sev || rank <= SEVERITIES.indexOf(dep.sev);
 const query = () => dep.filter.trim().toLowerCase();
 
 // Per scan, once: each component's search text and severity weight. Typing and the top-N cut
@@ -102,7 +108,14 @@ const index = computed(() => {
   const all = nodes.value;
   return Object.keys(all).map((ref) => {
     const n = all[ref];
-    return { ref, text: (n.name + " " + n.version).toLowerCase(), weight: sevWeight(n), vulnerable: total(n) > 0, category: n.category };
+    return {
+      ref,
+      text: (n.name + " " + n.version).toLowerCase(),
+      weight: sevWeight(n),
+      vulnerable: total(n) > 0,
+      category: n.category,
+      rank: rankOf(n),
+    };
   });
 });
 
@@ -153,7 +166,7 @@ function visibleRefs() {
     }
     refs = [...set];
   } else {
-    refs = index.value.filter((e) => (dep.cat === "all" || e.category === dep.cat) && (!dep.vulnOnly || e.vulnerable)).map((e) => e.ref);
+    refs = index.value.filter((e) => (dep.cat === "all" || e.category === dep.cat) && (!dep.vulnOnly || e.vulnerable) && atLeast(e.rank)).map((e) => e.ref);
   }
   let truncated = 0;
   if (refs.length > MAX_NODES) {
@@ -252,10 +265,12 @@ async function select(ref, center = false, history = "reset") {
       if (dep.filter) cleared.push("the search");
       if (dep.cat !== "all") cleared.push("the OS/Application filter");
       if (dep.vulnOnly && !total(nodes.value[ref])) cleared.push("Vulnerable paths only");
+      if (dep.sev && !atLeast(rankOf(nodes.value[ref]))) cleared.push("the severity filter");
       if (cleared.length) note.value = `Cleared ${cleared.join(" and ")} so this component shows in the graph.`;
       dep.filter = "";
       dep.cat = "all";
       if (!total(nodes.value[ref])) dep.vulnOnly = false;
+      dep.sev = "";
     }
   } else if (dep.focus) {
     dep.focus = 0;
@@ -265,7 +280,7 @@ async function select(ref, center = false, history = "reset") {
 }
 
 // Anything that changes which components are drawn; the selection only matters while focusing on it.
-watch(() => [dep.filter, dep.cat, dep.vulnOnly, dep.focus, dep.focus ? dep.selected : null], renderGraph);
+watch(() => [dep.filter, dep.cat, dep.vulnOnly, dep.sev, dep.focus, dep.focus ? dep.selected : null], renderGraph);
 watch(route, markRoute);
 watch(
   () => dep.labels,
@@ -315,6 +330,13 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
       </button>
     </div>
     <label class="chk"><input type="checkbox" id="dep-vuln-only" v-model="dep.vulnOnly" /> Vulnerable paths only</label>
+    <label class="chk"
+      >Severity
+      <select id="dep-sev" v-model="dep.sev">
+        <option value="">any</option>
+        <option v-for="s in SEVERITIES.slice(0, 4)" :key="s" :value="s">{{ s.toLowerCase() }}{{ s === "CRITICAL" ? " only" : " and above" }}</option>
+      </select>
+    </label>
     <label class="chk"
       >Focus
       <select id="dep-focus" v-model.number="dep.focus">
