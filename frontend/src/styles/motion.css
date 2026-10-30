@@ -1,0 +1,89 @@
+/* Motion: short transitions that show where something came from. Loaded last. Reduced-motion users get none (see the end of this file). */
+:root {
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Hover and focus feedback. */
+button,
+.node {
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    opacity var(--dur-fast) var(--ease);
+}
+
+/* Dialogs: fade and rise in, fade out. `display` and `overlay` are discrete so the closing state stays painted. */
+dialog {
+  --from: translateY(8px); /* where it comes from; the drawer overrides it */
+  opacity: 0;
+  transform: var(--from);
+  transition:
+    opacity var(--dur) var(--ease),
+    transform var(--dur) var(--ease),
+    overlay var(--dur) allow-discrete,
+    display var(--dur) allow-discrete;
+}
+dialog[open] {
+  opacity: 1;
+  transform: none;
+}
+@starting-style {
+  dialog[open] {
+    opacity: 0;
+    transform: var(--from);
+  }
+}
+dialog::backdrop {
+  opacity: 0;
+  transition:
+    opacity var(--dur) var(--ease),
+    overlay var(--dur) allow-discrete,
+    display var(--dur) allow-discrete;
+}
+dialog[open]::backdrop {
+  opacity: 1;
+}
+@starting-style {
+  dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* The VEX drawer slides in from the right edge instead. */
+dialog.drawer {
+  --from: translateX(24px);
+}
+
+/* A tab's content fades in when the tab is shown; the Dependencies detail pane does too when the selection changes (it is keyed on it). */
+.panel.active,
+.dep-sel {
+  animation: fade-in var(--dur) var(--ease);
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Copy confirmation pops in. */
+.copy-id.ok svg {
+  animation: pop var(--dur) var(--ease);
+}
+@keyframes pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

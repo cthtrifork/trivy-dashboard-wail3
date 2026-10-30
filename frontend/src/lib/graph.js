@@ -4,6 +4,8 @@
 
 const LEVEL = 120;
 const MAX_SPEED = 40; // px per step: a safety net against runaway nodes
+const TWEEN_MS = 180; // matches --dur in motion.css
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
 
 export class Graph {
   constructor(canvas, { onSelect = () => {}, onHover = () => {} } = {}) {
@@ -28,6 +30,7 @@ export class Graph {
     this.showLabels = "auto";
     this.raf = 0;
     this.seed = 1;
+    this.anim = 0; // requestAnimationFrame id of the camera tween
 
     new ResizeObserver(() => this.resize()).observe(canvas.parentElement);
     canvas.addEventListener("pointerdown", (e) => this.down(e));
@@ -76,8 +79,33 @@ export class Graph {
 
   select(id, { center = false } = {}) {
     this.selected = id;
-    if (center) this.centerOn(id);
-    this.draw();
+    const to = center ? this.cameraFor(id) : null;
+    if (!to) return this.draw();
+    this.autoFit = false;
+    const from = { k: this.k, tx: this.tx, ty: this.ty };
+    this.animate((e) => {
+      for (const key in from) this[key] = from[key] + (to[key] - from[key]) * e;
+    });
+  }
+
+  // Calls step(e) each frame with e easing from 0 to 1, drawing after each; a new call replaces a running one.
+  // With reduced motion it jumps straight to e = 1.
+  animate(step) {
+    cancelAnimationFrame(this.anim);
+    this.anim = 0;
+    if (REDUCED.matches) {
+      step(1);
+      this.draw();
+      return;
+    }
+    const t0 = performance.now();
+    const tick = (now) => {
+      const t = Math.min((now - t0) / TWEEN_MS, 1);
+      step(1 - (1 - t) ** 3); // ease-out
+      this.draw();
+      this.anim = t < 1 ? requestAnimationFrame(tick) : 0;
+    };
+    this.anim = requestAnimationFrame(tick);
   }
 
   // ids: the route from the image to the selection, in order. Its nodes and edges stay bright while
@@ -93,15 +121,13 @@ export class Graph {
     this.draw();
   }
 
-  centerOn(id) {
+  // The camera that puts a node in the middle, or null for an unknown id.
+  cameraFor(id) {
     const n = this.nodes[this.byId.get(id)];
-    if (!n) return;
-    this.autoFit = false;
+    if (!n) return null;
     const { w, h } = this.size();
-    this.k = Math.max(this.k, 1);
-    this.tx = w / 2 - n.x * this.k;
-    this.ty = h / 2 - n.y * this.k;
-    this.draw();
+    const k = Math.max(this.k, 1);
+    return { k, tx: w / 2 - n.x * k, ty: h / 2 - n.y * k };
   }
 
   screenPos(id) {
@@ -379,7 +405,14 @@ export class Graph {
     return best;
   }
 
+  // A drag or zoom takes over from a running camera tween.
+  stopTween() {
+    cancelAnimationFrame(this.anim);
+    this.anim = 0;
+  }
+
   down(e) {
+    this.stopTween();
     const { sx, sy } = this.local(e);
     const i = this.hit(sx, sy);
     this.c.setPointerCapture(e.pointerId);
@@ -430,6 +463,7 @@ export class Graph {
 
   wheel(e) {
     e.preventDefault();
+    this.stopTween();
     const { sx, sy } = this.local(e);
     const f = Math.exp(-e.deltaY * 0.0015);
     const k = Math.min(4, Math.max(0.1, this.k * f));
