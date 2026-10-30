@@ -7,7 +7,7 @@
 # same asset middleware the headless release build uses (gzip, cache headers).
 #
 # Requirements: Go, Node 20+ and a Chrome or Chromium (CHROME_PATH, default: google-chrome).
-# Lighthouse itself runs through `npx lighthouse@$LIGHTHOUSE_VERSION` (pinned in the Makefile).
+# Lighthouse itself runs through `npx lighthouse@$LIGHTHOUSE_VERSION` (pinned in .github/workflows/lighthouse.yml; set it to run the script by hand).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

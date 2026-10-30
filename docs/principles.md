@@ -32,9 +32,9 @@ Standing rules for this repository. They come from the maintainer's instructions
 
 ## Verification checklist before opening a PR
 
-- [ ] `make fmt-check` and `make vet` (`go vet` with and without `-tags production`) are clean
+- [ ] `make check` (gofmt, tidy, `make vet`: `go vet` with and without `-tags production`) is clean
 - [ ] `make test` (`go test -race -count=1 ./...`) passes
-- [ ] `make mod-check` is clean if dependencies changed
+- [ ] `go mod tidy -diff` and `go mod verify` are clean if dependencies changed
 - [ ] Headless build compiles: `make build-server`
 - [ ] Behaviour you touched was exercised, not only compiled (run it, curl it, drive it)
 - [ ] Docs and README updated; the PR body lists verified and unverified items

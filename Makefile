@@ -19,7 +19,7 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help doctor inspect test check fmt format fmt-check mod-check lint lint-go lint-frontend govulncheck tools format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots lighthouse \
+.PHONY: help test check fmt format lint lint-go lint-frontend tools format-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -36,64 +36,20 @@ fmt: ## Format the Go code
 
 format: fmt format-frontend ## Format the Go code and the Vue app (mkpm's test, lint, format trio)
 
-fmt-check: ## Fail if any Go file needs gofmt
-	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "These files need gofmt:"; echo "$$unformatted"; exit 1; fi
-
 # Dev tool versions. Renovate keeps them current through the `# renovate:` comments (renovate.json5).
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION := v2.15.0
-# renovate: datasource=go depName=golang.org/x/vuln
-GOVULNCHECK_VERSION := v1.9.0
 # renovate: datasource=go depName=golang.org/x/tools
 GOIMPORTS_VERSION := v0.52.0
-# renovate: datasource=npm depName=lighthouse
-LIGHTHOUSE_VERSION := 13.6.0
 
-# Like mkpm's binary check: say which tools are missing, and which Go version CI uses, before a build fails.
-doctor: ## Check that the tools the project needs are installed (podman and wails3 are optional)
-	@missing=0; \
-	for t in go node npm; do \
-	  if command -v $$t >/dev/null 2>&1; then echo "  ok        $$t"; else echo "  MISSING   $$t"; missing=1; fi; \
-	done; \
-	for t in podman wails3; do \
-	  if command -v $$t >/dev/null 2>&1; then echo "  ok        $$t"; else echo "  optional  $$t (not installed)"; fi; \
-	done; \
-	echo "  go: $$(go env GOVERSION 2>/dev/null) here, CI uses golang $$(awk '$$1 == "golang" {print $$2}' .tool-versions) from .tool-versions"; \
-	exit $$missing
-
-# mkpm's `inspect`: what the overridable settings and tool pins resolve to.
-inspect: ## Print the resolved Makefile settings (paths, ports, tool versions)
-	@echo "VERSION:      $(VERSION)"
-	@echo "OUT:          $(OUT)"
-	@echo "PODMAN:       $(PODMAN)"
-	@echo "IMAGE:        $(IMAGE)"
-	@echo "NAME:         $(NAME)"
-	@echo "PORT:         $(PORT)"
-	@echo "CACHE:        $(CACHE)"
-	@echo "SOCKET:       $(SOCKET)"
-	@echo "RACE:         $(RACE)"
-	@echo "VET_TAGS:     $(VET_TAGS)"
-	@echo "golangci-lint $(GOLANGCI_LINT_VERSION), govulncheck $(GOVULNCHECK_VERSION), goimports $(GOIMPORTS_VERSION), lighthouse $(LIGHTHOUSE_VERSION)"
-
-mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
-	go mod tidy -diff
-	go mod verify
-
-lint: lint-go lint-frontend lint-yaml ## golangci-lint, the frontend's Biome lint and format check, and yamllint (as CI runs them)
+lint: lint-go lint-frontend ## golangci-lint plus the frontend's Biome lint and format check (as CI runs them)
 
 lint-go: ## golangci-lint on the server-tag build (CGO off, no GTK needed)
 	CGO_ENABLED=0 go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --build-tags server ./...
 
-lint-yaml: ## yamllint (.yamllint.yml) on every tracked YAML file (needs `pip install yamllint`)
-	yamllint --strict $$(git ls-files '*.yml' '*.yaml')
-
-govulncheck: ## govulncheck on the whole module (the GUI package needs the GTK headers to type-check)
-	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
-
-tools: ## Install goimports, golangci-lint and govulncheck into GOBIN (for editors)
+tools: ## Install goimports and golangci-lint into GOBIN (for editors)
 	go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-	go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 
 lint-frontend: ## Biome lint, format check and knip (unused exports and dependencies) for the Vue app (needs `make frontend` once for node_modules)
 	cd frontend && npm run lint && npm run format:check && npm run knip
@@ -101,15 +57,12 @@ lint-frontend: ## Biome lint, format check and knip (unused exports and dependen
 format-frontend: ## Reformat the Vue app with Biome
 	cd frontend && npm run format
 
-audit-frontend: ## npm audit of the runtime dependencies (HIGH and above fails)
-	cd frontend && npm audit --omit=dev --audit-level=high
-
 vet: ## go vet, with and without the production tag
 	go vet ./...
 	go vet -tags $(VET_TAGS) ./...
 
 check: ## Everything CI checks that runs without GTK: gofmt, tidy, vet, tests, headless build
-	$(MAKE) fmt-check
+	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "These files need gofmt:"; echo "$$unformatted"; exit 1; fi
 	go mod tidy -diff
 	$(MAKE) vet test build-server
 
@@ -148,9 +101,6 @@ demo: frontend ## Run the desktop app on recorded data (dev build only)
 
 screenshots: ## Regenerate docs/screenshots (needs Node and Playwright)
 	scripts/screenshots.sh
-
-lighthouse: ## Lighthouse scores for the UI, written to ./lighthouse (needs Node and Chrome; CHROME_PATH)
-	LIGHTHOUSE_VERSION=$(LIGHTHOUSE_VERSION) scripts/lighthouse.sh
 
 ## Headless server in podman (no Go on the host; see docs/headless.md) ------
 
