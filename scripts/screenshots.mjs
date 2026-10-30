@@ -73,7 +73,7 @@ expect((await text("#mode-banner")).includes("Demo mode"), "demo banner should b
 const typedImage = await page.inputValue("#image");
 await page.fill("#image", "docker.io/library/traefik:");
 await page.waitForSelector("#image-error", { timeout: 5000 });
-expect((await text("#image-error")).includes("tag"), "an empty tag should be explained");
+expect((await text("#image-error")).includes("Not a valid image reference"), "an empty tag should be rejected with a reason");
 expect(await page.isDisabled("#scan-btn"), "Scan should be disabled for an invalid reference");
 await shot("00-invalid-image-ref");
 await page.fill("#image", typedImage);

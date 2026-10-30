@@ -234,6 +234,13 @@ func validImage(ref string) (string, error) {
 	return image, nil
 }
 
+// CheckImage reports why ref cannot be scanned, with the same rules every scan applies (the one
+// reference parser that also splits the image into repository and tag). A nil error means it can.
+func CheckImage(ref string) error {
+	_, err := validImage(ref)
+	return err
+}
+
 // begin claims the single job slot; release must be called when the job ends.
 func (s *Scanner) begin(parent context.Context) (context.Context, func(), error) {
 	ctx, cancel := context.WithCancel(parent)

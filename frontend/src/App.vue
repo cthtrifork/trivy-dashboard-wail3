@@ -125,14 +125,6 @@ function imageKey(ev) {
     pickRecent(history.value[histIdx.value], ev.key === "Enter");
   }
 }
-// The reason an image cannot be scanned shows once typing pauses, so "nginx:" mid-word is not shouted at.
-const shownError = ref("");
-let errTimer;
-watch(imageError, (e) => {
-  clearTimeout(errTimer);
-  if (!e) shownError.value = "";
-  else errTimer = setTimeout(() => (shownError.value = imageError.value), 500);
-});
 const sevTag = (n, sev) => ({ n, sev, style: sevStyle(sev) });
 
 const meta = computed(() => (result.value ? `${result.value.image}${result.value.os ? " · " + result.value.os : ""}` : ""));
@@ -225,9 +217,9 @@ onMounted(() => {
             autocomplete="off"
             spellcheck="false"
             required
-            :aria-invalid="!!shownError"
-            :aria-describedby="shownError ? 'image-error' : undefined"
-            :class="{ invalid: shownError }"
+            :aria-invalid="!!imageError"
+            :aria-describedby="imageError ? 'image-error' : undefined"
+            :class="{ invalid: imageError }"
             @focus="histOpen = true"
             @input="onImageInput"
             @blur="closeHistory"
@@ -297,7 +289,7 @@ onMounted(() => {
         </div>
         <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
       </div>
-      <p v-if="shownError" id="image-error" role="alert">✗ {{ shownError }}</p>
+      <p v-if="imageError" id="image-error" role="alert">✗ {{ imageError }}</p>
       <p v-else-if="composing && !scanning" id="scan-state" class="changed" role="status">
         ● Still showing the scan of {{ result.image }}. Scan to replace it, or press Esc to go back.
       </p>

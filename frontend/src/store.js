@@ -3,7 +3,6 @@
 import { computed, reactive, ref, shallowRef, watch } from "vue";
 import { Events } from "@wailsio/runtime";
 import { ScanService } from "../bindings/github.com/cthtrifork/trivy-dashboard-wail3/internal/app";
-import { imageRefError } from "./lib/imageref.js";
 
 export { ScanService };
 
@@ -390,8 +389,23 @@ export const scanState = computed(() => {
   return settingsChanged.value ? "settings" : "current";
 });
 
-// imageError is why the current reference cannot be scanned: "" when it can, or when the box is empty.
-export const imageError = computed(() => imageRefError(image.value));
+// imageError is why the typed reference cannot be scanned ("" when it can). It comes from the same Go
+// parser every scan uses, asked once typing pauses and cleared at the next keystroke.
+export const imageError = ref("");
+let imageCheck;
+watch(image, (img) => {
+  clearTimeout(imageCheck);
+  imageError.value = "";
+  if (!img.trim()) return;
+  imageCheck = setTimeout(async () => {
+    try {
+      const why = await ScanService.ValidateImage(img);
+      if (image.value === img) imageError.value = why;
+    } catch {
+      /* the scan itself reports a reference it cannot use */
+    }
+  }, 500);
+});
 // looksLikeRef tells a pasted full image reference from a tag: tags never contain "/" or "@".
 export const looksLikeRef = (s) => /[/@]/.test(s.trim());
 // Composing: the single image box is back while the old results stay on screen, so a new image can be

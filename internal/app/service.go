@@ -498,6 +498,27 @@ func (s *ScanService) SplitImage(ref string) ImageParts {
 	return ImageParts{Repo: trivy.ImageRepo(ref), Tag: trivy.ImageTag(ref)}
 }
 
+// ValidateImage says why an image reference cannot be scanned, or returns "" when it can be (or is
+// empty, which the field's own "required" covers). It runs the check every scan runs, so the
+// field can warn while the reference is typed.
+func (s *ScanService) ValidateImage(ref string) string {
+	if strings.TrimSpace(ref) == "" {
+		return ""
+	}
+	err := trivy.CheckImage(ref)
+	if err == nil {
+		return ""
+	}
+	// The parser's own detail ("repository name … must be lowercase") is the best hint when it has one;
+	// its general failure is only "invalid reference format", which says nothing about what to fix.
+	detail := strings.TrimPrefix(strings.TrimPrefix(err.Error(), "invalid image reference: "), "invalid reference format")
+	detail = strings.TrimPrefix(detail, ": ")
+	if detail == "" {
+		return "Not a valid image reference. Expected repository[:tag][@sha256:digest], with a lowercase repository and no spaces."
+	}
+	return strings.ToUpper(detail[:1]) + detail[1:] + "."
+}
+
 // LatestTag returns the highest semantic-version tag a registry offers for an image repository,
 // preferring one with the same suffix as baseTag (see trivy.Scanner.LatestTag).
 func (s *ScanService) LatestTag(repo, baseTag string) (string, error) {

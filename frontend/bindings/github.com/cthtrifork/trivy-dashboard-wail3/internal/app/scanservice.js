@@ -330,6 +330,17 @@ export function VEXSet(image, e) {
     }));
 }
 
+/**
+ * ValidateImage says why an image reference cannot be scanned, or returns "" when it can be (or is
+ * empty, which the field's own "required" covers). It runs the check every scan runs, so the
+ * field can warn while the reference is typed.
+ * @param {string} ref
+ * @returns {$CancellablePromise<string>}
+ */
+export function ValidateImage(ref) {
+    return $Call.ByID(1541138352, ref);
+}
+
 // Private type creation functions
 const $$createType0 = $models.UpdateStatus.createFrom;
 const $$createType1 = trivy$0.CompareResult.createFrom;
