@@ -69,14 +69,16 @@ jobs:
           node-version-file: .tool-versions
           package-manager-cache: false
 
-      # Lighthouse comes from `npx lighthouse@<version>` (pinned in the Makefile), not from a
+      # Lighthouse comes from `npx lighthouse@<version>` (pinned in this workflow), not from a
       # third-party action; the runner's Google Chrome is the browser.
       - name: Lighthouse
         env:
           CHROME_PATH: /usr/bin/google-chrome
+          # renovate: datasource=npm depName=lighthouse
+          LIGHTHOUSE_VERSION: 13.6.0
         run: |
           google-chrome --version
-          make lighthouse
+          scripts/lighthouse.sh
 
       - name: Keep the full reports
         if: ${{ !cancelled() }}

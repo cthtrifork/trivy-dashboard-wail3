@@ -91,7 +91,7 @@ jobs:
           YAMLLINT_VERSION: 1.38.0
         run: |
           python3 -m pip install --user "yamllint==${YAMLLINT_VERSION}"
-          PATH="$HOME/.local/bin:$PATH" make lint-yaml
+          PATH="$HOME/.local/bin:$PATH" yamllint --strict $(git ls-files '*.yml' '*.yaml')
 
       - name: Check go.mod is tidy and modules verify
         run: make mod-check

@@ -64,9 +64,12 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Run govulncheck
+        env:
+          # renovate: datasource=go depName=golang.org/x/vuln
+          GOVULNCHECK_VERSION: v1.9.0
         run: |
           go version
-          make govulncheck
+          go run golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION} ./...
 
   trivy-fs:
     name: trivy (filesystem)
@@ -110,4 +113,5 @@ jobs:
       # build tooling, and an advisory there should not fail the weekly run; Renovate and the
       # Trivy scan above still report it. HIGH and above fails, lower severities are left to Renovate.
       - name: Audit production dependencies
-        run: make audit-frontend
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high

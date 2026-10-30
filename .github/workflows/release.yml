@@ -123,7 +123,10 @@ jobs:
         run: make vet test
 
       - name: govulncheck
-        run: make govulncheck
+        env:
+          # renovate: datasource=go depName=golang.org/x/vuln
+          GOVULNCHECK_VERSION: v1.9.0
+        run: go run golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION} ./...
 
   build:
     name: build linux/amd64
