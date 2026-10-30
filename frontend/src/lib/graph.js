@@ -80,7 +80,7 @@ export class Graph {
   select(id, { center = false } = {}) {
     const changed = id !== this.selected;
     this.selected = id;
-    const to = center ? this.centerTarget(id) : null;
+    const to = center ? this.cameraFor(id) : null;
     if (to) this.autoFit = false;
     this.tween(changed && id != null, to);
   }
@@ -122,19 +122,12 @@ export class Graph {
   }
 
   // The camera that puts a node in the middle, or null for an unknown id.
-  centerTarget(id) {
+  cameraFor(id) {
     const n = this.nodes[this.byId.get(id)];
     if (!n) return null;
     const { w, h } = this.size();
     const k = Math.max(this.k, 1);
     return { k, tx: w / 2 - n.x * k, ty: h / 2 - n.y * k };
-  }
-
-  centerOn(id) {
-    const to = this.centerTarget(id);
-    if (!to) return;
-    this.autoFit = false;
-    this.tween(false, to);
   }
 
   screenPos(id) {

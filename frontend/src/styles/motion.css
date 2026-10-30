@@ -7,8 +7,7 @@
 
 /* Hover and focus feedback. */
 button,
-.copy-id,
-.tab {
+.node {
   transition:
     background-color var(--dur-fast) var(--ease),
     color var(--dur-fast) var(--ease),
@@ -17,8 +16,9 @@ button,
 
 /* Dialogs: fade and rise in, fade out. `display` and `overlay` are discrete so the closing state stays painted. */
 dialog {
+  --from: translateY(8px); /* where it comes from; the drawer overrides it */
   opacity: 0;
-  transform: translateY(8px);
+  transform: var(--from);
   transition:
     opacity var(--dur) var(--ease),
     transform var(--dur) var(--ease),
@@ -32,7 +32,7 @@ dialog[open] {
 @starting-style {
   dialog[open] {
     opacity: 0;
-    transform: translateY(8px);
+    transform: var(--from);
   }
 }
 dialog::backdrop {
@@ -53,33 +53,18 @@ dialog[open]::backdrop {
 
 /* The VEX drawer slides in from the right edge instead. */
 dialog.drawer {
-  transform: translateX(24px);
-}
-dialog.drawer[open] {
-  transform: none;
-}
-@starting-style {
-  dialog.drawer[open] {
-    transform: translateX(24px);
-  }
+  --from: translateX(24px);
 }
 
-/* A tab's content fades in when the tab is shown, and when results replace the skeleton. */
-.panel.active {
+/* A tab's content fades in when the tab is shown; the Dependencies detail pane does too when the selection changes (it is keyed on it). */
+.panel.active,
+.dep-sel {
   animation: fade-in var(--dur) var(--ease);
 }
 @keyframes fade-in {
   from {
     opacity: 0;
   }
-}
-
-/* Dependencies tab: picking a node swaps the detail pane (keyed on the selection) and eases the tree row. */
-.dep-sel {
-  animation: fade-in var(--dur) var(--ease);
-}
-.node {
-  transition: background-color var(--dur-fast) var(--ease);
 }
 
 /* Copy confirmation pops in. */
