@@ -1,9 +1,10 @@
 package trivy
 
 import (
-	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/opencontainers/go-digest"
 )
 
 func TestDefaultTrivyImageIsPinned(t *testing.T) {
@@ -15,7 +16,7 @@ func TestDefaultTrivyImageIsPinned(t *testing.T) {
 	if _, err := ResolveTrivyImage(tag); err != nil {
 		t.Errorf("default must be a pinned version, got tag %q", tag)
 	}
-	if !regexp.MustCompile(`^sha256:[0-9a-f]{64}$`).MatchString(defaultTrivyDigest) {
+	if d := digest.Digest(defaultTrivyDigest); d.Validate() != nil || d.Algorithm() != digest.SHA256 {
 		t.Errorf("default image must carry a sha256 digest, got %q", defaultTrivyDigest)
 	}
 	if pinnedTrivyImage != DefaultTrivyImage+"@"+defaultTrivyDigest {

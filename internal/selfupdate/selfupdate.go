@@ -14,11 +14,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/wailsapp/wails/v3/pkg/updater"
 	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -29,16 +29,16 @@ const (
 	ChecksumAsset = "SHA256SUMS"
 )
 
-// releaseVersion matches the semantic versions a release is tagged with, with or
-// without the leading "v". "dev", "ci-<sha>" and the like are not release versions.
-var releaseVersion = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$`)
-
 // Enabled reports whether a build that identifies itself as version should be
 // able to update. This matters: the updater compares versions with x/mod/semver,
 // where an invalid string such as "dev" sorts below every real version, so a
 // development build would otherwise offer to replace itself with the newest
 // release.
-func Enabled(version string) bool { return releaseVersion.MatchString(version) }
+//
+// Release builds are always stamped with the git tag, which the release workflow
+// requires to be vMAJOR.MINOR.PATCH[-prerelease], so a leading "v" plus valid semver
+// is the whole test: "dev", "ci-<sha>" and the like are not release versions.
+func Enabled(version string) bool { return semver.IsValid(version) }
 
 // isArchive reports whether an asset name is an archive or a Linux package (.deb, .rpm), none of
 // which the updater can install in place.
