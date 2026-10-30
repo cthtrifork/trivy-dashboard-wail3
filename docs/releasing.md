@@ -25,12 +25,14 @@ The workflow then:
 1. refuses to run anywhere but `main`;
 2. works out the tag (`scripts/next-version.sh`) and stops if a **release** for it already exists;
 3. creates an annotated tag on the head of `main` and pushes it, unless the tag already exists (see *Retrying*);
-4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck`, builds the binary, and publishes the
+4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck` (in a `checks` job beside the binary build, not before it), builds the binary, and publishes the
    release with its assets (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
    have the names they do. The same run also pushes the headless container image to
    `ghcr.io/cthtrifork/trivy-dashboard-wail3` (tags `1.2.3`, `v1.2.3`, and `latest` for a final release) with a signed
    provenance attestation; see [headless](headless.md). The image is only pushed for a tagged release, never from a
-   branch or a dry run.
+   branch or a dry run, and only once `checks` has passed. It builds beside the binary, so a failure in the binary job
+   (for example a missing signing key) does not stop the image from being pushed; the GitHub release is only created
+   when both finish.
 
 ## One-time setup: the package signing key
 
