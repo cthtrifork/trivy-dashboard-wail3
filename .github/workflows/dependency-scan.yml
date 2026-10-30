@@ -43,38 +43,78 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          path: head
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
 
       - name: Scan pull request
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
-          scan-ref: .
+          scan-ref: head
           scanners: vuln
           severity: HIGH,CRITICAL
           format: template
-          template: '@.github/trivy/dependency-scan.tpl'
-          output: report.md
+          template: '@head/.github/trivy/dependency-scan.tpl'
+          output: head.tsv
+          skip-dirs: internal/trivy/fixtures
+          exit-code: '0'
+          version: ${{ env.TRIVY_VERSION }}
+
+      - name: Scan base
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: base
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          format: template
+          template: '@head/.github/trivy/dependency-scan.tpl'
+          output: base.tsv
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
           version: ${{ env.TRIVY_VERSION }}
 
       # Trivy has no template linter, but `trivy convert` renders a template from recorded JSON, so a
-      # broken template (or one that no longer produces a table) fails here, not silently in a comment.
+      # broken template (or one that no longer produces findings) fails here, not silently in a comment.
       - name: Validate report template
         run: |
-          trivy convert --format template --template @.github/trivy/dependency-scan.tpl \
-            --output rendered.md internal/trivy/fixtures/traefik_3.7.13.json
-          grep -q '^| Severity | Package ' rendered.md
+          trivy convert --format template --template @head/.github/trivy/dependency-scan.tpl \
+            --output rendered.tsv head/internal/trivy/fixtures/traefik_3.7.13.json
+          grep -q $'^CVE-.*\t.*\t.*\t[A-Z]*$' rendered.tsv
 
-      # GitHub rejects comments over 65536 characters.
-      - name: Limit report size
+      # Short overview: the findings that appear or disappear with this PR.
+      - name: Build report
         run: |
-          if [ "$(wc -c < report.md)" -gt 60000 ]; then
-            head -c 60000 report.md > report.tmp
-            printf '\n\n_Report truncated; see the Trivy scan in the job log or security workflow._\n' >> report.tmp
-            mv report.tmp report.md
-          fi
-          cat report.md >> "$GITHUB_STEP_SUMMARY"
+          export LC_ALL=C
+          sort -u base.tsv > base.sorted
+          sort -u head.tsv > head.sorted
+          comm -13 base.sorted head.sorted > added.tsv
+          comm -23 base.sorted head.sorted > removed.tsv
+
+          list() { # TITLE FILE
+            [ -s "$2" ] || return 0
+            printf '\n**%s (%s)**\n\n' "$1" "$(wc -l < "$2")"
+            while IFS=$'\t' read -r id pkg version severity; do
+              printf -- '- %s [%s](https://avd.aquasec.com/nvd/%s) `%s` %s\n' "$severity" "$id" "${id,,}" "$pkg" "$version"
+            done < "$2"
+          }
+
+          {
+            echo '## Trivy dependency scan'
+            if [ -s added.tsv ] || [ -s removed.tsv ]; then
+              printf '\nHIGH and CRITICAL vulnerabilities: **+%s** added, **-%s** removed (%s on this branch).\n' \
+                "$(wc -l < added.tsv)" "$(wc -l < removed.tsv)" "$(wc -l < head.sorted)"
+              list Added added.tsv
+              list Removed removed.tsv
+            else
+              printf '\nNo change in HIGH and CRITICAL vulnerabilities (%s on this branch).\n' "$(wc -l < head.sorted)"
+            fi
+          } | tee report.md >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
