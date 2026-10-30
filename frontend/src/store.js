@@ -412,7 +412,7 @@ export const looksLikeRef = (s) => /[/@]/.test(s.trim());
 // typed or pasted without losing them. Back returns to the split view of the shown scan.
 export const composing = computed(() => !split.value && !!result.value);
 export function startCompose(ref) {
-  if (!result.value) return;
+  if (!split.value || scanning.value) return; // also after a failed scan, when there is no result to go back to
   split.value = false;
   image.value = ref === undefined ? joinRef(imageRepo.value, imageTag.value) : ref.trim();
 }
