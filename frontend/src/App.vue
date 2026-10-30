@@ -14,6 +14,7 @@ import {
   setTag,
   clearAll,
   looksLikeRef,
+  joinRef,
   imageError,
   composing,
   startCompose,
@@ -34,6 +35,7 @@ import {
 import { ago, bytes } from "./lib/format.js";
 import OptionsPanel from "./components/OptionsPanel.vue";
 import TagInput from "./components/TagInput.vue";
+import CopyId from "./components/CopyId.vue";
 import PrioritiesPanel from "./components/PrioritiesPanel.vue";
 import VulnsPanel from "./components/VulnsPanel.vue";
 import DepsPanel from "./components/DepsPanel.vue";
@@ -188,6 +190,7 @@ onMounted(() => {
               @click="compose()"
               @paste="pasteRef"
             />
+            <CopyId class="repo-copy" :text="joinRef(imageRepo, imageTag)" />
             <span class="repo-edit" aria-hidden="true">✎</span>
           </div>
           <TagInput
