@@ -66,6 +66,8 @@ A PR is listed once, in the first section it matches (title type, or the label a
 
 When you change a type or section, change the `types` in `pr-title.yml`, the categories and autolabeler rules in `.github/release-drafter.yml`, and the table above together.
 
+**Regrouping old releases.** Releases published before the sections existed carry GitHub's flat *What's Changed* list. `scripts/regroup-release-notes.sh [--apply] [tag...]` rewrites them into the sections above (dry run by default; needs `gh` and, for `--apply`, a token that can write releases). Old titles are not conventional, so it classifies by author and title keywords: read the dry run first.
+
 **Limits.** Release Drafter finds the last release from the published releases, not the tags, so a tag that was never released does not move the base version. A non-conventional title (a PR opened before this convention, or by someone who ignored the check) lands in *Other changes* as a patch.
 
 ## One-time setup: the package signing key
