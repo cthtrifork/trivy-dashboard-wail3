@@ -9,9 +9,11 @@ name: PR title
 #     edited. Labelling needs write access, so it is skipped for fork PRs.
 #   - Skipped: bot/* branches (the never-merged screenshots preview PR).
 #   - Make "check title" a required status check in the branch rules to enforce it on merge.
+# synchronize matters: a required status check is attached to the head commit, and update-branches.yml
+# pushes a merge commit to open PRs, so every new head needs its own run or the check stays "Expected".
 on:
   pull_request:
-    types: [opened, edited, reopened]
+    types: [opened, edited, reopened, synchronize]
 
 permissions:
   contents: read
