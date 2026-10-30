@@ -47,7 +47,7 @@ Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces 
 
 ## Actions lint
 
-`actions-lint.yml` runs on changes under `.github/`, on `main` and weekly: zizmor (pedantic persona, installed from PyPI at the version pinned in the workflow) audits workflows and composite actions. `pin format` fails on any `uses:` that is not pinned to a commit SHA with a `# vX.Y.Z` comment (local `$/` and `./` references excepted); it is deterministic, so it runs on every event. `latest actions` runs on pull requests only: `gh pin-actions workflows --latest` re-pins the workflows the PR adds or changes and a newer release is a warning, not a failure, because Renovate owns freshness and a release can land before its PR. The tool pins immutable releases to the tag instead of the SHA; that is the same version, so it is not reported.
+`actions-lint.yml` runs on changes under `.github/`, on `main` and weekly: zizmor (pedantic persona, installed from PyPI at the version pinned in the workflow) audits workflows and composite actions, and `gh pin-actions workflows --latest` re-pins every `uses:` in the workflows a PR adds or changes (that job runs on pull requests only: on `main` an action can have a release Renovate has not bumped yet). The check fails on an unpinned action or one with a newer release. The tool pins immutable releases to the tag instead of the SHA; that is the same version, so it is not a failure.
 
 ## Lighthouse
 
