@@ -271,3 +271,13 @@ main.dim {
 #scan-state.settings {
   color: var(--accent);
 }
+
+/* An image reference that cannot be scanned: the box is marked and the reason is given under it. */
+#image.invalid {
+  box-shadow: 0 0 0 2px var(--CRITICAL);
+}
+#image-error {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: var(--CRITICAL);
+}

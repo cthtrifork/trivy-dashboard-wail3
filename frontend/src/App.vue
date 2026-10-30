@@ -14,6 +14,7 @@ import {
   setTag,
   clearAll,
   looksLikeRef,
+  imageError,
   composing,
   startCompose,
   backToView,
@@ -90,9 +91,19 @@ function compose(ref) {
   closeHistory();
   focusImage();
 }
-function pasteRef(ev) {
+// Pasted text loses the spaces and line breaks around it, which a copied reference often carries.
+function insertTrimmed(ev) {
   const text = ev.clipboardData?.getData("text") ?? "";
-  if (!looksLikeRef(text)) return;
+  if (text === text.trim()) return;
+  ev.preventDefault();
+  const el = ev.target;
+  if (el.readOnly) return;
+  el.setRangeText(text.trim(), el.selectionStart, el.selectionEnd, "end");
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function pasteRef(ev) {
+  const text = (ev.clipboardData?.getData("text") ?? "").trim();
+  if (!looksLikeRef(text)) return insertTrimmed(ev);
   ev.preventDefault();
   compose(text);
 }
@@ -114,6 +125,14 @@ function imageKey(ev) {
     pickRecent(history.value[histIdx.value], ev.key === "Enter");
   }
 }
+// The reason an image cannot be scanned shows once typing pauses, so "nginx:" mid-word is not shouted at.
+const shownError = ref("");
+let errTimer;
+watch(imageError, (e) => {
+  clearTimeout(errTimer);
+  if (!e) shownError.value = "";
+  else errTimer = setTimeout(() => (shownError.value = imageError.value), 500);
+});
 const sevTag = (n, sev) => ({ n, sev, style: sevStyle(sev) });
 
 const meta = computed(() => (result.value ? `${result.value.image}${result.value.os ? " · " + result.value.os : ""}` : ""));
@@ -206,10 +225,14 @@ onMounted(() => {
             autocomplete="off"
             spellcheck="false"
             required
+            :aria-invalid="!!shownError"
+            :aria-describedby="shownError ? 'image-error' : undefined"
+            :class="{ invalid: shownError }"
             @focus="histOpen = true"
             @input="onImageInput"
             @blur="closeHistory"
             @keydown="imageKey"
+            @paste="insertTrimmed"
           />
           <div id="recent-list" v-show="showHistory" role="listbox" aria-label="Recent images">
             <div class="recent-head" aria-hidden="true">Recent images</div>
@@ -236,7 +259,7 @@ onMounted(() => {
           id="scan-btn"
           type="submit"
           :class="{ rescan: scanState === 'current' }"
-          :disabled="scanning"
+          :disabled="scanning || !!imageError"
           :title="scanState === 'current' ? 'Scan this image again, e.g. when a floating tag has moved' : ''"
         >
           {{ scanState === "current" ? "Rescan" : "Scan" }}
@@ -274,7 +297,8 @@ onMounted(() => {
         </div>
         <button id="cancel-btn" type="button" v-show="scanning && !comparing" @click="cancel">Cancel</button>
       </div>
-      <p v-if="composing && !scanning" id="scan-state" class="changed" role="status">
+      <p v-if="shownError" id="image-error" role="alert">✗ {{ shownError }}</p>
+      <p v-else-if="composing && !scanning" id="scan-state" class="changed" role="status">
         ● Still showing the scan of {{ result.image }}. Scan to replace it, or press Esc to go back.
       </p>
       <p v-else-if="split && !scanning && scanState !== 'new'" id="scan-state" :class="scanState" role="status">

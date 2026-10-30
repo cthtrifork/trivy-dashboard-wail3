@@ -3,6 +3,7 @@
 import { computed, reactive, ref, shallowRef, watch } from "vue";
 import { Events } from "@wailsio/runtime";
 import { ScanService } from "../bindings/github.com/cthtrifork/trivy-dashboard-wail3/internal/app";
+import { imageRefError } from "./lib/imageref.js";
 
 export { ScanService };
 
@@ -389,6 +390,8 @@ export const scanState = computed(() => {
   return settingsChanged.value ? "settings" : "current";
 });
 
+// imageError is why the current reference cannot be scanned: "" when it can, or when the box is empty.
+export const imageError = computed(() => imageRefError(image.value));
 // looksLikeRef tells a pasted full image reference from a tag: tags never contain "/" or "@".
 export const looksLikeRef = (s) => /[/@]/.test(s.trim());
 // Composing: the single image box is back while the old results stay on screen, so a new image can be
@@ -444,6 +447,7 @@ export async function loadVEX() {
 
 export async function runScan() {
   if (scanning.value) return; // a scan or compare is already running; its result and log must not interleave
+  if (imageError.value) return setStatus(imageError.value, { err: true });
   scanning.value = true;
   compareData.value = null;
   const { repo, tag } = splitRef(image.value);
