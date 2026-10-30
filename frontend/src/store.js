@@ -389,6 +389,15 @@ export const scanState = computed(() => {
   return settingsChanged.value ? "settings" : "current";
 });
 
+// looksLikeRef tells a pasted full image reference from a tag: tags never contain "/" or "@".
+export const looksLikeRef = (s) => /[/@]/.test(s.trim());
+// useRef goes back to the single image box holding ref, keeping the shown results, so pasting another
+// image while the split view is up works instead of being ignored.
+export function useRef(ref) {
+  split.value = false;
+  image.value = ref.trim();
+}
+
 // clearAll empties the shown findings and goes back to the single image box (which keeps the reference).
 export function clearAll() {
   split.value = false;

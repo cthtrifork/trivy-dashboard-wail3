@@ -13,6 +13,8 @@ import {
   ensureTags,
   setTag,
   clearAll,
+  looksLikeRef,
+  useRef,
   scanState,
   scanning,
   comparing,
@@ -71,6 +73,20 @@ function pickRecent(e, rescan) {
 function clearView() {
   clearAll();
   nextTick(() => document.getElementById("image")?.focus());
+}
+// A full image reference pasted into the split view (repository or tag field) replaces the image:
+// the view returns to the single box with it, ready to scan.
+function pasteRef(ev) {
+  const text = ev.clipboardData?.getData("text") ?? "";
+  if (!looksLikeRef(text)) return;
+  ev.preventDefault();
+  useRef(text);
+  closeHistory();
+  nextTick(() => {
+    const el = document.getElementById("image");
+    el?.focus();
+    el?.select();
+  });
 }
 function imageKey(ev) {
   const n = history.value.length;
@@ -138,7 +154,7 @@ onMounted(() => {
       </div>
       <div class="scan-row">
         <div v-if="split" class="image-wrap image-split">
-          <input id="image-repo" :value="imageRepo" readonly tabindex="-1" aria-label="Image repository" :title="imageRepo" />
+          <input id="image-repo" :value="imageRepo" readonly tabindex="-1" aria-label="Image repository" :title="imageRepo" @paste="pasteRef" />
           <TagInput
             id="image-tag"
             :model-value="imageTag"
@@ -147,6 +163,7 @@ onMounted(() => {
             :class="{ changed: scanState === 'changed' }"
             @update:model-value="setTag"
             @open="ensureTags(imageRepo)"
+            @paste="pasteRef"
           />
           <button type="button" class="ghost clear-btn" title="Clear the results and go back to the single image field" :disabled="scanning" @click="clearView">
             Clear
