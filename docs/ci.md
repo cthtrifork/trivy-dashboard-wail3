@@ -53,6 +53,10 @@ Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces 
 - **Conflicts:** the update fails for a PR whose branch conflicts with `main`; the job summary lists it and the author resolves it by hand.
 - **Cost:** every push to `main` re-runs CI on each behind PR.
 
+## PR titles and release notes
+
+`pr-title.yml` checks that a PR title follows `type(scope)!: summary` and labels the PR from the type, using the table in `scripts/pr-title.sh`; `.github/release.yml` turns those labels into sections of the generated release notes. It uses `gh` and the workflow's own token (`pull-requests: write`, no third-party action to pin), runs for fork PRs as a read-only title check, and skips `bot/*` branches. Details and the type table: [releasing](releasing.md#release-notes).
+
 ## Actions lint
 
 `actions-lint.yml` runs on changes under `.github/`, on `main` and weekly: zizmor (pedantic persona, installed from PyPI at the version pinned in the workflow) audits workflows and composite actions, and `gh pin-actions workflows --latest` re-pins every `uses:` in the workflows a PR adds or changes (that job runs on pull requests only: on `main` an action can have a release Renovate has not bumped yet). The check fails on an unpinned action or one with a newer release. The tool pins immutable releases to the tag instead of the SHA; that is the same version, so it is not a failure.

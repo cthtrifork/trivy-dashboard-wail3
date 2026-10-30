@@ -34,6 +34,31 @@ The workflow then:
    (for example a missing signing key) does not stop the image from being pushed; the GitHub release is only created
    when both finish.
 
+## Release notes
+
+`release.yml` publishes with `gh release create --generate-notes`, so the notes are built from the PRs merged since the previous tag and laid out by [`.github/release.yml`](../.github/release.yml). Two things make them readable: a title written for users, and a label that picks the section. Both come from the PR title, so nobody tags PRs by hand.
+
+**Title: `type(scope)!: summary`.** The `scope` and `!` are optional. Max 72 characters, no trailing period. Write the effect a user sees (`fix: keep the last scan on disk across a restart`), not the diff (`fix: change persist.go`). Squash merges use the title as the commit subject, so the history reads the same way.
+
+| Type | Label | Release-note section |
+|---|---|---|
+| `feat` | `feature` | New features |
+| `fix` | `bug` | Bug fixes |
+| `security` | `security` | Security |
+| `perf` | `performance` | Performance |
+| `docs` | `documentation` | Documentation |
+| `deps` | `dependencies` | Dependencies |
+| `ci`, `build` | `ci`, `build` | CI, build and release |
+| `refactor` | `refactor` | Maintenance |
+| `test`, `chore`, `revert` | `maintenance` | Maintenance |
+| any type with `!` | adds `breaking-change` | Breaking changes (first) |
+
+A PR with no matching label lands in *Other changes*. Add `skip-changelog` to keep a PR out of the notes entirely.
+
+**Enforcement.** The *PR title* workflow (`pr-title.yml`) fails a PR whose title does not match, and creates and sets the label (removing a stale one when the title is edited). The rules and the table live in `scripts/pr-title.sh`; try one with `scripts/pr-title.sh check "fix: ..."`. Fork PRs are checked but not labelled (the token is read-only). The `bot/*` screenshots preview PR is skipped. Renovate PRs are titled `deps: update ...` (`semanticCommits` in `renovate.json5`) and keep their own `dependencies` and `security` labels. To make the check block merging, add **check title** as a required status check in the branch rules (repository settings; not something a workflow can do).
+
+When you change a type, label or section, change `scripts/pr-title.sh`, `.github/release.yml` and the table above together.
+
 ## One-time setup: the package signing key
 
 The `.deb` and `.rpm` are signed with a PGP key kept in two repository secrets (Settings → Secrets and variables →

@@ -9,6 +9,12 @@
   ],
   labels: ["dependencies"],
 
+  // PR titles follow the repository convention `type: summary` (scripts/pr-title.sh), so a Renovate PR
+  // reads `deps: update dependency knip to v6.44.0` and passes the PR title check.
+  semanticCommits: "enabled",
+  semanticCommitType: "deps",
+  semanticCommitScope: null,
+
   // New releases wait 2 days. "strict" means no branch or PR exists until the wait is over, so a
   // PR (and an automerge) never races a release that gets yanked or fixed within the first days.
   minimumReleaseAge: "2 days",

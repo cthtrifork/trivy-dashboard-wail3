@@ -1,3 +1,5 @@
+<!-- Title: `type(scope)!: summary`, e.g. `fix: keep the last scan on restart`. Types: feat fix security perf refactor docs test chore ci build deps. `!` marks a breaking change. The title is the release-note line; the label is set from it. -->
+
 ## What and why
 
 ## Verified

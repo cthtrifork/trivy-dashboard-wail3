@@ -1,0 +1,28 @@
+# Layout of the generated release notes (`gh release create --generate-notes` in release.yml reads this).
+# Sections are filled by PR label; the labels come from the PR title type (scripts/pr-title.sh, pr-title.yml).
+# A PR lands in the first section whose labels it has, so breaking changes and security fixes come first.
+changelog:
+  exclude:
+    labels:
+      - skip-changelog # internal noise; add by hand to a PR that should not appear in the notes
+  categories:
+    - title: Breaking changes
+      labels: [breaking-change]
+    - title: Security
+      labels: [security]
+    - title: New features
+      labels: [feature]
+    - title: Bug fixes
+      labels: [bug]
+    - title: Performance
+      labels: [performance]
+    - title: Documentation
+      labels: [documentation]
+    - title: Dependencies
+      labels: [dependencies]
+    - title: CI, build and release
+      labels: [ci, build]
+    - title: Maintenance
+      labels: [maintenance, refactor]
+    - title: Other changes
+      labels: ["*"]

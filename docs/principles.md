@@ -29,6 +29,7 @@ Standing rules for this repository. They come from the maintainer's instructions
 14. **Tests replay fixtures**; they must not need podman, network or a display. Prefer testing `internal/trivy` behaviour over UI plumbing.
 15. **Keep the frontend small.** Vue 3 + Vite with `@wailsio/runtime` and nothing else at runtime; the dependency graph stays a hand-written canvas. Add an npm dependency only with a decision record (see decision 14).
 16. **Small files of docs next to the feature** (`docs/<feature>.md`), linked from the README.
+17. **Title PRs for the release notes.** `type(scope)!: summary`, see `docs/releasing.md`. The title is the changelog line, so describe the effect for a user, not the diff. `skip-changelog` is only for a PR that must not appear in the notes.
 
 ## Verification checklist before opening a PR
 
