@@ -6,6 +6,7 @@ name: Actions lint
 #   - gh-pin-actions checks that every `uses:` is pinned to a commit SHA with a version comment, and
 #     that it is the latest release. On pull requests only the workflows the PR adds or changes.
 #   - renovate-config validates .github/renovate.json5 with renovate-config-validator.
+#   - trivy-template renders .github/trivy/dependency-scan.tpl from a recorded scan (Trivy has no template linter).
 # They run when workflow, action or Renovate files change, and weekly, because new zizmor audits
 # and advisories appear without any change here. They use a paths filter, so do not mark them as
 # required checks.
@@ -108,3 +109,25 @@ jobs:
           # renovate: datasource=npm depName=renovate
           RENOVATE_VERSION: 44.196.0
         run: npx --yes --package "renovate@${RENOVATE_VERSION}" -- renovate-config-validator --strict .github/renovate.json5
+
+  trivy-template:
+    name: trivy template
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          # renovate: datasource=github-releases depName=aquasecurity/trivy
+          version: v0.70.0
+
+      # `trivy convert` renders a template from recorded JSON without scanning, so a broken template
+      # (or one that no longer produces findings) fails here instead of silently in the PR comment.
+      - name: Render the dependency scan template
+        run: |
+          trivy convert --format template --template @.github/trivy/dependency-scan.tpl \
+            --output rendered.tsv internal/trivy/fixtures/traefik_3.7.13.json
+          grep -qP '^\S.*\t- [A-Z]+ \[[A-Z]+-.*\]\(https://' rendered.tsv

@@ -33,6 +33,10 @@ concurrency:
 
 env:
   GOTOOLCHAIN: local
+  # renovate: datasource=github-releases depName=aquasecurity/trivy
+  TRIVY_VERSION: v0.70.0
+  # The DB comes from the cache that trivy-cache.yml refreshes daily.
+  TRIVY_SKIP_DB_UPDATE: 'true'
 
 jobs:
   govulncheck:
@@ -84,6 +88,7 @@ jobs:
           # Recorded scan output of a third-party image: full of CVE ids by design, not our dependencies.
           skip-dirs: internal/trivy/fixtures
           exit-code: '1'
+          version: ${{ env.TRIVY_VERSION }}
 
   npm-audit:
     name: npm audit (frontend runtime dependencies)
