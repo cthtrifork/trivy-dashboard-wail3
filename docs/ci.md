@@ -47,9 +47,9 @@ Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces 
 
 ## Keeping pull requests up to date
 
-`update-branches.yml` runs on every push to `main` (and by hand). A personal account has no merge queue, so it does what the "Update branch" button does for every open, non-draft, same-repository PR that is behind `main`: it calls the `update-branch` API (merge, with `expected_head_sha` so a branch that moved meanwhile is left alone). The merge commit starts CI again, so the PR stays mergeable under "Require branches to be up to date before merging" (add that to the branch rules, together with auto-merge on the PR, for the full effect). It uses the Renovate GitHub App's token (Contents and Pull requests write), because a push with `GITHUB_TOKEN` starts no workflows.
+`update-branches.yml` runs on every push to `main` (and by hand). A personal account has no merge queue, so it does what the "Update branch" button does for every open, non-draft, same-repository PR by the repository owner (`--author`, the personal account) that is behind `main`: it calls the `update-branch` API (merge, with `expected_head_sha` so a branch that moved meanwhile is left alone). The merge commit starts CI again, so the PR stays mergeable under "Require branches to be up to date before merging" (add that to the branch rules, together with auto-merge on the PR, for the full effect). It uses the Renovate GitHub App's token (Contents and Pull requests write), because a push with `GITHUB_TOKEN` starts no workflows.
 
-- **Skipped on purpose:** `renovate/*` (Renovate rebases its own branches, and a commit it did not make makes it stop updating the branch) and `bot/*` (force-pushed by `screenshots.yml`), fork PRs and drafts.
+- **Skipped on purpose:** PRs by anyone else, `renovate/*` (Renovate rebases its own branches, and a commit it did not make makes it stop updating the branch) and `bot/*` (force-pushed by `screenshots.yml`), fork PRs and drafts.
 - **Conflicts:** the update fails for a PR whose branch conflicts with `main`; the job summary lists it and the author resolves it by hand.
 - **Cost:** every push to `main` re-runs CI on each behind PR.
 
