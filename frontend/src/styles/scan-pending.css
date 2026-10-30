@@ -13,12 +13,6 @@
   color: var(--mute);
   font-size: 12px;
 }
-.sp-log {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .sp-bar,
 .sp-bar-dot circle {
   background: var(--line);

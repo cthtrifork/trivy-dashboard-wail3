@@ -2,7 +2,7 @@
 // Placeholder for a view whose data arrives when the running scan (or compare) finishes.
 // "rows" mimics the Priorities list, "table" a plain table with `cols` columns, "graph" the dependency graph.
 import { computed } from "vue";
-import { image, status, comparing, cmpForm, cmpBase } from "../store.js";
+import { image, comparing, cmpForm, cmpBase } from "../store.js";
 
 const props = defineProps({
   kind: { type: String, default: "rows" },
@@ -11,8 +11,6 @@ const props = defineProps({
 });
 
 const subject = computed(() => (comparing.value ? `${cmpBase.value.repo}:${cmpBase.value.tag} and ${cmpForm.b}` : image.value.trim()));
-// Trivy's latest log line, as the status bar shows it.
-const detail = computed(() => (status.busy ? status.msg : ""));
 // Fixed width cycle, so the bars look like text without randomness (a re-render must not reshuffle them).
 const width = (i, j = 0) => 38 + ((i * 17 + j * 29) % 5) * 11 + "%";
 const rows = computed(() => Array.from({ length: props.count }, (_, i) => i));
@@ -22,7 +20,6 @@ const rows = computed(() => Array.from({ length: props.count }, (_, i) => i));
   <div class="sp" :class="kind" role="status">
     <div class="sp-note spin">
       <span>Scanning {{ subject }}… results appear here when it finishes.</span>
-      <span v-if="detail" class="sp-log mono">{{ detail }}</span>
     </div>
     <template v-if="kind === 'rows'">
       <div class="ptable-head" aria-hidden="true"><span>Severity</span><span>CVSS</span><span>Finding</span><span>Priority</span><span>Fix</span></div>
