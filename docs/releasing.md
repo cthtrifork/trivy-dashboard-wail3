@@ -98,7 +98,16 @@ WebKitGTK 6 and a glibc that new. Try it locally with a built binary: `make wail
 If the tag was created but the release failed (a flaky step, a vulnerability that needed fixing first), run
 **Tag and release** again with that **exact tag** in `tag` (not `auto`: the draft's version may have moved on). A tag that exists without a release is reused, not moved, so
 the run finishes the release for the commit that was tagged. If you instead need the fix in the release, delete the tag
-(`git push origin :refs/tags/v1.2.3`) and run again.
+(`git push origin :refs/tags/v1.2.3`) and run again. That only works while no release was **published** for the tag.
+
+## Immutable releases
+
+The repository can turn on *immutable releases* (Settings, General; it only applies to releases published afterwards). The release flow is written for it: `release.yml` creates the release as a draft (Release Drafter), attaches every asset to the draft and only then publishes it, which is the order GitHub requires for the assets to be locked in. After publishing, the tag and the assets can no longer be changed or deleted; the title, notes, pre-release flag and *latest* flag still can (the publish step sets them in the same call). That has consequences:
+
+- **A published release cannot be fixed in place.** Cut a new version with the fix. Do not try to move the tag or replace an asset.
+- **A tag name is used up for good.** Even after the release is deleted the tag name cannot be reused. The *delete the tag and run again* advice under *Retrying* is only for a tag that never got a published release (a failed run leaves a draft, which is fine to retry or delete).
+- The release also gets GitHub's own release attestation, next to the build-provenance and SBOM attestations this workflow signs (below).
+- **Not yet run against an immutable release.** The docs do not say whether publishing a draft for a tag that already exists is allowed under immutability, or that uploading to a draft works through its upload URL; the first release after enabling it is the test.
 
 ## Why the release is called, not triggered
 
@@ -126,6 +135,13 @@ the binary, then verifies them itself before creating the release. To check a do
 gh attestation verify trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboard-wail3
 gh attestation verify trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboard-wail3 \
   --predicate-type https://cyclonedx.org/bom
+```
+
+With immutable releases on, GitHub's own attestation covers the tag, commit and assets, and the CLI checks it:
+
+```sh
+gh release verify v1.2.3 --repo cthtrifork/trivy-dashboard-wail3
+gh release verify-asset v1.2.3 trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboard-wail3
 ```
 
 The packages are also signed with the release PGP key. Import `trivy-scanner-release-key.asc` from the release, check
