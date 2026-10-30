@@ -96,20 +96,12 @@ jobs:
         with:
           name: dependency-scan-report
 
-      # Updates its own earlier comment instead of adding one per push.
+      # --edit-last updates this token's previous comment on the pull request and --create-if-none
+      # posts one the first time, so there is a single comment however many times the PR is pushed.
       - name: Comment on pull request
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
-        run: |
-          marker='<!-- trivy-dependency-scan -->'
-          { echo "$marker"; cat report.md; } > comment.md
-          id=$(gh api --paginate "repos/$GH_REPO/issues/$PR/comments" \
-            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | head -n1)
-          if [ -n "$id" ]; then
-            gh api -X PATCH "repos/$GH_REPO/issues/comments/$id" -F body=@comment.md >/dev/null
-          else
-            gh api -X POST "repos/$GH_REPO/issues/$PR/comments" -F body=@comment.md >/dev/null
-          fi
+        run: gh pr comment "$PR" --body-file report.md --edit-last --create-if-none
