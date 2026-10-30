@@ -1,30 +1,58 @@
 #!/usr/bin/env bash
 # Usage: dependency-scan-report.sh BASE.json HEAD.json
 # Prints a Markdown report of how a pull request changes the vulnerabilities Trivy finds: those only
-# in HEAD (introduced) and those only in BASE (resolved). A finding is package + version + advisory id.
+# in HEAD (introduced) and those only in BASE (resolved).
 set -euo pipefail
 
-jq -rn --slurpfile base "${1:?base trivy json}" --slurpfile head "${2:?head trivy json}" '
-  def findings: [.Results[]? | .Target as $t | .Vulnerabilities[]?
-    | {id: .VulnerabilityID, pkg: .PkgName, ver: .InstalledVersion, fixed: (.FixedVersion // "–"), sev: .Severity, target: $t}];
-  def key: "\(.pkg)@\(.ver)|\(.id)";
-  def rank: {CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3}[.sev] // 4;
-  def only_in($other): ($other | map({(key): 1}) | add // {}) as $seen
-    | unique_by(key) | map(select($seen[key] | not)) | sort_by([rank, .pkg]);
-  def section($title; $list):
-    if ($list | length) == 0 then empty else
-      "", "### \($title) (\($list | length))", "",
-      "| Severity | Package | Version | Fixed in | Advisory | Target |",
-      "|---|---|---|---|---|---|",
-      ($list[:50][] | "| \(.sev) | `\(.pkg)` | \(.ver) | \(.fixed) | [\(.id)](https://avd.aquasec.com/nvd/\(.id | ascii_downcase)) | `\(.target)` |"),
-      (if ($list | length) > 50 then "", "_Showing 50 of \($list | length)._" else empty end)
-    end;
+base=${1:?base trivy json}
+head=${2:?head trivy json}
 
-  ($base[0] | findings) as $b | ($head[0] | findings) as $h
-  | ($h | only_in($b)) as $new | ($b | only_in($h)) as $gone
-  | "## Trivy dependency scan", "",
-    (if ($new | length) + ($gone | length) == 0
-     then "No change in vulnerabilities (\($h | length) on this branch)."
-     else "\($h | length) on this branch: **\($new | length)** introduced, **\($gone | length)** resolved.",
-          section("Introduced"; $new), section("Resolved"; $gone) end)
-'
+# One sorted, tab-separated line per finding: severity rank, severity, package, version, fix, id, target.
+# The rank first makes the sort order CRITICAL -> LOW, and sorted lines are what comm compares.
+findings() {
+  jq -r '
+    .Results[]? | .Target as $target | .Vulnerabilities[]? |
+    [ ({CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3}[.Severity] // 4),
+      .Severity, .PkgName, .InstalledVersion, (.FixedVersion // "–"), .VulnerabilityID, $target ] | @tsv
+  ' "$1" | LC_ALL=C sort -u
+}
+
+# section TITLE ROWS: a heading and a table for the rows (at most 50), nothing when there are none.
+section() {
+  local title=$1 rows=$2 max=50
+  [ -n "$rows" ] || return 0
+  local count
+  count=$(wc -l <<<"$rows")
+
+  printf '\n### %s (%s)\n\n' "$title" "$count"
+  echo '| Severity | Package | Version | Fixed in | Advisory | Target |'
+  echo '|---|---|---|---|---|---|'
+  head -n "$max" <<<"$rows" | while IFS=$'\t' read -r _ severity pkg version fixed id target; do
+    printf '| %s | `%s` | %s | %s | [%s](https://avd.aquasec.com/nvd/%s) | `%s` |\n' \
+      "$severity" "$pkg" "$version" "$fixed" "$id" "${id,,}" "$target"
+  done
+  if [ "$count" -gt "$max" ]; then
+    printf '\n_Showing %s of %s._\n' "$max" "$count"
+  fi
+}
+
+base_findings=$(findings "$base")
+head_findings=$(findings "$head")
+
+# comm -13: only in HEAD. comm -23: only in BASE. Both inputs are sorted.
+introduced=$(LC_ALL=C comm -13 <(echo "$base_findings") <(echo "$head_findings") | sed '/^$/d')
+resolved=$(LC_ALL=C comm -23 <(echo "$base_findings") <(echo "$head_findings") | sed '/^$/d')
+
+total=$(echo "$head_findings" | sed '/^$/d' | wc -l)
+n_introduced=$(echo "$introduced" | sed '/^$/d' | wc -l)
+n_resolved=$(echo "$resolved" | sed '/^$/d' | wc -l)
+
+echo '## Trivy dependency scan'
+echo
+if [ "$n_introduced" -eq 0 ] && [ "$n_resolved" -eq 0 ]; then
+  echo "No change in vulnerabilities ($total on this branch)."
+  exit 0
+fi
+echo "$total on this branch: **$n_introduced** introduced, **$n_resolved** resolved."
+section Introduced "$introduced"
+section Resolved "$resolved"
