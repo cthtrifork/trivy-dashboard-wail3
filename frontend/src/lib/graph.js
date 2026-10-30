@@ -4,6 +4,7 @@
 
 const LEVEL = 120;
 const MAX_SPEED = 40; // px per step: a safety net against runaway nodes
+const TWEEN_MS = 180; // matches --dur in motion.css
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
 
 export class Graph {
@@ -29,8 +30,7 @@ export class Graph {
     this.showLabels = "auto";
     this.raf = 0;
     this.seed = 1;
-    this.emph = 1; // 0..1: how far the selection's dimming of everything else has faded in
-    this.anim = 0; // requestAnimationFrame id of the selection tween
+    this.anim = 0; // requestAnimationFrame id of the camera tween
 
     new ResizeObserver(() => this.resize()).observe(canvas.parentElement);
     canvas.addEventListener("pointerdown", (e) => this.down(e));
@@ -78,22 +78,19 @@ export class Graph {
   }
 
   select(id, { center = false } = {}) {
-    const fade = id != null && id !== this.selected;
-    const to = center ? this.cameraFor(id) : null;
-    const from = { k: this.k, tx: this.tx, ty: this.ty };
     this.selected = id;
-    if (to) this.autoFit = false;
-    if (!fade && !to) return this.draw(); // nothing to animate, e.g. a deselect
-    // The dimming of the rest of the graph fades in and the camera eases to the node, over one short tween.
+    const to = center ? this.cameraFor(id) : null;
+    if (!to) return this.draw();
+    this.autoFit = false;
+    const from = { k: this.k, tx: this.tx, ty: this.ty };
     this.animate((e) => {
-      if (fade) this.emph = 0.35 + 0.65 * e;
-      if (to) for (const key in from) this[key] = from[key] + (to[key] - from[key]) * e;
+      for (const key in from) this[key] = from[key] + (to[key] - from[key]) * e;
     });
   }
 
-  // Calls step(e) each frame with e easing from 0 to 1 (ease-out), drawing after each; a new call replaces a running one.
+  // Calls step(e) each frame with e easing from 0 to 1, drawing after each; a new call replaces a running one.
   // With reduced motion it jumps straight to e = 1.
-  animate(step, ms = 220) {
+  animate(step) {
     cancelAnimationFrame(this.anim);
     this.anim = 0;
     if (REDUCED.matches) {
@@ -103,8 +100,8 @@ export class Graph {
     }
     const t0 = performance.now();
     const tick = (now) => {
-      const t = Math.min((now - t0) / ms, 1);
-      step(1 - (1 - t) ** 3);
+      const t = Math.min((now - t0) / TWEEN_MS, 1);
+      step(1 - (1 - t) ** 3); // ease-out
       this.draw();
       this.anim = t < 1 ? requestAnimationFrame(tick) : 0;
     };
@@ -297,7 +294,7 @@ export class Graph {
       const onPath = this.pathEdges.has(p.id + ">" + q.id);
       const hot = onPath || (sel !== undefined && (ai === sel || bi === sel));
       const inReach = !!reach && reach.has(p.id) && reach.has(q.id);
-      ctx.globalAlpha = hot ? 1 : sel !== undefined && !inReach ? 0.45 - 0.35 * this.emph : 0.45;
+      ctx.globalAlpha = hot ? 1 : sel !== undefined && !inReach ? 0.1 : 0.45;
       ctx.strokeStyle = hot ? accent : mute;
       ctx.fillStyle = ctx.strokeStyle;
       ctx.lineWidth = (onPath ? 2.5 : hot ? 2 : 1) / this.k;
@@ -328,7 +325,7 @@ export class Graph {
     const labelled = [];
     this.nodes.forEach((n, i) => {
       const on = active(i);
-      ctx.globalAlpha = on ? 1 : 1 - 0.7 * this.emph;
+      ctx.globalAlpha = on ? 1 : 0.3;
       if (n.hl) {
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r + 7, 0, 7);
@@ -408,11 +405,10 @@ export class Graph {
     return best;
   }
 
-  // A drag or zoom takes over from a running selection tween.
+  // A drag or zoom takes over from a running camera tween.
   stopTween() {
     cancelAnimationFrame(this.anim);
     this.anim = 0;
-    this.emph = 1;
   }
 
   down(e) {
