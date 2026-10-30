@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive } from "vue";
-import { result } from "../store.js";
+import { result, scanning } from "../store.js";
+import ScanPending from "./ScanPending.vue";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
 import SummaryCard from "./SummaryCard.vue";
@@ -83,7 +84,8 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
         </tr>
       </tbody>
     </table>
-    <div v-if="!rows.length" class="empty" id="sbom-empty">
+    <ScanPending v-if="!result && scanning" kind="table" :cols="5" />
+    <div v-else-if="!rows.length" class="empty" id="sbom-empty">
       {{ result ? "No components match the filter." : "Run a scan to see the SBOM." }}
     </div>
   </div>

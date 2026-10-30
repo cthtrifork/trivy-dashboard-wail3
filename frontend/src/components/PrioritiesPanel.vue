@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, reactive, ref, watch } from "vue";
-import { prioTarget, result, showInGraph, vulns, vex } from "../store.js";
+import { prioTarget, result, scanning, showInGraph, vulns, vex } from "../store.js";
 import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import CopyId from "./CopyId.vue";
@@ -8,6 +8,7 @@ import CvssBreakdown from "./CvssBreakdown.vue";
 import CvssMeter from "./CvssMeter.vue";
 import Ratings from "./Ratings.vue";
 import RulesEditor from "./RulesEditor.vue";
+import ScanPending from "./ScanPending.vue";
 import VexBox from "./VexBox.vue";
 import WhereItLives from "./WhereItLives.vue";
 import SuppressedRow from "./SuppressedRow.vue";
@@ -202,7 +203,8 @@ defineExpose({ count: computed(() => pool.value.length) });
     <button type="button" class="ghost" aria-label="Dismiss" @click="landed = null">×</button>
   </div>
   <div id="prio-list" class="scroll" ref="scroller">
-    <div v-if="!result" class="empty">Run a scan to see what matters most.</div>
+    <ScanPending v-if="!result && scanning" kind="rows" />
+    <div v-else-if="!result" class="empty">Run a scan to see what matters most.</div>
     <div v-else-if="!all.length" class="empty">No vulnerabilities found 🎉</div>
     <template v-else>
       <div class="kv">{{ signals }}</div>

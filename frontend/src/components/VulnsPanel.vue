@@ -1,10 +1,11 @@
 <script setup>
 import { computed, reactive } from "vue";
-import { result, vulns, vex, SEVERITIES, sevStyle } from "../store.js";
+import { result, scanning, vulns, vex, SEVERITIES, sevStyle } from "../store.js";
 import { tierStyle, pct, detailUrl, openUrl as open, COLUMN_HELP, effectiveScore } from "../lib/format.js";
 import { sortRows, sortBy, sortClass } from "../lib/sorting.js";
 import { useVirtualList } from "../lib/virtual.js";
 import Chip from "./Chip.vue";
+import ScanPending from "./ScanPending.vue";
 import CopyId from "./CopyId.vue";
 import CvssMeter from "./CvssMeter.vue";
 import Ratings from "./Ratings.vue";
@@ -158,6 +159,7 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
         </tr>
       </tbody>
     </table>
-    <div v-if="!rows.length" class="empty" id="vuln-empty">{{ result ? emptyText : "Run a scan to see vulnerabilities." }}</div>
+    <ScanPending v-if="!result && scanning" kind="table" :cols="6" />
+    <div v-else-if="!rows.length" class="empty" id="vuln-empty">{{ result ? emptyText : "Run a scan to see vulnerabilities." }}</div>
   </div>
 </template>

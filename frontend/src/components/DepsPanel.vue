@@ -1,10 +1,12 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
-import { depsTarget, result, SEVERITIES, SEV_COLOR, sevStyle, showInPriorities, vex, vulns } from "../store.js";
+import { depsTarget, result, scanning, SEVERITIES, SEV_COLOR, sevStyle, showInPriorities, vex, vulns } from "../store.js";
 import { Graph } from "../lib/graph.js";
-import { STATUS_LABEL, suppresses, tierStyle } from "../lib/format.js";
+import { STATUS_LABEL, detailUrl, openUrl, suppresses, tierStyle } from "../lib/format.js";
 import { blastRadius, routeTo } from "../lib/where.js";
 import Chip from "./Chip.vue";
+import CopyId from "./CopyId.vue";
+import ScanPending from "./ScanPending.vue";
 import SevBadges from "./SevBadges.vue";
 
 const IMAGE_NODE = "__image__";
@@ -195,6 +197,7 @@ function renderGraph() {
       ring: tot && !own ? colors[tot] : own ? colors[own] : null,
       shape: n.category === "OS" ? "square" : "circle",
       always: labelled.has(r) && total(n) > 0,
+      weight: sevWeight(n),
       hl: !!q && (n.name + " " + n.version).toLowerCase().includes(q),
     };
   });
@@ -329,6 +332,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
   <div id="dep-split">
     <div class="graph-wrap" id="dep-graph">
       <canvas id="dep-canvas" ref="canvas"></canvas>
+      <ScanPending v-if="!result && scanning" kind="graph" class="dep-pending" />
       <div id="dep-hover">{{ hover }}</div>
       <div id="dep-legend">
         <span><i class="lg sq"></i>OS package</span><span><i class="lg"></i>library / app</span>
@@ -337,7 +341,8 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
       </div>
     </div>
     <div class="table-wrap" id="dep-detail">
-      <div v-if="!result" class="empty">Run a scan to explore dependencies. Click a node to inspect it.</div>
+      <div v-if="!result && scanning" class="empty">Scanning… the dependency graph appears when the scan finishes.</div>
+      <div v-else-if="!result" class="empty">Run a scan to explore dependencies. Click a node to inspect it.</div>
       <div v-else-if="!selectedNode" class="empty">Click a node to inspect it.</div>
       <template v-else>
         <button v-if="trail.length" type="button" class="link" @click="back">
@@ -371,18 +376,24 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
           }}{{ total(selectedNode) > selectedVulns.length ? `, ${total(selectedNode)} incl. dependencies` : "" }})
         </h4>
         <template v-for="v in shownVulns" :key="vkey(v)">
-          <button
-            type="button"
-            class="vrow vpick"
-            :class="{ sel: dep.vuln === vkey(v) }"
-            :aria-expanded="dep.vuln === vkey(v)"
-            @click="dep.vuln = dep.vuln === vkey(v) ? null : vkey(v)"
-          >
-            <span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span>
-            <span class="mono">{{ v.id }}</span>
-            <span class="kv">{{ v.fixed ? `fixed in ${v.fixed}` : "no fix" }}</span>
-            <span class="caret" aria-hidden="true">{{ dep.vuln === vkey(v) ? "▾" : "›" }}</span>
-          </button>
+          <div class="vline" :class="{ sel: dep.vuln === vkey(v) }">
+            <button
+              type="button"
+              class="vrow vpick"
+              :aria-expanded="dep.vuln === vkey(v)"
+              @click="dep.vuln = dep.vuln === vkey(v) ? null : vkey(v)"
+            >
+              <span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span>
+              <span class="mono">{{ v.id }}</span>
+              <span class="kv">{{ v.fixed ? `fixed in ${v.fixed}` : "no fix" }}</span>
+              <span class="caret" aria-hidden="true">{{ dep.vuln === vkey(v) ? "▾" : "›" }}</span>
+            </button>
+            <CopyId :text="v.id" />
+            <a v-if="detailUrl(v)" class="copy-id" :href="detailUrl(v)" title="Open CVE details" @click.prevent.stop="openUrl(detailUrl(v))">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5L7.5 8.5M12 9v3.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H7" /></svg>
+              <span class="vlink-label">Open {{ v.id }}</span>
+            </a>
+          </div>
           <div v-if="dep.vuln === vkey(v) && info(v)" class="vcard">
             <div class="vcard-title">{{ v.title || v.id }}</div>
             <div class="vcard-meta">
