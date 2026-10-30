@@ -4,6 +4,7 @@
 
 const LEVEL = 120;
 const MAX_SPEED = 40; // px per step: a safety net against runaway nodes
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)");
 
 export class Graph {
   constructor(canvas, { onSelect = () => {}, onHover = () => {} } = {}) {
@@ -28,6 +29,8 @@ export class Graph {
     this.showLabels = "auto";
     this.raf = 0;
     this.seed = 1;
+    this.emph = 1; // 0..1: how far the selection's dimming of everything else has faded in
+    this.anim = 0; // requestAnimationFrame id of the selection tween
 
     new ResizeObserver(() => this.resize()).observe(canvas.parentElement);
     canvas.addEventListener("pointerdown", (e) => this.down(e));
@@ -75,9 +78,34 @@ export class Graph {
   }
 
   select(id, { center = false } = {}) {
+    const changed = id !== this.selected;
     this.selected = id;
-    if (center) this.centerOn(id);
-    this.draw();
+    const to = center ? this.centerTarget(id) : null;
+    if (to) this.autoFit = false;
+    this.tween(changed && id != null, to);
+  }
+
+  // Ease the camera to `to` and fade the dimming in, over a short time; draws once when motion is off.
+  tween(fade, to, ms = 220) {
+    cancelAnimationFrame(this.anim);
+    this.anim = 0;
+    if (REDUCED.matches || !(fade || to)) {
+      this.emph = 1;
+      if (to) Object.assign(this, to);
+      this.draw();
+      return;
+    }
+    const from = { k: this.k, tx: this.tx, ty: this.ty };
+    const t0 = performance.now();
+    const tick = (now) => {
+      const t = Math.min((now - t0) / ms, 1);
+      const e = 1 - (1 - t) ** 3; // ease-out
+      if (fade) this.emph = 0.35 + 0.65 * e;
+      if (to) for (const key of ["k", "tx", "ty"]) this[key] = from[key] + (to[key] - from[key]) * e;
+      this.draw();
+      this.anim = t < 1 ? requestAnimationFrame(tick) : 0;
+    };
+    this.anim = requestAnimationFrame(tick);
   }
 
   // ids: the route from the image to the selection, in order. Its nodes and edges stay bright while
@@ -93,15 +121,20 @@ export class Graph {
     this.draw();
   }
 
-  centerOn(id) {
+  // The camera that puts a node in the middle, or null for an unknown id.
+  centerTarget(id) {
     const n = this.nodes[this.byId.get(id)];
-    if (!n) return;
-    this.autoFit = false;
+    if (!n) return null;
     const { w, h } = this.size();
-    this.k = Math.max(this.k, 1);
-    this.tx = w / 2 - n.x * this.k;
-    this.ty = h / 2 - n.y * this.k;
-    this.draw();
+    const k = Math.max(this.k, 1);
+    return { k, tx: w / 2 - n.x * k, ty: h / 2 - n.y * k };
+  }
+
+  centerOn(id) {
+    const to = this.centerTarget(id);
+    if (!to) return;
+    this.autoFit = false;
+    this.tween(false, to);
   }
 
   screenPos(id) {
@@ -268,7 +301,7 @@ export class Graph {
       const onPath = this.pathEdges.has(p.id + ">" + q.id);
       const hot = onPath || (sel !== undefined && (ai === sel || bi === sel));
       const inReach = !!reach && reach.has(p.id) && reach.has(q.id);
-      ctx.globalAlpha = hot ? 1 : sel !== undefined && !inReach ? 0.1 : 0.45;
+      ctx.globalAlpha = hot ? 1 : sel !== undefined && !inReach ? 0.45 - 0.35 * this.emph : 0.45;
       ctx.strokeStyle = hot ? accent : mute;
       ctx.fillStyle = ctx.strokeStyle;
       ctx.lineWidth = (onPath ? 2.5 : hot ? 2 : 1) / this.k;
@@ -299,7 +332,7 @@ export class Graph {
     const labelled = [];
     this.nodes.forEach((n, i) => {
       const on = active(i);
-      ctx.globalAlpha = on ? 1 : 0.3;
+      ctx.globalAlpha = on ? 1 : 1 - 0.7 * this.emph;
       if (n.hl) {
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r + 7, 0, 7);
@@ -379,7 +412,15 @@ export class Graph {
     return best;
   }
 
+  // A drag or zoom takes over from a running selection tween.
+  stopTween() {
+    cancelAnimationFrame(this.anim);
+    this.anim = 0;
+    this.emph = 1;
+  }
+
   down(e) {
+    this.stopTween();
     const { sx, sy } = this.local(e);
     const i = this.hit(sx, sy);
     this.c.setPointerCapture(e.pointerId);
@@ -430,6 +471,7 @@ export class Graph {
 
   wheel(e) {
     e.preventDefault();
+    this.stopTween();
     const { sx, sy } = this.local(e);
     const f = Math.exp(-e.deltaY * 0.0015);
     const k = Math.min(4, Math.max(0.1, this.k * f));

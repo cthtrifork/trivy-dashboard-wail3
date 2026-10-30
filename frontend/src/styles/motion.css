@@ -74,6 +74,14 @@ dialog.drawer[open] {
   }
 }
 
+/* Dependencies tab: picking a node swaps the detail pane (keyed on the selection) and eases the tree row. */
+.dep-sel {
+  animation: fade-in var(--dur) var(--ease);
+}
+.node {
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
 /* Copy confirmation pops in. */
 .copy-id.ok svg {
   animation: pop var(--dur) var(--ease);

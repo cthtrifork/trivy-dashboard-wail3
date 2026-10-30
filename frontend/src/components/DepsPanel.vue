@@ -362,7 +362,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
     <div class="table-wrap" id="dep-detail">
       <div v-if="!result && scanning" class="empty">Scanning… the dependency graph appears when the scan finishes.</div>
       <div v-else-if="!result" class="empty">Run a scan to explore dependencies. Click a node to inspect it.</div>
-      <template v-else-if="selectedNode">
+      <div v-else-if="selectedNode" :key="dep.selected" class="dep-sel">
         <button v-if="trail.length" type="button" class="link" @click="back">
           ← Back to {{ nodes[trail.at(-1)]?.name }} {{ nodes[trail.at(-1)]?.version }}
         </button>
@@ -444,7 +444,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
           <div v-if="more(refs.length)" class="kv">…and {{ more(refs.length) }} more</div>
           <div v-if="!refs.length" class="kv">none</div>
         </template>
-      </template>
+      </div>
     </div>
   </div>
 </template>

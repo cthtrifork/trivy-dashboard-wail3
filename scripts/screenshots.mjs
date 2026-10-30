@@ -189,7 +189,7 @@ if (views !== "core") {
     // is not mistaken for the end of the layout.
     let calm = 0;
     for (let i = 0; i < 600 && calm < 3; i++) {
-      const rest = await page.evaluate(() => window.__depGraph.alpha <= 0.015 && !window.__depGraph.raf);
+      const rest = await page.evaluate(() => window.__depGraph.alpha <= 0.015 && !window.__depGraph.raf && !window.__depGraph.anim);
       calm = rest ? calm + 1 : 0;
       await page.waitForTimeout(200);
     }
