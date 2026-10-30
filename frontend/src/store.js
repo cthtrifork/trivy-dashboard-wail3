@@ -506,13 +506,22 @@ export async function runScan() {
   }
 }
 
+// The SBOM components repeat six keys per row, which is most of the saved JSON. Saved as tuples they
+// stringify, parse and sit in storage at roughly half the size; packComponents/unpackComponents convert.
+const packComponents = (cs) => cs.map((c) => [c.name, c.version, c.type, c.purl, c.licenses, c.group]);
+const unpackComponents = (rows) =>
+  rows.map(([name, version, type, purl, licenses, group]) => ({ name, version, type, purl, licenses, group }));
+
 // persistScan keeps the scan for the next reload. A result too big for the quota is dropped, not left stale.
 function persistScan(r) {
   const img = image.value.trim();
   lsSet(KEYS.image, img);
   setHashImage(img);
   try {
-    localStorage.setItem(KEYS.lastResult, JSON.stringify({ forImage: img, result: r }));
+    localStorage.setItem(
+      KEYS.lastResult,
+      JSON.stringify({ forImage: img, result: { ...r, components: packComponents(r.components ?? []) } }),
+    );
   } catch {
     lsRemove(KEYS.lastResult);
   }
@@ -525,6 +534,7 @@ async function restoreScan() {
   if (!want) return;
   const saved = lsJSON(KEYS.lastResult, null);
   if (saved?.result && saved.forImage === want) {
+    saved.result.components = unpackComponents(saved.result.components ?? []);
     result.value = saved.result;
     scannedSettings.value = scanSettings(); // the options are not saved with the result: assume they match
     const { repo, tag } = splitRef(want);
@@ -532,7 +542,10 @@ async function restoreScan() {
     // The backend keeps findings only in memory: hand them back so VEX import/export and re-ranking
     // work after a server restart, not just in the tab that scanned.
     try {
-      await ScanService.RestoreScan(saved.result);
+      // Only the findings and the product id matter to the backend: not the SBOM and graph, which are
+      // the bulk of the result and would be serialised across the bridge for nothing.
+      const { image, productPurl, vulnerabilities } = saved.result;
+      await ScanService.RestoreScan({ image, productPurl, vulnerabilities });
     } catch {
       /* the result is still shown; the backend asks for a rescan when it needs the findings */
     }
