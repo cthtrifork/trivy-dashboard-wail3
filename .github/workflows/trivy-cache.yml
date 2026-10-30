@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: trivy-cache
+  cancel-in-progress: false
+
 jobs:
   update:
     name: update Trivy DB cache
