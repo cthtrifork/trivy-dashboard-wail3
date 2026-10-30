@@ -122,12 +122,7 @@ async function rerank() {
     return;
   }
   try {
-    let out = await ScanService.Rescore({ ...rules });
-    if (!out.length && r.vulnerabilities.length) {
-      // the backend lost the findings (restart): hand the shown scan back and rank again
-      await ScanService.RestoreScan(r);
-      out = await ScanService.Rescore({ ...rules });
-    }
+    const out = await ScanService.Rescore({ ...rules });
     if (token !== rankToken || out.length !== r.vulnerabilities.length) return;
     vulns.value = out.map((o) => ({
       ...r.vulnerabilities[o.index],
@@ -453,19 +448,6 @@ export const refreshFootprint = () =>
     (f) => (footprint.value = f),
     () => {},
   );
-
-// withScan runs a backend call that needs the findings of the scan on screen. The backend keeps them
-// in memory only, so a restarted server (a dev rebuild, a container restart) has none while this page
-// still shows the scan: on "scan the image first" hand the shown scan back once and retry.
-export async function withScan(call) {
-  try {
-    return await call();
-  } catch (err) {
-    if (!result.value || !errText(err).includes("scan the image first")) throw err;
-    await ScanService.RestoreScan(result.value);
-    return call();
-  }
-}
 
 export async function loadVEX() {
   const m = new Map();
