@@ -1,21 +1,20 @@
 name: Screenshots
 
-# docs/screenshots is rendered here, never committed from a feature branch: every PR that rewrote
-# the PNGs conflicted with every other one, because git cannot merge binary files.
+# The screenshots are never committed to main: docs/screenshots is gitignored and rendered here.
 #
 #   pull_request  Render the screenshots from the recorded fixtures, upload each image as its own
 #                 unzipped artifact (`archive: false`) and embed them in one sticky PR comment
 #                 that is updated on every push. Nothing is pushed anywhere. Fork PRs (read-only
-#                 token) get the artifacts on the run page but no comment.
-#   push to main  Render again and, if any image differs from docs/screenshots, open or update one
-#                 PR (branch bot/update-screenshots) with the new images and enable auto-merge
-#                 on it, so it lands once the required checks pass.
+#                 token) get the artifacts on the run page but no comment. The dependency graph
+#                 (06-09) is left out: its canvas anti-aliasing varies between runs.
+#   push to main  Render everything, force-push the images as one commit on top of main to
+#                 bot/update-screenshots and keep one DRAFT PR open from it ("Screenshots
+#                 preview"). The PR exists only so the current images can be browsed in its
+#                 "Files changed" tab. It is never merged: it is a draft (GitHub refuses to merge
+#                 a draft), the CI job `no-screenshots` fails on it, and the workflow turns it back
+#                 into a draft if someone marks it ready. Close it and the next run opens a new one.
 #
-# The dependency graph (06-09) is not rendered here: its canvas anti-aliasing varies between runs,
-# so it opened PRs with no real change. screenshots-deps.yml renders it on PRs that change it.
-#
-# The bot PR only touches docs/screenshots, which is not in `paths`, so merging it does not
-# trigger another run.
+# Nothing ever lands on main, so there is no loop and no binary merge conflict.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -63,7 +62,7 @@ jobs:
           client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
           permission-contents: write # push the commit
-          permission-pull-requests: write # open the update PR and enable auto-merge
+          permission-pull-requests: write # open and update the preview PR
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -91,7 +90,8 @@ jobs:
       - name: Generate screenshots
         env:
           SCREENSHOT_BROWSER_CHANNEL: chrome
-          SCREENSHOT_VIEWS: core # everything but the dependency graph, see the header
+          # Pull requests skip the dependency graph (see the header); the preview on main renders it.
+          SCREENSHOT_VIEWS: ${{ github.event_name == 'pull_request' && 'core' || 'all' }}
         run: make screenshots
 
       - name: Upload 00-invalid-image-ref
@@ -272,7 +272,7 @@ jobs:
           STEPS: ${{ toJSON(steps) }}
         run: |
           # Every PNG rendered here needs an `Upload` step above; fail loudly when a screenshot was added.
-          want="$(ls docs/screenshots/*.png | grep -vc -- -dependencies-)" # the graph is rendered by screenshots-deps.yml
+          want="$(ls docs/screenshots/*.png | grep -vc -- -dependencies-)" # the graph is only rendered on main
           have="$(jq '[to_entries[] | select(.key | startswith("shot-"))] | length' <<<"$STEPS")"
           if [ "$want" != "$have" ]; then
             echo "::error::docs/screenshots has $want images but screenshots.yml uploads $have: add or remove an 'Upload <name>' step."
@@ -283,7 +283,7 @@ jobs:
           {
             echo "### Screenshots"
             echo
-            echo "Rendered from the recorded fixtures at ${HEAD_SHA::7}. Not committed to this branch; after merge a bot PR from \`main\` updates \`docs/screenshots\`. Images are run artifacts: you must be logged in to see them, and they expire after 14 days."
+            echo "Rendered from the recorded fixtures at ${HEAD_SHA::7}. Not committed: screenshots never live in the repository, the draft PR \`bot/update-screenshots\` shows the ones from \`main\`. Images are run artifacts: you must be logged in to see them, and they expire after 14 days."
             echo
             jq -r 'to_entries[] | select(.key | startswith("shot-")) | "\(.key[5:])\t\(.value.outputs["artifact-url"])"' <<<"$STEPS" |
               while IFS=$'\t' read -r name url; do
@@ -311,33 +311,31 @@ jobs:
         run: |
           echo "Rendered \`docs/screenshots\`. This is a fork PR (read-only token), so there is no PR comment: the images are in this run's artifacts." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Open or update the screenshots PR
+      - name: Update the screenshots preview PR
         if: github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           BRANCH: bot/update-screenshots
         run: |
-          if [ -z "$(git status --porcelain -- docs/screenshots)" ]; then
-            echo "Screenshots are up to date." | tee -a "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$BRANCH"
-          git add docs/screenshots
-          git commit -m "Update screenshots"
+          git add -f docs/screenshots # the folder is gitignored
+          # Skip the push when nothing but the graph's canvas noise differs from the branch.
+          if git fetch --quiet origin "$BRANCH" 2>/dev/null &&
+            git diff --cached --quiet "origin/$BRANCH" -- docs/screenshots ':!docs/screenshots/*-dependencies-*'; then
+            echo "The screenshots preview is up to date." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git commit -m "Screenshots preview (never merge)"
           # Always rebuilt from the current main, so the branch cannot conflict with it.
           git push --force origin "$BRANCH"
-          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
-            gh pr create --base main --head "$BRANCH" \
-              --title "Update screenshots" \
-              --body "Regenerated by the Screenshots workflow from the recorded fixtures on \`main\` (${GITHUB_SHA::7}). Only \`docs/screenshots\` changes."
-          fi
-          # Merge as soon as the branch rules are satisfied. Needs "Allow auto-merge" in the repo
-          # settings; without it this only warns, and the PR stays open for a manual merge.
-          if gh pr merge "$BRANCH" --auto --squash --delete-branch; then
-            echo "Auto-merge is enabled on the screenshots PR." >> "$GITHUB_STEP_SUMMARY"
+          body="Preview of the screenshots rendered from the recorded fixtures on \`main\` (${GITHUB_SHA::7}). **Never merge this PR**: screenshots do not live in the repository. Open *Files changed* to see the images; the branch is rebuilt on every push to \`main\`."
+          pr="$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')"
+          if [ -z "$pr" ]; then
+            gh pr create --draft --base main --head "$BRANCH" --title "Screenshots preview (do not merge)" --body "$body"
           else
-            echo "::warning::Could not enable auto-merge on the screenshots PR (is 'Allow auto-merge' on in the repo settings?). Merge it manually."
+            gh pr edit "$pr" --body "$body"
+            gh pr ready "$pr" --undo || true # a draft cannot be merged
           fi
-          echo "Screenshots PR for \`${BRANCH}\` is up to date." | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Screenshots preview PR for \`${BRANCH}\` is up to date." | tee -a "$GITHUB_STEP_SUMMARY"

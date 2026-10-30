@@ -111,6 +111,29 @@ jobs:
           version: v2.15.0
           args: --build-tags server ./...
 
+  # Screenshots are rendered in CI and never committed (docs/ci.md). The draft preview PR from
+  # bot/update-screenshots is meant to fail this check; make it required to keep the PR unmergeable.
+  no-screenshots:
+    name: no-screenshots
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fail when the PR adds screenshots
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          files="$(git diff --name-only "$BASE_SHA...HEAD" -- docs/screenshots)"
+          if [ -n "$files" ]; then
+            echo "::error::Screenshots are not committed to this repository (docs/ci.md, Screenshots). Do not merge this PR; remove docs/screenshots from it."
+            echo "$files"
+            exit 1
+          fi
+
   test:
     name: test
     runs-on: ubuntu-24.04

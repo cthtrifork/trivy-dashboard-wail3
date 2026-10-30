@@ -111,3 +111,6 @@ desktop.ini
 # Go hot reload output (air)
 /tmp/
 /lighthouse/
+
+# Rendered by `make screenshots`; never committed (docs/ci.md, Screenshots)
+docs/screenshots/

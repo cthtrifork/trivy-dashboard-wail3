@@ -22,7 +22,7 @@ make vet                                           # go vet, with and without -t
 make build-server                                  # headless build (CGO_ENABLED=0, -tags server,production), no GTK
 make run-mcp                                       # desktop app with Wails' MCP server on 127.0.0.1:9099 (dev only, docs/mcp.md); run-mcp-server is the headless variant
 make demo                                          # demo mode on recorded data (dev builds only)
-make screenshots                                   # rewrites docs/screenshots (needs Node + Playwright)
+make screenshots                                   # renders into the gitignored docs/screenshots (needs Node + Playwright); never commit them
 ```
 
 The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. Use the `server` tag with `CGO_ENABLED=0` there; without `CGO_ENABLED=0` you get `pkg-config: Package gtk4 was not found`.
