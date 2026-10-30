@@ -2,9 +2,10 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 import { depsTarget, result, scanning, SEVERITIES, SEV_COLOR, sevStyle, showInPriorities, vex, vulns } from "../store.js";
 import { Graph } from "../lib/graph.js";
-import { STATUS_LABEL, suppresses, tierStyle } from "../lib/format.js";
+import { STATUS_LABEL, detailUrl, openUrl, suppresses, tierStyle } from "../lib/format.js";
 import { blastRadius, routeTo } from "../lib/where.js";
 import Chip from "./Chip.vue";
+import CopyId from "./CopyId.vue";
 import ScanPending from "./ScanPending.vue";
 import SevBadges from "./SevBadges.vue";
 
@@ -374,18 +375,24 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
           }}{{ total(selectedNode) > selectedVulns.length ? `, ${total(selectedNode)} incl. dependencies` : "" }})
         </h4>
         <template v-for="v in shownVulns" :key="vkey(v)">
-          <button
-            type="button"
-            class="vrow vpick"
-            :class="{ sel: dep.vuln === vkey(v) }"
-            :aria-expanded="dep.vuln === vkey(v)"
-            @click="dep.vuln = dep.vuln === vkey(v) ? null : vkey(v)"
-          >
-            <span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span>
-            <span class="mono">{{ v.id }}</span>
-            <span class="kv">{{ v.fixed ? `fixed in ${v.fixed}` : "no fix" }}</span>
-            <span class="caret" aria-hidden="true">{{ dep.vuln === vkey(v) ? "▾" : "›" }}</span>
-          </button>
+          <div class="vline" :class="{ sel: dep.vuln === vkey(v) }">
+            <button
+              type="button"
+              class="vrow vpick"
+              :aria-expanded="dep.vuln === vkey(v)"
+              @click="dep.vuln = dep.vuln === vkey(v) ? null : vkey(v)"
+            >
+              <span class="sev" :style="sevStyle(v.severity)">{{ v.severity }}</span>
+              <span class="mono">{{ v.id }}</span>
+              <span class="kv">{{ v.fixed ? `fixed in ${v.fixed}` : "no fix" }}</span>
+              <span class="caret" aria-hidden="true">{{ dep.vuln === vkey(v) ? "▾" : "›" }}</span>
+            </button>
+            <CopyId :text="v.id" />
+            <a v-if="detailUrl(v)" class="copy-id" :href="detailUrl(v)" title="Open CVE details" @click.prevent.stop="openUrl(detailUrl(v))">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5L7.5 8.5M12 9v3.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H7" /></svg>
+              <span class="vlink-label">Open {{ v.id }}</span>
+            </a>
+          </div>
           <div v-if="dep.vuln === vkey(v) && info(v)" class="vcard">
             <div class="vcard-title">{{ v.title || v.id }}</div>
             <div class="vcard-meta">
