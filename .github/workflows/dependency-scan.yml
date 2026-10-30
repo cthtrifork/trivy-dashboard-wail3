@@ -18,12 +18,14 @@ on:
       - frontend/package.json
       - frontend/package-lock.json
       - build/docker/**
+  # Manual run on any branch: compares it with the default branch and only writes the job summary.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: dependency-scan-${{ github.event.pull_request.number }}
+  group: dependency-scan-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -48,7 +50,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.event.pull_request.base.sha || github.event.repository.default_branch }}
           path: base
 
       - name: Scan pull request
@@ -117,6 +119,7 @@ jobs:
   comment:
     name: comment on pull request
     needs: scan
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
