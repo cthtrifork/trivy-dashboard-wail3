@@ -84,8 +84,7 @@ jobs:
       - name: Check formatting
         run: make fmt-check
 
-      # Config in .yamllint.yml. The second script catches a blank line inside a step (between `uses:`
-      # and `with:`, say), which yamllint allows and which reads as a mistake.
+      # Config in .yamllint.yml.
       - name: Lint YAML
         env:
           # renovate: datasource=pypi depName=yamllint

@@ -1,8 +1,7 @@
 extends: default
 
 # Workflows and configs carry long explanatory comments and URLs, so line length is not enforced.
-# Blank lines are limited to one in a row (and none at the start or end of a file), which is what
-# catches a stray gap inside a step.
+# Blank lines are limited to one in a row, and none at the start or end of a file.
 rules:
   line-length: disable
   document-start: disable
