@@ -60,7 +60,7 @@ jobs:
           severity: HIGH,CRITICAL
           format: template
           template: '@head/.github/trivy/dependency-scan.tpl'
-          output: head.md
+          output: head.tsv
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
           version: ${{ env.TRIVY_VERSION }}
@@ -74,31 +74,34 @@ jobs:
           severity: HIGH,CRITICAL
           format: template
           template: '@head/.github/trivy/dependency-scan.tpl'
-          output: base.md
+          output: base.tsv
           skip-dirs: internal/trivy/fixtures
           exit-code: '0'
           version: ${{ env.TRIVY_VERSION }}
 
-      # Short overview: the findings that appear or disappear with this PR.
+      # Short overview: the findings that appear or disappear with this PR, grouped by file.
       - name: Build report
         run: |
           export LC_ALL=C
-          sort -u base.md > base.sorted
-          sort -u head.md > head.sorted
-          comm -13 base.sorted head.sorted > added.md
-          comm -23 base.sorted head.sorted > removed.md
+          sort -u base.tsv > base.sorted
+          sort -u head.tsv > head.sorted
+          comm -13 base.sorted head.sorted > added.tsv
+          comm -23 base.sorted head.sorted > removed.tsv
+
+          # a heading whenever the file (first column) changes, then the list item (second column)
+          group='$1 != file { printf "\n**`%s`**\n\n", $1; file = $1 } { print $2 }'
 
           {
             echo '## Trivy dependency scan'
             echo
-            echo "HIGH and CRITICAL vulnerabilities: **+$(wc -l < added.md)** added, **-$(wc -l < removed.md)** removed ($(wc -l < head.sorted) on this branch)."
-            if [ -s added.md ]; then
-              printf '\n**Added**\n\n'
-              cat added.md
+            echo "HIGH and CRITICAL vulnerabilities: **+$(wc -l < added.tsv)** added, **-$(wc -l < removed.tsv)** removed ($(wc -l < head.sorted) on this branch)."
+            if [ -s added.tsv ]; then
+              printf '\n### Added\n'
+              awk -F'\t' "$group" added.tsv
             fi
-            if [ -s removed.md ]; then
-              printf '\n**Removed**\n\n'
-              cat removed.md
+            if [ -s removed.tsv ]; then
+              printf '\n### Removed\n'
+              awk -F'\t' "$group" removed.tsv
             fi
           } | tee report.md >> "$GITHUB_STEP_SUMMARY"
 

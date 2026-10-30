@@ -125,9 +125,9 @@ jobs:
           version: v0.70.0
 
       # `trivy convert` renders a template from recorded JSON without scanning, so a broken template
-      # (or one that no longer produces list items) fails here instead of silently in the PR comment.
+      # (or one that no longer produces findings) fails here instead of silently in the PR comment.
       - name: Render the dependency scan template
         run: |
           trivy convert --format template --template @.github/trivy/dependency-scan.tpl \
-            --output rendered.md internal/trivy/fixtures/traefik_3.7.13.json
-          grep -q '^- [A-Z]* \[CVE-.*\](https://' rendered.md
+            --output rendered.tsv internal/trivy/fixtures/traefik_3.7.13.json
+          grep -qP '^\S.*\t- [A-Z]+ \[[A-Z]+-.*\]\(https://' rendered.tsv
