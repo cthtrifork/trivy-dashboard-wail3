@@ -30,7 +30,7 @@ concurrency:
 
 env:
   # renovate: datasource=github-releases depName=aquasecurity/trivy
-  TRIVY_VERSION: v0.70.0
+  TRIVY_VERSION: v0.76.1
   # The DB comes from the cache that trivy-cache.yml refreshes daily.
   TRIVY_SKIP_DB_UPDATE: 'true'
 
@@ -129,12 +129,13 @@ jobs:
         with:
           name: dependency-scan-report
 
-      # --edit-last updates this token's previous comment on the pull request and --create-if-none
-      # posts one the first time, so there is a single comment however many times the PR is pushed.
+      # One sticky comment, found by header (a hidden marker the action manages). Not
+      # `gh pr comment --edit-last`: that edits the token's newest comment on the pull request, and
+      # lighthouse.yml and screenshots.yml comment as the same bot, so it overwrote their comments,
+      # which they then created again, leaving several copies of this report.
       - name: Comment on pull request
         continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        run: gh pr comment "$PR" --body-file report.md --edit-last --create-if-none
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: trivy-dependency-scan
+          path: report.md

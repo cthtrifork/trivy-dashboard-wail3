@@ -72,7 +72,7 @@ for (const [mode, flags] of Object.entries(MODES)) {
 }
 
 const failures = [];
-const lines = ["<!-- lighthouse-score -->", "### Lighthouse", ""];
+const lines = ["### Lighthouse", ""];
 lines.push(`| | ${CATEGORIES.map(([, name]) => name).join(" | ")} |`);
 lines.push(`|---|${CATEGORIES.map(() => ":-:").join("|")}|`);
 for (const [mode, { scores }] of Object.entries(results)) {

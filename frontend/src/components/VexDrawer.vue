@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from "vue";
-import { ScanService, assessing, result, vex, findingsById, errText, lsGet, lsSet, KEYS } from "../store.js";
+import { ScanService } from "../lib/api.js";
+import { assessing, result, vex, findingsById, errText, lsGet, lsSet, KEYS } from "../store.js";
 import { JUSTIFICATION_PLAIN, STATUS_LABEL, cvssFloor, detailUrl, openUrl, tierStyle } from "../lib/format.js";
 import { glance } from "../lib/glance.js";
 import Chip from "./Chip.vue";

@@ -8,6 +8,7 @@ on:
     paths:
       - '**.go'
       - go.mod
+      - .tool-versions
       - go.sum
       - frontend/package.json
       - frontend/package-lock.json
@@ -17,6 +18,7 @@ on:
     paths:
       - '**.go'
       - go.mod
+      - .tool-versions
       - go.sum
       - frontend/package.json
       - frontend/package-lock.json
@@ -34,7 +36,7 @@ concurrency:
 env:
   GOTOOLCHAIN: local
   # renovate: datasource=github-releases depName=aquasecurity/trivy
-  TRIVY_VERSION: v0.70.0
+  TRIVY_VERSION: v0.76.1
   # The DB comes from the cache that trivy-cache.yml refreshes daily.
   TRIVY_SKIP_DB_UPDATE: 'true'
 
@@ -56,15 +58,18 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.27'
+          go-version-file: .tool-versions
           check-latest: true
           cache: true
           cache-dependency-path: go.sum
 
       - name: Run govulncheck
+        env:
+          # renovate: datasource=go depName=golang.org/x/vuln
+          GOVULNCHECK_VERSION: v1.9.0
         run: |
           go version
-          make govulncheck
+          go run golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION} ./...
 
   trivy-fs:
     name: trivy (filesystem)
@@ -99,8 +104,14 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .tool-versions
+          package-manager-cache: false
+
       # --omit=dev: only what ships in the app (vue, @wailsio/runtime). Vite and the Vue plugin are
       # build tooling, and an advisory there should not fail the weekly run; Renovate and the
       # Trivy scan above still report it. HIGH and above fails, lower severities are left to Renovate.
       - name: Audit production dependencies
-        run: make audit-frontend
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high

@@ -10,11 +10,11 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
 - **Dependencies** – interactive graph of the SBOM dependency graph. A selected component shows its route from the image and its blast radius (everything that requires it, directly or through others).
 - **SBOM** – CycloneDX components with search and type filters.
 
-Screenshots: [`docs/screenshots`](docs/screenshots).
+Screenshots are not committed. The draft [Screenshots preview](../../pulls?q=is%3Apr+is%3Aopen+head%3Abot%2Fupdate-screenshots) PR shows the current ones (Files changed), and `make screenshots` renders them locally.
 
 ## Requirements
-- Go 1.26+, [Wails v3 CLI](https://v3.wails.io) (`make wails3-install`)
-- Node 20.19+ or 22.12+ for the Vue frontend (`frontend/`)
+- Go 1.27+, [Wails v3 CLI](https://v3.wails.io) (`make wails3-install`)
+- Node 20.19+ or 22.12+ for the Vue frontend (`frontend/`); CI and the container images use the version in `.tool-versions`
 - Linux: GTK4 + WebKitGTK 6 dev packages; macOS/Windows: native webview
 - `podman` on PATH (override with `PODMAN=/path/to/podman`)
 

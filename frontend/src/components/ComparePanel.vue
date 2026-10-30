@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
+import { ScanService } from "../lib/api.js";
 import {
-  ScanService,
   SEVERITIES,
   sevStyle,
   opts,

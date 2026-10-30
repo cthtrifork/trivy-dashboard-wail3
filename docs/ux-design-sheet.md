@@ -1,6 +1,6 @@
 # UX design sheet
 
-One page describing how the UI looks and behaves, so new screens and components stay consistent. It documents what `frontend/src/styles/` and the components do today; when they change, change this sheet in the same PR. Screenshots live in `docs/screenshots/`.
+One page describing how the UI looks and behaves, so new screens and components stay consistent. It documents what `frontend/src/styles/` and the components do today; when they change, change this sheet in the same PR. Screenshots are not committed: see the draft `Screenshots preview` PR (branch `bot/update-screenshots`) or run `make screenshots` (output in the gitignored `docs/screenshots/`).
 
 ## Design intent
 

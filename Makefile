@@ -19,7 +19,7 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt fmt-check mod-check lint lint-go lint-frontend govulncheck tools format-frontend audit-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots lighthouse \
+.PHONY: help test check fmt format lint lint-go lint-frontend tools format-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -34,35 +34,22 @@ test: ## Run the tests as CI does (fixtures, no podman needed)
 fmt: ## Format the Go code
 	gofmt -w .
 
-fmt-check: ## Fail if any Go file needs gofmt
-	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "These files need gofmt:"; echo "$$unformatted"; exit 1; fi
+format: fmt format-frontend ## Format the Go code and the Vue app (mkpm's test, lint, format trio)
 
 # Dev tool versions. Renovate keeps them current through the `# renovate:` comments (renovate.json5).
-# renovate: datasource=go depName=github.com/golangci/golangci-lint/v2
+# renovate: datasource=github-releases depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION := v2.15.0
-# renovate: datasource=go depName=golang.org/x/vuln
-GOVULNCHECK_VERSION := v1.9.0
 # renovate: datasource=go depName=golang.org/x/tools
 GOIMPORTS_VERSION := v0.52.0
-# renovate: datasource=npm depName=lighthouse
-LIGHTHOUSE_VERSION := 13.6.0
-
-mod-check: ## Fail if go.mod/go.sum are not tidy, then verify the modules
-	go mod tidy -diff
-	go mod verify
 
 lint: lint-go lint-frontend ## golangci-lint plus the frontend's Biome lint and format check (as CI runs them)
 
 lint-go: ## golangci-lint on the server-tag build (CGO off, no GTK needed)
 	CGO_ENABLED=0 go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --build-tags server ./...
 
-govulncheck: ## govulncheck on the whole module (the GUI package needs the GTK headers to type-check)
-	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
-
-tools: ## Install goimports, golangci-lint and govulncheck into GOBIN (for editors)
+tools: ## Install goimports and golangci-lint into GOBIN (for editors)
 	go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-	go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 
 lint-frontend: ## Biome lint, format check and knip (unused exports and dependencies) for the Vue app (needs `make frontend` once for node_modules)
 	cd frontend && npm run lint && npm run format:check && npm run knip
@@ -70,15 +57,12 @@ lint-frontend: ## Biome lint, format check and knip (unused exports and dependen
 format-frontend: ## Reformat the Vue app with Biome
 	cd frontend && npm run format
 
-audit-frontend: ## npm audit of the runtime dependencies (HIGH and above fails)
-	cd frontend && npm audit --omit=dev --audit-level=high
-
 vet: ## go vet, with and without the production tag
 	go vet ./...
 	go vet -tags $(VET_TAGS) ./...
 
 check: ## Everything CI checks that runs without GTK: gofmt, tidy, vet, tests, headless build
-	$(MAKE) fmt-check
+	@unformatted="$$(gofmt -l .)"; if [ -n "$$unformatted" ]; then echo "These files need gofmt:"; echo "$$unformatted"; exit 1; fi
 	go mod tidy -diff
 	$(MAKE) vet test build-server
 
@@ -115,11 +99,8 @@ run-mcp-server: frontend ## Headless app with the MCP server; only app_info, win
 demo: frontend ## Run the desktop app on recorded data (dev build only)
 	TRIVY_SCANNER_FAKE_PODMAN=1 go run .
 
-screenshots: ## Regenerate docs/screenshots (needs Node and Playwright)
+screenshots: ## Render docs/screenshots, gitignored (needs Node and Playwright)
 	scripts/screenshots.sh
-
-lighthouse: ## Lighthouse scores for the UI, written to ./lighthouse (needs Node and Chrome; CHROME_PATH)
-	LIGHTHOUSE_VERSION=$(LIGHTHOUSE_VERSION) scripts/lighthouse.sh
 
 ## Headless server in podman (no Go on the host; see docs/headless.md) ------
 
