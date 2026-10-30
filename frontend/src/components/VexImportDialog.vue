@@ -1,6 +1,6 @@
 <script setup>
 import { computed, defineAsyncComponent, ref } from "vue";
-import { ScanService, result, vex, loadVEX, errText, lsGet, KEYS } from "../store.js";
+import { ScanService, result, vex, loadVEX, withScan, errText, lsGet, KEYS } from "../store.js";
 
 // CodeMirror is ~half of the bundle; keep it out of the first load.
 const JsonBox = defineAsyncComponent(() => import("./JsonBox.vue"));
@@ -74,7 +74,9 @@ async function apply() {
   busy.value = true;
   error.value = "";
   try {
-    report.value = await ScanService.VEXImport(result.value.image, doc, uncovered.value !== "none", uncovered.value === "ALL" ? "" : uncovered.value);
+    report.value = await withScan(() =>
+      ScanService.VEXImport(result.value.image, doc, uncovered.value !== "none", uncovered.value === "ALL" ? "" : uncovered.value),
+    );
     await loadVEX();
     imported.value = true;
   } catch (e) {
@@ -89,7 +91,7 @@ async function generate() {
   busy.value = true;
   error.value = "";
   try {
-    await ScanService.VEXMarkUnassessed(result.value.image, lsGet(KEYS.vexAuthor), genSeverity.value);
+    await withScan(() => ScanService.VEXMarkUnassessed(result.value.image, lsGet(KEYS.vexAuthor), genSeverity.value));
     await loadVEX();
     dlg.value.close();
     emit("generated");

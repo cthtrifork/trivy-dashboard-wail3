@@ -1,7 +1,7 @@
 <script setup>
 import { copyText } from "../lib/clipboard.js";
 import { computed, defineAsyncComponent, reactive, ref, watch } from "vue";
-import { ScanService, result, vex, loadVEX, errText, lsGet, lsSet, KEYS } from "../store.js";
+import { ScanService, result, vex, loadVEX, withScan, errText, lsGet, lsSet, KEYS } from "../store.js";
 
 // CodeMirror is ~half of the bundle; keep it out of the first load.
 const JsonBox = defineAsyncComponent(() => import("./JsonBox.vue"));
@@ -37,7 +37,7 @@ const stale = computed(() => {
 async function refresh() {
   msg.value = "";
   try {
-    text.value = await ScanService.VEXExport(result.value.image, form.author, "", form.onlyCurrent);
+    text.value = await withScan(() => ScanService.VEXExport(result.value.image, form.author, "", form.onlyCurrent));
   } catch (e) {
     text.value = "";
     msg.value = errText(e);
@@ -69,7 +69,7 @@ async function open() {
 // Cover every finding that has no assessment yet, so nothing is silently missing from the export.
 async function markAll() {
   try {
-    const n = await ScanService.VEXMarkUnassessed(result.value.image, form.author, "");
+    const n = await withScan(() => ScanService.VEXMarkUnassessed(result.value.image, form.author, ""));
     await loadVEX();
     await refresh();
     msg.value = n ? `Marked ${n} finding${n === 1 ? "" : "s"} as under investigation.` : "Every finding already has an assessment.";
@@ -86,7 +86,7 @@ async function copy() {
 async function save() {
   lsSet(KEYS.vexAuthor, form.author);
   try {
-    const path = await ScanService.VEXSave(result.value.image, form.author, "", form.onlyCurrent);
+    const path = await withScan(() => ScanService.VEXSave(result.value.image, form.author, "", form.onlyCurrent));
     msg.value = path ? "Saved to " + path : "";
     return;
   } catch (e) {
