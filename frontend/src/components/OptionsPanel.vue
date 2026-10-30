@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { ScanService } from "../lib/api.js";
 import {
   opts,
@@ -148,11 +148,33 @@ const updateAction = computed(() => {
       return { label: "Check for updates…", run: checkForUpdates };
   }
 });
-
+// Esc or a click outside closes the popover. Esc is left alone while a dialog is open (it closes that first)
+// or when something inside already handled it, such as the version dropdown.
+const details = ref(null);
+const closeOptions = () => {
+  if (details.value) details.value.open = false;
+};
+const onKeydown = (ev) => {
+  if (ev.key !== "Escape" || ev.defaultPrevented || !details.value?.open) return;
+  if (document.querySelector("dialog[open]")) return;
+  closeOptions();
+  details.value.querySelector("summary")?.focus();
+};
+const onPointerdown = (ev) => {
+  if (details.value?.open && !details.value.contains(ev.target) && !ev.target.closest?.("dialog")) closeOptions();
+};
+onMounted(() => {
+  document.addEventListener("keydown", onKeydown);
+  document.addEventListener("pointerdown", onPointerdown);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener("keydown", onKeydown);
+  document.removeEventListener("pointerdown", onPointerdown);
+});
 </script>
 
 <template>
-<details id="opts">
+<details id="opts" ref="details">
   <summary>Options<span v-if="activeCount" class="opts-count"> · {{ activeCount }} active</span
   ><span v-if="settingsChanged" class="opts-count"> · rescan to apply</span></summary>
   <div class="opts-body">

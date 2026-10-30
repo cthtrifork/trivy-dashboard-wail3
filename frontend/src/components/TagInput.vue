@@ -46,7 +46,10 @@ function pick(t) {
 }
 function onKey(ev) {
   const n = options.value.length;
-  if (ev.key === "Escape") return close();
+  if (ev.key === "Escape") {
+    if (shown.value) ev.preventDefault(); // closes only the list; a second Esc reaches the Options popover
+    return close();
+  }
   if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
     ev.preventDefault();
     if (!shown.value) return show();
