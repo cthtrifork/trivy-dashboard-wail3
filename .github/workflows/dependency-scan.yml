@@ -1,7 +1,7 @@
 name: Dependency scan
 
-# Scans the repository with Trivy and comments the HIGH and CRITICAL vulnerabilities it finds,
-# rendered by .github/trivy/dependency-scan.tpl. It runs only when a dependency manifest or lockfile
+# Scans the PR and its base with Trivy (.github/trivy/dependency-scan.tpl lists the findings) and
+# comments the HIGH and CRITICAL vulnerabilities the PR adds and removes. It runs only when a dependency manifest or lockfile
 # changes. The comment is informational; the blocking check is the Trivy job in security.yml. It uses
 # a paths filter, so do not mark it as a required check.
 #
