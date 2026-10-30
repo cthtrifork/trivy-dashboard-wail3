@@ -267,7 +267,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      contents: write # create the release and upload assets
+      contents: write # update the draft release, upload assets and publish it
+      pull-requests: read # Release Drafter reads the merged PRs
       id-token: write # sign the provenance attestation
       attestations: write # store the attestations
     steps:
@@ -317,16 +318,56 @@ jobs:
           gh attestation verify dist/*_linux_amd64 --repo "$REPO" \
             --predicate-type https://cyclonedx.org/bom
 
-      - name: Create GitHub release
+      # The notes come from Release Drafter (.github/release-drafter.yml). Aimed at the tag, it writes the
+      # draft for exactly this tag, from the PRs merged since the last published release up to the tagged
+      # commit, so a retried release gets the notes of the commit that was tagged.
+      - name: Draft the release notes
+        id: notes
+        uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
+        with:
+          tag: ${{ needs.meta.outputs.version }}
+          name: ${{ needs.meta.outputs.version }}
+          commitish: refs/tags/${{ needs.meta.outputs.version }}
+          prerelease: ${{ needs.meta.outputs.prerelease }}
+
+      # Assets go onto the draft and the draft is then published, so the release appears complete.
+      - name: Attach the build and publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.meta.outputs.version }}
           PRERELEASE: ${{ needs.meta.outputs.prerelease }}
+          RELEASE_ID: ${{ steps.notes.outputs.id }}
+          UPLOAD_URL: ${{ steps.notes.outputs.upload_url }}
+          NOTES: ${{ steps.notes.outputs.body }}
         run: |
-          flags=(--verify-tag --generate-notes --title "$TAG")
-          [ "$PRERELEASE" = "true" ] && flags+=(--prerelease)
-          gh release create "$TAG" dist/* "${flags[@]}"
+          set -euo pipefail
+          # Publishing a draft would create a missing tag from its target. The tag must already exist, as
+          # `gh release create --verify-tag` required.
+          gh api "repos/$GH_REPO/git/ref/tags/$TAG" --silent ||
+            { echo "::error::Tag $TAG does not exist; refusing to let the release create it."; exit 1; }
+
+          # A retry finds the assets of an earlier, failed upload on the draft: start clean.
+          gh api "repos/$GH_REPO/releases/$RELEASE_ID/assets" --paginate --jq '.[].id' |
+            while read -r id; do gh api -X DELETE "repos/$GH_REPO/releases/assets/$id" --silent; done
+
+          for f in dist/*; do
+            name="$(basename "$f")"
+            curl -fsS -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/octet-stream" \
+              --data-binary "@$f" \
+              "${UPLOAD_URL%\{*}}?name=$(printf '%s' "$name" | jq -sRr @uri)" > /dev/null
+            echo "Uploaded $name"
+          done
+
+          # The notes are written again from this run's own output: Release Drafter also runs on every push
+          # to main (release-drafter.yml) and may have rewritten the draft while the assets uploaded.
+          latest=true
+          [ "$PRERELEASE" = true ] && latest=false
+          gh api -X PATCH "repos/$GH_REPO/releases/$RELEASE_ID" --silent \
+            -F draft=false -F prerelease="$PRERELEASE" -f make_latest="$latest" \
+            -f name="$TAG" -f body="$NOTES"
+          echo "Published $TAG"
 
   # The headless image (build/docker/headless.Dockerfile, docs/headless.md) goes out with the other
   # release artifacts: only for a tagged release, never from a branch push, and only after vet, tests

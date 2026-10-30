@@ -1,6 +1,7 @@
 name: Tag and release
 
 # Creates a git tag on main and releases it. Run it from the Actions tab ("Run workflow") or with
+#   gh workflow run tag-release.yml                    (next version from the merged PR titles)
 #   gh workflow run tag-release.yml -f bump=minor
 #   gh workflow run tag-release.yml -f tag=v1.0.0
 # Give either an explicit tag or choose a bump. A tag, when given, wins over the bump.
@@ -13,10 +14,10 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: Which part of the latest vX.Y.Z tag to increase (ignored when a tag name is given below)
+        description: "auto takes the next version from the merged PR titles (Release Drafter); the others increase that part of the latest vX.Y.Z tag. Ignored when a tag name is given below."
         type: choice
-        options: [patch, minor, major]
-        default: patch
+        options: [auto, patch, minor, major]
+        default: auto
       tag:
         description: Or the exact new tag, such as v1.4.0 or v1.4.0-rc.1. Leave empty to use the bump.
         type: string
@@ -36,7 +37,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      contents: write # push the tag
+      contents: write # push the tag; Release Drafter updates the draft release
+      pull-requests: read # Release Drafter reads the merged PRs
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
@@ -57,13 +59,21 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+      # `auto`: the version is what Release Drafter works out from the PRs merged since the last release
+      # (breaking change = major, feat = minor, anything else = patch; .github/release-drafter.yml).
+      - name: Work out the next version
+        id: draft
+        if: inputs.tag == '' && inputs.bump == 'auto'
+        uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
+
       - name: Create the tag
         id: tag
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           BUMP: ${{ inputs.bump }}
-          TAG_INPUT: ${{ inputs.tag }}
+          # An explicit tag wins, then the version Release Drafter resolved (empty unless bump is auto).
+          TAG_INPUT: ${{ inputs.tag || steps.draft.outputs.tag_name }}
         run: scripts/create-release-tag.sh
 
   release:
@@ -71,7 +81,8 @@ jobs:
     needs: tag
     # What release.yml's publish and image jobs need; a called workflow cannot have more than its caller grants.
     permissions:
-      contents: write # create the release and upload assets
+      contents: write # update the draft release, upload assets and publish it
+      pull-requests: read # Release Drafter reads the merged PRs
       packages: write # push the headless image to ghcr.io
       id-token: write # sign the provenance attestation
       attestations: write # store the attestations

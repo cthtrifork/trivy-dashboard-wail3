@@ -5,6 +5,7 @@
 **Actions → Tag and release → Run workflow** (on `main`), or from a terminal:
 
 ```sh
+gh workflow run tag-release.yml                    # next version, from the merged PR titles
 gh workflow run tag-release.yml -f bump=minor      # next minor version
 gh workflow run tag-release.yml -f tag=v1.0.0      # an exact tag
 ```
@@ -14,7 +15,7 @@ Give **either** an exact tag **or** a bump:
 | Input | Effect |
 |---|---|
 | `tag` (text) | Use exactly this tag: `v1.4.0` or `v1.4.0-rc.1`. When filled in, it wins over `bump`. |
-| `bump` (`patch` / `minor` / `major`, default `patch`) | Increase that part of the highest **stable** `vX.Y.Z` tag, resetting the lower parts. |
+| `bump` (`auto` / `patch` / `minor` / `major`, default `auto`) | `auto` uses the version Release Drafter works out from the PRs merged since the last release: a breaking change (`!`) is a major, a `feat` a minor, anything else a patch ([Release notes](#release-notes)). The others increase that part of the highest **stable** `vX.Y.Z` tag, resetting the lower parts. |
 
 With no tags yet the base is `v0.0.0`: `minor` gives `v0.1.0`, `major` gives `v1.0.0`, `patch` gives `v0.0.1`.
 Pre-releases and tags that are not `vX.Y.Z` are ignored when working out the base, so `v2.0.0-rc.1` does not make
@@ -23,10 +24,10 @@ the next `minor` become `v2.1.0`.
 The workflow then:
 
 1. refuses to run anywhere but `main`;
-2. works out the tag (`scripts/next-version.sh`) and stops if a **release** for it already exists;
+2. works out the tag (Release Drafter for `auto`, otherwise `scripts/next-version.sh`) and stops if a published **release** for it already exists (the draft Release Drafter keeps does not count);
 3. creates an annotated tag on the head of `main` and pushes it, unless the tag already exists (see *Retrying*);
 4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck` (in a `checks` job beside the binary build, not before it), builds the binary, and publishes the
-   release with its assets (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
+   release (the draft Release Drafter wrote for that tag, with the assets attached) (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
    have the names they do. The same run also pushes the headless container image to
    `ghcr.io/cthtrifork/trivy-dashboard-wail3` (tags `1.2.3`, `v1.2.3`, and `latest` for a final release) with a signed
    provenance attestation; see [headless](headless.md). The image is only pushed for a tagged release, never from a
@@ -36,28 +37,36 @@ The workflow then:
 
 ## Release notes
 
-`release.yml` publishes with `gh release create --generate-notes`, so the notes are built from the PRs merged since the previous tag and laid out by [`.github/release.yml`](../.github/release.yml). Two things make them readable: a title written for users, and a label that picks the section. Both come from the PR title, so nobody tags PRs by hand.
+[Release Drafter](https://github.com/release-drafter/release-drafter) writes the notes and works out the next version, from one config, [`.github/release-drafter.yml`](../.github/release-drafter.yml). Nobody tags PRs or edits notes by hand: a PR title is all it needs.
 
-**Title: `type(scope)!: summary`** ([Conventional Commits](https://www.conventionalcommits.org/)). The `scope` and `!` are optional. Write the effect a user sees (`fix: keep the last scan on disk across a restart`), not the diff (`fix: change persist.go`). Squash merges use the title as the commit subject, so the history reads the same way.
+**Title: `type(scope)!: summary`** ([Conventional Commits](https://www.conventionalcommits.org/)). The `scope` and `!` are optional. Write the effect a user sees (`fix: keep the last scan on disk across a restart`), not the diff (`fix: change persist.go`). Squash merges use the title as the commit subject, so the history reads the same way. In the notes the `type(scope):` prefix is dropped and the first letter capitalised, because the section already says what kind of change it is.
 
-| Type | Label | Release-note section |
-|---|---|---|
-| `feat` | `feature` | New features |
-| `fix` | `bug` | Bug fixes |
-| `security` | `security` | Security |
-| `perf` | `performance` | Performance |
-| `docs` | `documentation` | Documentation |
-| `deps` | `dependencies` | Dependencies |
-| `ci`, `build` | `ci`, `build` | CI, build and release |
-| `refactor` | `refactor` | Maintenance |
-| `test`, `chore`, `revert` | `maintenance` | Maintenance |
-| any type with `!` | adds `breaking-change` | Breaking changes (first) |
+| Type | Release-note section | Label | Next version |
+|---|---|---|---|
+| any type with `!` | Breaking changes (first) | `breaking-change` | major |
+| `security` | Security | `security` | patch |
+| `feat` | New features | `feature` | minor |
+| `fix` | Bug fixes | `bug` | patch |
+| `perf` | Performance | `performance` | patch |
+| `docs` | Documentation | `documentation` | patch |
+| `deps` | Dependencies (collapsed after 5) | `dependencies` | patch |
+| `ci`, `build` | CI, build and release | `ci`, `build` | patch |
+| `refactor`, `test`, `chore`, `revert` | Maintenance | `maintenance` (`refactor` also `refactor`) | patch |
+| anything else | Other changes | none | patch |
 
-A PR with no matching label lands in *Other changes*. Add `skip-changelog` to keep a PR out of the notes entirely.
+A PR is listed once, in the first section it matches (title type, or the label as an override). The next version is the highest increment among the merged PRs. A PR labelled `skip-changelog` is left out of both the notes and the version.
 
-**Enforcement.** The *PR title* workflow (`pr-title.yml`) fails a PR whose title does not match (`amannn/action-semantic-pull-request`) and sets the label from the type (`release-drafter`'s autolabeler, rules in `.github/pr-labels.yml`, which also removes a stale label when the title is edited and creates a label that does not exist yet). Fork PRs are checked but not labelled (the token is read-only). The `bot/*` screenshots preview PR is skipped. Renovate PRs are titled `deps: update ...`, or `security: ...` for vulnerability fixes (`semanticCommits` in `renovate.json5`), so they get the same labels. To make the check block merging, add **check title** as a required status check in the branch rules (repository settings; not something a workflow can do).
+**How it fits the release flow**
 
-When you change a type, label or section, change the `types` in `pr-title.yml`, the rules in `.github/pr-labels.yml`, `.github/release.yml` and the table above together.
+1. *Release Drafter* (`release-drafter.yml`) runs on every push to `main` and keeps a **draft release** current: a preview of the next notes and version. Nothing is published from it. Open the repository's Releases page to read it before cutting a release.
+2. *Tag and release* with `bump` = `auto` (the default) tags the version Release Drafter resolved. An explicit `tag`, or `patch` / `minor` / `major`, still wins; then Release Drafter is only asked for the notes.
+3. `release.yml` asks Release Drafter for the notes of exactly that tag (`tag`, and `commitish` = the tag, so the list ends at the tagged commit), uploads the build to that draft, checks the tag exists, then publishes the draft with the notes written again from the same run, so a push to `main` while the assets uploaded cannot change them. A retry deletes the draft's assets first and uploads again.
+
+**Enforcement.** The *PR title* workflow (`pr-title.yml`) fails a PR whose title does not match (`amannn/action-semantic-pull-request`) and sets the label from the type (Release Drafter's autolabeler, `autolabeler` in the same config; with `sync-labels` it also removes a stale label when the title is edited and creates a label that does not exist yet). The labels are for filtering and as a manual override: the notes and the version read the title, so a missing label does not misfile a PR. Fork PRs are checked but not labelled (the token is read-only). The `bot/*` screenshots preview PR is skipped. Renovate PRs are titled `deps: update ...`, or `security: ...` for vulnerability fixes (`semanticCommits` in `renovate.json5`), so they get the same sections and labels. To make the check block merging, add **check title** as a required status check in the branch rules (repository settings; not something a workflow can do).
+
+When you change a type or section, change the `types` in `pr-title.yml`, the categories and autolabeler rules in `.github/release-drafter.yml`, and the table above together.
+
+**Limits.** Release Drafter finds the last release from the published releases, not the tags, so a tag that was never released does not move the base version. A non-conventional title (a PR opened before this convention, or by someone who ignored the check) lands in *Other changes* as a patch.
 
 ## One-time setup: the package signing key
 
@@ -87,7 +96,7 @@ WebKitGTK 6 and a glibc that new. Try it locally with a built binary: `make wail
 ## Retrying
 
 If the tag was created but the release failed (a flaky step, a vulnerability that needed fixing first), run
-**Tag and release** again with that **exact tag** in `tag`. A tag that exists without a release is reused, not moved, so
+**Tag and release** again with that **exact tag** in `tag` (not `auto`: the draft's version may have moved on). A tag that exists without a release is reused, not moved, so
 the run finishes the release for the commit that was tagged. If you instead need the fix in the release, delete the tag
 (`git push origin :refs/tags/v1.2.3`) and run again.
 
