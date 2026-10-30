@@ -197,6 +197,7 @@ function renderGraph() {
       ring: tot && !own ? colors[tot] : own ? colors[own] : null,
       shape: n.category === "OS" ? "square" : "circle",
       always: labelled.has(r) && total(n) > 0,
+      weight: sevWeight(n),
       hl: !!q && (n.name + " " + n.version).toLowerCase().includes(q),
     };
   });

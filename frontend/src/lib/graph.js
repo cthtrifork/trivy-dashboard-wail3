@@ -49,7 +49,7 @@ export class Graph {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 
-  // nodes: {id,label,sub,r,fill,ring,shape,depth,hl}; edges: [fromId,toId]
+  // nodes: {id,label,sub,r,fill,ring,shape,depth,hl,weight}; edges: [fromId,toId]
   setData(nodes, edges) {
     for (const n of this.nodes) this.pos.set(n.id, { x: n.x, y: n.y });
     this.nodes = nodes.map((n, i) => {
@@ -336,7 +336,9 @@ export class Graph {
     const fontPx = 12 / Math.min(Math.max(this.k, 0.6), 1.4);
     const shorten = (s) => (s.length > 30 ? "…" + s.slice(-29) : s);
     const rank = (n) => (n === this.nodes[sel] || n === this.nodes[hov] ? 0 : n.hl ? 1 : n.always ? 2 : 3);
-    labelled.sort((x, y) => rank(x) - rank(y) || y.r - x.r);
+    // Within a rank the most severe node claims its label first; size only breaks ties. Otherwise a big
+    // medium-severity neighbour can push a small critical node's label out.
+    labelled.sort((x, y) => rank(x) - rank(y) || (y.weight ?? 0) - (x.weight ?? 0) || y.r - x.r);
     const placed = [];
     for (const n of labelled) {
       const important = rank(n) === 0;
