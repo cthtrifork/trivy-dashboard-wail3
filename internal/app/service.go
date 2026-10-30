@@ -25,6 +25,8 @@ type ScanService struct {
 	app     *application.App
 	scanner *trivy.Scanner
 	vex     *trivy.VEXStore
+	// lastScanPath is where the latest scan is kept across restarts; empty (tests) keeps nothing.
+	lastScanPath string
 
 	// ctx is the application context from ServiceStartup, cancelled when shutdown begins.
 	ctx context.Context
@@ -88,13 +90,15 @@ func NewScanService() *ScanService {
 			EPSSURL: cfg.EPSSURL,
 			KEVURL:  cfg.KEVURL,
 		}},
-		vex:     &trivy.VEXStore{Path: vexFile()},
-		product: map[string]string{},
-		found:   map[string][]trivy.Vulnerability{},
+		vex:          &trivy.VEXStore{Path: vexFile()},
+		lastScanPath: lastScanFile(),
+		product:      map[string]string{},
+		found:        map[string][]trivy.Vulnerability{},
 	}
 	if mode.Fixtures {
 		svc.scanner.Enricher = nil // recorded scans stay offline and deterministic
 	}
+	svc.loadLastScan()
 	return svc
 }
 
@@ -272,6 +276,7 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 	if err := s.vex.Clear(); err != nil {
 		return nil, errors.New("could not clear the old VEX file: " + err.Error())
 	}
+	s.forgetLastScan()
 	s.mu.Lock()
 	s.found = map[string][]trivy.Vulnerability{}
 	s.latest = nil
@@ -279,6 +284,7 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 	s.mu.Unlock()
 	res, err := s.scanner.Scan(s.appCtx(), req)
 	if err == nil {
+		s.saveLastScan(res)
 		s.mu.Lock()
 		s.product[trivy.ImageRepo(res.Image)] = res.ProductPURL
 		s.found[trivy.ImageRepo(res.Image)] = res.Vulnerabilities

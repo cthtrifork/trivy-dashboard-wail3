@@ -139,3 +139,29 @@ func TestRestoreScanLetsVEXCallsSeeTheRememberedScan(t *testing.T) {
 		t.Errorf("RestoreScan(nil) cleared the findings")
 	}
 }
+
+// A restart must not lose the findings the UI still shows: the next process loads the saved scan,
+// and a new scan discards it.
+func TestLastScanSurvivesARestart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "last-scan.json")
+	image := "ghcr.io/acme/app:1.0"
+	first := newTestService(&blockingEngine{started: make(chan struct{}, 1)})
+	first.lastScanPath = path
+	first.saveLastScan(&trivy.ScanResult{
+		Image:           image,
+		Vulnerabilities: []trivy.Vulnerability{{ID: "CVE-2026-0001", Package: "libfoo", Severity: "HIGH"}},
+	})
+
+	second := newTestService(&blockingEngine{started: make(chan struct{}, 1)})
+	second.found = map[string][]trivy.Vulnerability{}
+	second.lastScanPath = path
+	second.loadLastScan()
+	if n, err := second.VEXMarkUnassessed(image, "", ""); err != nil || n != 1 {
+		t.Fatalf("after restart: marked %d, err = %v", n, err)
+	}
+
+	second.forgetLastScan()
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("forgetLastScan left the file behind: %v", err)
+	}
+}

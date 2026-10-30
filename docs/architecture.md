@@ -64,7 +64,7 @@ Override it per run in the UI: **Options → Trivy version** (the field starts w
 
 ### Surviving a reload
 
-The last scan survives a browser reload or a container restart. After a scan the frontend stores the image and the result in `localStorage` (a result over the quota is dropped) and writes `#image=<ref>` to the URL. On load the image comes from the hash, else from `localStorage`; the stored result is shown when it belongs to that image, and a hash naming a different image reruns the scan. Credentials are never stored. The hash is read at load only, so editing it in place does nothing until a reload.
+The last scan survives a browser reload or a container restart. After a scan the frontend stores the image and the result in `localStorage` (a result over the quota is dropped) and writes `#image=<ref>` to the URL. On load the image comes from the hash, else from `localStorage`; the stored result is shown when it belongs to that image, and a hash naming a different image reruns the scan. The backend also writes the scan to `last-scan.json` beside the VEX file and reloads it at startup, so a restarted server still has the findings that VEX import/export and re-ranking match against (a new scan deletes it). Credentials are never stored. The hash is read at load only, so editing it in place does nothing until a reload.
 
 ### Ignore policy and ignore file
 
