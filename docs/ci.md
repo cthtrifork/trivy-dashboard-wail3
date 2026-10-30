@@ -19,7 +19,7 @@ Sources:
 | One named artifact per platform | action's `upload-artifact` step | CI uploads `trivy-scanner-linux-amd64` (unsigned, 7 days) so reviewers can try a PR build |
 | Inject a version into the binary from the tag | guide's list of enhancements | `-X …/internal/app.version=…` in release (and `ci-<sha>` in CI) |
 | Cache dependencies | guide's list of enhancements | `setup-go` cache |
-| Create the release when a tag is pushed | action's release step | `gh release create` in `release.yml`, instead of a third-party action |
+| Create the release when a tag is pushed | action's release step | `release.yml` attaches the build to the draft that Release Drafter writes for the tag, then publishes it through the REST API (see [releasing](releasing.md#release-notes)) |
 | Test job: GTK4 + WebKitGTK 6 build dependencies, `GOTOOLCHAIN: local`, cancel superseded PR runs | Wails v3 `build-and-test-v3.yml` | `ci.yml` |
 | Job graph: `lint` (gofmt, tidy, bindings; no GTK) → `vet` → `test` and `build` in parallel, so cheap failures surface before the slow race tests | this repo | `ci.yml` |
 
@@ -52,6 +52,16 @@ Self-hosted Renovate (`renovate.yml`, the `renovatebot/github-action`) replaces 
 - **Skipped on purpose:** PRs by anyone else, `renovate/*` (Renovate rebases its own branches, and a commit it did not make makes it stop updating the branch) and `bot/*` (force-pushed by `screenshots.yml`), fork PRs and drafts.
 - **Conflicts:** the update fails for a PR whose branch conflicts with `main`; the job summary lists it and the author resolves it by hand.
 - **Cost:** every push to `main` re-runs CI on each behind PR.
+
+## PR titles and release notes
+
+Release notes and the next version come from [`release-drafter`](https://github.com/release-drafter/release-drafter) and one config, `.github/release-drafter.yml`. Three workflows use it:
+
+- `pr-title.yml` checks that a PR title follows `type(scope)!: summary` with [`amannn/action-semantic-pull-request`](https://github.com/amannn/action-semantic-pull-request), and labels the PR with Release Drafter's autolabeler (the `autolabeler` rules of that config; the notes and version read the title, so the label is a convenience and an override). It runs on every push to the PR, because a required check belongs to the head commit and `update-branches.yml` pushes merge commits. It runs for fork PRs as a read-only title check (labelling needs write access) and skips `bot/*` branches.
+- `release-drafter.yml` keeps a draft release current on every push to `main` (a preview; it publishes nothing).
+- `release.yml` has Release Drafter write the notes for the exact tag, uploads the build to that draft and publishes it. `tag-release.yml` uses it to pick the version for bump `auto`.
+
+All actions are SHA-pinned like the rest and use the workflow's own token. Details and the type table: [releasing](releasing.md#release-notes).
 
 ## Actions lint
 

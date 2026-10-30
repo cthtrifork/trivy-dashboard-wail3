@@ -9,6 +9,13 @@
   ],
   labels: ["dependencies"],
 
+  // PR titles follow the repository convention `type: summary` (.github/workflows/pr-title.yml), so a Renovate PR
+  // reads `deps: update dependency knip to v6.44.0` and passes the PR title check. The title type also
+  // picks the label (.github/release-drafter.yml), so vulnerability fixes are titled `security:`.
+  semanticCommits: "enabled",
+  semanticCommitType: "deps",
+  semanticCommitScope: null,
+
   // New releases wait 2 days. "strict" means no branch or PR exists until the wait is over, so a
   // PR (and an automerge) never races a release that gets yanked or fixed within the first days.
   minimumReleaseAge: "2 days",
@@ -27,6 +34,7 @@
   osvVulnerabilityAlerts: true,
   vulnerabilityAlerts: {
     labels: ["dependencies", "security"],
+    semanticCommitType: "security",
   },
 
   // Rules apply in order and a later rule wins, so the general ones come first.

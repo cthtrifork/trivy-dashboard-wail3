@@ -5,6 +5,7 @@
 **Actions → Tag and release → Run workflow** (on `main`), or from a terminal:
 
 ```sh
+gh workflow run tag-release.yml                    # next version, from the merged PR titles
 gh workflow run tag-release.yml -f bump=minor      # next minor version
 gh workflow run tag-release.yml -f tag=v1.0.0      # an exact tag
 ```
@@ -14,7 +15,7 @@ Give **either** an exact tag **or** a bump:
 | Input | Effect |
 |---|---|
 | `tag` (text) | Use exactly this tag: `v1.4.0` or `v1.4.0-rc.1`. When filled in, it wins over `bump`. |
-| `bump` (`patch` / `minor` / `major`, default `patch`) | Increase that part of the highest **stable** `vX.Y.Z` tag, resetting the lower parts. |
+| `bump` (`auto` / `patch` / `minor` / `major`, default `auto`) | `auto` uses the version Release Drafter works out from the PRs merged since the last release: a breaking change (`!`) is a major, a `feat` a minor, anything else a patch ([Release notes](#release-notes)). The others increase that part of the highest **stable** `vX.Y.Z` tag, resetting the lower parts. |
 
 With no tags yet the base is `v0.0.0`: `minor` gives `v0.1.0`, `major` gives `v1.0.0`, `patch` gives `v0.0.1`.
 Pre-releases and tags that are not `vX.Y.Z` are ignored when working out the base, so `v2.0.0-rc.1` does not make
@@ -23,16 +24,49 @@ the next `minor` become `v2.1.0`.
 The workflow then:
 
 1. refuses to run anywhere but `main`;
-2. works out the tag (`scripts/next-version.sh`) and stops if a **release** for it already exists;
+2. works out the tag (Release Drafter for `auto`, otherwise `scripts/next-version.sh`) and stops if a published **release** for it already exists (the draft Release Drafter keeps does not count);
 3. creates an annotated tag on the head of `main` and pushes it, unless the tag already exists (see *Retrying*);
 4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck` (in a `checks` job beside the binary build, not before it), builds the binary, and publishes the
-   release with its assets (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
+   release (the draft Release Drafter wrote for that tag, with the assets attached) (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
    have the names they do. The same run also pushes the headless container image to
    `ghcr.io/cthtrifork/trivy-dashboard-wail3` (tags `1.2.3`, `v1.2.3`, and `latest` for a final release) with a signed
    provenance attestation; see [headless](headless.md). The image is only pushed for a tagged release, never from a
    branch or a dry run, and only once `checks` has passed. It builds beside the binary, so a failure in the binary job
    (for example a missing signing key) does not stop the image from being pushed; the GitHub release is only created
    when both finish.
+
+## Release notes
+
+[Release Drafter](https://github.com/release-drafter/release-drafter) writes the notes and works out the next version, from one config, [`.github/release-drafter.yml`](../.github/release-drafter.yml). Nobody tags PRs or edits notes by hand: a PR title is all it needs.
+
+**Title: `type(scope)!: summary`** ([Conventional Commits](https://www.conventionalcommits.org/)). The `scope` and `!` are optional. Write the effect a user sees (`fix: keep the last scan on disk across a restart`), not the diff (`fix: change persist.go`). Squash merges use the title as the commit subject, so the history reads the same way. In the notes the `type(scope):` prefix is dropped and the first letter capitalised, because the section already says what kind of change it is.
+
+| Type | Release-note section | Label | Next version |
+|---|---|---|---|
+| any type with `!` | Breaking changes (first) | `breaking-change` | major |
+| `security` | Security | `security` | patch |
+| `feat` | New features | `feature` | minor |
+| `fix` | Bug fixes | `bug` | patch |
+| `perf` | Performance | `performance` | patch |
+| `docs` | Documentation | `documentation` | patch |
+| `deps` | Dependencies (collapsed after 5) | `dependencies` | patch |
+| `ci`, `build` | CI, build and release | `ci`, `build` | patch |
+| `refactor`, `test`, `chore`, `revert` | Maintenance | `maintenance` (`refactor` also `refactor`) | patch |
+| anything else | Other changes | none | patch |
+
+A PR is listed once, in the first section it matches (title type, or the label as an override). The next version is the highest increment among the merged PRs. A PR labelled `skip-changelog` is left out of both the notes and the version.
+
+**How it fits the release flow**
+
+1. *Release Drafter* (`release-drafter.yml`) runs on every push to `main` and keeps a **draft release** current: a preview of the next notes and version. Nothing is published from it. Open the repository's Releases page to read it before cutting a release.
+2. *Tag and release* with `bump` = `auto` (the default) tags the version Release Drafter resolved. An explicit `tag`, or `patch` / `minor` / `major`, still wins; then Release Drafter is only asked for the notes.
+3. `release.yml` asks Release Drafter for the notes of exactly that tag (`tag`, and `commitish` = the tag, so the list ends at the tagged commit), then `gh release upload` puts the build on that draft and `gh release edit --draft=false --verify-tag` publishes it with the notes set again from the same run. `gh` finds the draft by its pending tag name, so if a push to `main` makes `release-drafter.yml` retarget the draft to another version meanwhile, the run fails and publishes nothing; run it again. A retry replaces the assets a failed attempt left on the draft (`--clobber`; their names carry the version).
+
+**Enforcement.** The *PR title* workflow (`pr-title.yml`) fails a PR whose title does not match (`amannn/action-semantic-pull-request`) and sets the label from the type (Release Drafter's autolabeler, `autolabeler` in the same config; with `sync-labels` it also removes a stale label when the title is edited and creates a label that does not exist yet). The labels are for filtering and as a manual override: the notes and the version read the title, so a missing label does not misfile a PR. Fork PRs are checked but not labelled (the token is read-only). The `bot/*` screenshots preview PR is skipped. Renovate PRs are titled `deps: update ...`, or `security: ...` for vulnerability fixes (`semanticCommits` in `renovate.json5`), so they get the same sections and labels. To make the check block merging, add **check title** as a required status check in the branch rules (repository settings; not something a workflow can do).
+
+When you change a type or section, change the `types` in `pr-title.yml`, the categories and autolabeler rules in `.github/release-drafter.yml`, and the table above together.
+
+**Limits.** Release Drafter finds the last release from the published releases, not the tags, so a tag that was never released does not move the base version. A non-conventional title (a PR opened before this convention, or by someone who ignored the check) lands in *Other changes* as a patch.
 
 ## One-time setup: the package signing key
 
@@ -62,9 +96,18 @@ WebKitGTK 6 and a glibc that new. Try it locally with a built binary: `make wail
 ## Retrying
 
 If the tag was created but the release failed (a flaky step, a vulnerability that needed fixing first), run
-**Tag and release** again with that **exact tag** in `tag`. A tag that exists without a release is reused, not moved, so
+**Tag and release** again with that **exact tag** in `tag` (not `auto`: the draft's version may have moved on). A tag that exists without a release is reused, not moved, so
 the run finishes the release for the commit that was tagged. If you instead need the fix in the release, delete the tag
-(`git push origin :refs/tags/v1.2.3`) and run again.
+(`git push origin :refs/tags/v1.2.3`) and run again. That only works while no release was **published** for the tag.
+
+## Immutable releases
+
+The repository can turn on *immutable releases* (Settings, General; it only applies to releases published afterwards). The release flow is written for it: `release.yml` creates the release as a draft (Release Drafter), attaches every asset to the draft and only then publishes it, which is the order GitHub requires for the assets to be locked in. After publishing, the tag and the assets can no longer be changed or deleted; the title, notes, pre-release flag and *latest* flag still can (the publish step sets them in the same call). That has consequences:
+
+- **A published release cannot be fixed in place.** Cut a new version with the fix. Do not try to move the tag or replace an asset.
+- **A tag name is used up for good.** Even after the release is deleted the tag name cannot be reused. The *delete the tag and run again* advice under *Retrying* is only for a tag that never got a published release (a failed run leaves a draft, which is fine to retry or delete).
+- The release also gets GitHub's own release attestation, next to the build-provenance and SBOM attestations this workflow signs (below).
+- **Not yet run against an immutable release.** The docs do not say whether publishing a draft for a tag that already exists is allowed under immutability, or that uploading to a draft works through its upload URL; the first release after enabling it is the test.
 
 ## Why the release is called, not triggered
 
@@ -92,6 +135,13 @@ the binary, then verifies them itself before creating the release. To check a do
 gh attestation verify trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboard-wail3
 gh attestation verify trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboard-wail3 \
   --predicate-type https://cyclonedx.org/bom
+```
+
+With immutable releases on, GitHub's own attestation covers the tag, commit and assets, and the CLI checks it:
+
+```sh
+gh release verify v1.2.3 --repo cthtrifork/trivy-dashboard-wail3
+gh release verify-asset v1.2.3 trivy-scanner_linux_amd64 --repo cthtrifork/trivy-dashboard-wail3
 ```
 
 The packages are also signed with the release PGP key. Import `trivy-scanner-release-key.asc` from the release, check
