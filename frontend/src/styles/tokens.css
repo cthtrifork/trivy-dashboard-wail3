@@ -20,6 +20,10 @@
   --on-LOW: #fff;
   --on-UNKNOWN: #0f1218;
   --ok: #3fb97a;
+  /* Floating surfaces (popovers): lighter than --panel, with a visible ring and a shadow that shows on a dark page. */
+  --raise: #202735;
+  --ring: #4a5569;
+  --shadow-pop: rgba(0, 0, 0, 0.75);
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -32,5 +36,8 @@
     --ok: #1a7f45;
     --accent: #2563eb;
     --on-accent: #fff;
+    --raise: #fff;
+    --ring: #8d97a8;
+    --shadow-pop: rgba(20, 30, 50, 0.38);
   }
 }
