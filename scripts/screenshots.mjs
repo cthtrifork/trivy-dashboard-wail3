@@ -280,11 +280,12 @@ if (views !== "deps") {
 
 // ---- Help ----
 // One image with the glossary and the app config side by side, like the Options image. The dialog
-// scrolls, so each half is photographed with its height limit lifted while the other is hidden, then
+// scrolls, so each half is photographed on its own tab with its height limit lifted, then
 // the two are laid out on a blank page and photographed again. Paths that depend on the machine or
 // the throwaway temp dir are replaced, so the image does not change from one run or machine to the next.
 if (views !== "deps") {
   await page.click("#help-btn");
+  await page.click(".help-nav .tab:nth-child(2)");
   await page.waitForSelector("#help-config .hgroup");
   // The config sections start collapsed: open them all so the image shows everything.
   await page.evaluate(() => document.querySelectorAll("#help-config .hsum").forEach((b) => b.click()));
@@ -312,9 +313,9 @@ if (views !== "deps") {
     }
   });
   const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  const half = async (hide) => {
+  const half = async () => {
     const style = await page.addStyleTag({
-      content: `#help-dialog{height:fit-content !important;max-height:none !important}.help-body{overflow:visible !important}${hide}{display:none !important}`,
+      content: `#help-dialog{height:fit-content !important;max-height:none !important}.help-body{overflow:visible !important}`,
     });
     await page.setViewportSize({ width: 1400, height: 8000 });
     const height = await page.locator("#help-dialog").evaluate((d) => Math.ceil(d.getBoundingClientRect().height));
@@ -324,11 +325,12 @@ if (views !== "deps") {
     await style.evaluate((el) => el.remove());
     return png.toString("base64");
   };
-  const glossary = await half("#help-config");
+  await page.click(".help-nav .tab:nth-child(1)");
+  const glossary = await half();
   await page.setViewportSize({ width: 1400, height: 900 });
-  await page.click(".help-nav .tab:nth-child(2)"); // the header follows the scroll position
+  await page.click(".help-nav .tab:nth-child(2)");
   await page.waitForTimeout(300);
-  const config = await half("#help-glossary");
+  const config = await half();
   const sheet = await browser.newPage({ viewport: { width: 1800, height: 100 } });
   await sheet.setContent(
     `<body style="margin:0;padding:24px;background:${background};display:flex;gap:24px;align-items:flex-start">` +

@@ -31,7 +31,7 @@
 .help-head h3 {
   margin: 0;
 }
-/* Jump links, not tabs: glossary and config share one scrolling body. */
+/* Tabs: glossary and config are separate panels, one shown at a time. */
 .help-nav {
   display: flex;
   gap: 4px;
