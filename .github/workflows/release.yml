@@ -330,45 +330,29 @@ jobs:
           commitish: refs/tags/${{ needs.meta.outputs.version }}
           prerelease: ${{ needs.meta.outputs.prerelease }}
 
-      # Assets go onto the draft and the draft is then published, so the release appears complete.
+      # Assets go onto the draft and the draft is then published, so the release appears complete (and, with
+      # immutable releases on, is locked with its assets in place). `gh` finds a draft by its pending tag name,
+      # so if release-drafter.yml retargets the draft to another version meanwhile, these calls fail to find it
+      # and nothing is published, instead of publishing the wrong tag.
       - name: Attach the build and publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.meta.outputs.version }}
           PRERELEASE: ${{ needs.meta.outputs.prerelease }}
-          RELEASE_ID: ${{ steps.notes.outputs.id }}
-          UPLOAD_URL: ${{ steps.notes.outputs.upload_url }}
           NOTES: ${{ steps.notes.outputs.body }}
         run: |
           set -euo pipefail
-          # Publishing a draft would create a missing tag from its target. The tag must already exist, as
-          # `gh release create --verify-tag` required.
-          gh api "repos/$GH_REPO/git/ref/tags/$TAG" --silent ||
-            { echo "::error::Tag $TAG does not exist; refusing to let the release create it."; exit 1; }
+          # A retry finds the assets of an earlier, failed attempt on the draft; their names carry the
+          # version, so --clobber replaces them.
+          gh release upload "$TAG" dist/* --clobber
 
-          # A retry finds the assets of an earlier, failed upload on the draft: start clean.
-          gh api "repos/$GH_REPO/releases/$RELEASE_ID/assets" --paginate --jq '.[].id' |
-            while read -r id; do gh api -X DELETE "repos/$GH_REPO/releases/assets/$id" --silent; done
-
-          for f in dist/*; do
-            name="$(basename "$f")"
-            curl -fsS -X POST \
-              -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/octet-stream" \
-              --data-binary "@$f" \
-              "${UPLOAD_URL%\{*}?name=$(printf '%s' "$name" | jq -sRr @uri)" > /dev/null
-            echo "Uploaded $name"
-          done
-
-          # Release Drafter also runs on every push to main (release-drafter.yml) and may have retargeted this
-          # same draft to a newer version while the assets uploaded. So the publish call sets everything that
-          # identifies the release again, from this run: tag, target (unused, the tag exists), name and notes.
           latest=true
           [ "$PRERELEASE" = true ] && latest=false
-          sha="$(gh api "repos/$GH_REPO/commits/$TAG" --jq .sha)"
-          gh api -X PATCH "repos/$GH_REPO/releases/$RELEASE_ID" --silent \
-            -F draft=false -F prerelease="$PRERELEASE" -f make_latest="$latest" \
-            -f tag_name="$TAG" -f target_commitish="$sha" -f name="$TAG" -f body="$NOTES"
+          # --verify-tag: publishing would create a missing tag from the draft's target, so stop instead.
+          # The notes are set again from this run's own output.
+          printf '%s' "$NOTES" | gh release edit "$TAG" --verify-tag --draft=false \
+            --prerelease="$PRERELEASE" --latest="$latest" --title "$TAG" --notes-file -
           echo "Published $TAG"
 
   # The headless image (build/docker/headless.Dockerfile, docs/headless.md) goes out with the other
