@@ -78,30 +78,33 @@ export class Graph {
   }
 
   select(id, { center = false } = {}) {
-    const changed = id !== this.selected;
-    this.selected = id;
+    const fade = id != null && id !== this.selected;
     const to = center ? this.cameraFor(id) : null;
+    const from = { k: this.k, tx: this.tx, ty: this.ty };
+    this.selected = id;
     if (to) this.autoFit = false;
-    this.tween(changed && id != null, to);
+    if (!fade && !to) return this.draw(); // nothing to animate, e.g. a deselect
+    // The dimming of the rest of the graph fades in and the camera eases to the node, over one short tween.
+    this.animate((e) => {
+      if (fade) this.emph = 0.35 + 0.65 * e;
+      if (to) for (const key in from) this[key] = from[key] + (to[key] - from[key]) * e;
+    });
   }
 
-  // Ease the camera to `to` and fade the dimming in, over a short time; draws once when motion is off.
-  tween(fade, to, ms = 220) {
+  // Calls step(e) each frame with e easing from 0 to 1 (ease-out), drawing after each; a new call replaces a running one.
+  // With reduced motion it jumps straight to e = 1.
+  animate(step, ms = 220) {
     cancelAnimationFrame(this.anim);
     this.anim = 0;
-    if (REDUCED.matches || !(fade || to)) {
-      this.emph = 1;
-      if (to) Object.assign(this, to);
+    if (REDUCED.matches) {
+      step(1);
       this.draw();
       return;
     }
-    const from = { k: this.k, tx: this.tx, ty: this.ty };
     const t0 = performance.now();
     const tick = (now) => {
       const t = Math.min((now - t0) / ms, 1);
-      const e = 1 - (1 - t) ** 3; // ease-out
-      if (fade) this.emph = 0.35 + 0.65 * e;
-      if (to) for (const key of ["k", "tx", "ty"]) this[key] = from[key] + (to[key] - from[key]) * e;
+      step(1 - (1 - t) ** 3);
       this.draw();
       this.anim = t < 1 ? requestAnimationFrame(tick) : 0;
     };
