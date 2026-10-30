@@ -10,7 +10,9 @@ import ScanPending from "./ScanPending.vue";
 import SevBadges from "./SevBadges.vue";
 
 const IMAGE_NODE = "__image__";
-const MAX_NODES = 400;
+// The layout compares every pair of nodes each frame (lib/graph.js), so cost grows with the square of this.
+// Headless Chromium measured about 6 ms per frame at 1000 nodes and 2 ms at 400; 800 leaves headroom for slower webviews.
+const MAX_NODES = 800;
 
 const dep = reactive({ filter: "", cat: "all", vulnOnly: true, sev: "", focus: 0, selected: null, vuln: null, labels: false });
 // The search box redraws the graph, so wait for a pause in typing before applying it.
@@ -346,7 +348,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
     <button type="button" class="ghost" id="dep-fit" @click="graph?.fit()">Fit</button>
     <span id="dep-shown">{{ shown }}</span>
   </div>
-  <div id="dep-split">
+  <div id="dep-split" :class="{ solo: result && !selectedNode }">
     <div class="graph-wrap" id="dep-graph">
       <canvas id="dep-canvas" ref="canvas"></canvas>
       <ScanPending v-if="!result && scanning" kind="graph" class="dep-pending" />
@@ -354,14 +356,13 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
       <div id="dep-legend">
         <span><i class="lg sq"></i>OS package</span><span><i class="lg"></i>library / app</span>
         <span><i class="lg ring"></i>vulnerable via dependency</span><span>size = vulnerability count</span>
-        <span class="kv">scroll to zoom · drag to pan · double-click to fit</span>
+        <span class="kv">click a node to inspect it · scroll to zoom · drag to pan · double-click to fit</span>
       </div>
     </div>
     <div class="table-wrap" id="dep-detail">
       <div v-if="!result && scanning" class="empty">Scanning… the dependency graph appears when the scan finishes.</div>
       <div v-else-if="!result" class="empty">Run a scan to explore dependencies. Click a node to inspect it.</div>
-      <div v-else-if="!selectedNode" class="empty">Click a node to inspect it.</div>
-      <template v-else>
+      <template v-else-if="selectedNode">
         <button v-if="trail.length" type="button" class="link" @click="back">
           ← Back to {{ nodes[trail.at(-1)]?.name }} {{ nodes[trail.at(-1)]?.version }}
         </button>

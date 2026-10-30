@@ -6,6 +6,13 @@
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: 12px;
 }
+/* Nothing selected: the graph takes the whole width, the detail pane returns with a selection. */
+#dep-split.solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+#dep-split.solo #dep-detail {
+  display: none;
+}
 .node {
   display: flex;
   align-items: center;
