@@ -451,3 +451,55 @@ jobs:
           predicate-type: https://openvex.dev/ns/v0.2.0
           predicate-path: ${{ runner.temp }}/openvex.json
           push-to-registry: true
+
+  # EXPERIMENT: the headless image patched with Copacetic (.github/actions/copa-patch, docs/ci.md),
+  # published as <version>-copa next to the normal image, which it starts from. It runs after the
+  # normal image is pushed, is not a need of the release, and never fails the run: if Copa cannot
+  # patch the image or the patched image fails its smoke test, nothing is pushed. It carries no
+  # signed attestations (the normal image does); the patched layers are produced by Copa's rebuild.
+  copa-image:
+    name: publish copa-patched image
+    needs: [meta, image]
+    if: needs.meta.outputs.publish == 'true'
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read # check out the tag
+      packages: write # push to ghcr.io
+    env:
+      # renovate: datasource=go depName=github.com/project-copacetic/copacetic
+      COPA_VERSION: v0.15.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+          persist-credentials: false
+
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - id: copa
+        uses: ./.github/actions/copa-patch
+        with:
+          image: ghcr.io/${{ github.repository }}:${{ needs.meta.outputs.version }}
+          patched-tag: ${{ needs.meta.outputs.version }}-copa
+          copa-version: ${{ env.COPA_VERSION }}
+          trivy-version: ${{ env.TRIVY_VERSION }}
+
+      - name: Push the patched image
+        if: steps.copa.outputs.copa-outcome == 'success' && steps.copa.outputs.smoke-outcome == 'success'
+        env:
+          PATCHED: ${{ steps.copa.outputs.patched-image }}
+        run: docker push "$PATCHED"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: copa-report
+          path: copa-report.md
+          if-no-files-found: ignore
+          retention-days: 14

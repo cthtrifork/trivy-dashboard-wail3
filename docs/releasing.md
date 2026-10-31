@@ -30,7 +30,7 @@ The workflow then:
    release (the draft Release Drafter wrote for that tag, with the assets attached) (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
    have the names they do. The same run also pushes the headless container image to
    `ghcr.io/cthtrifork/trivy-dashboard-wail3` (tags `1.2.3`, `v1.2.3`, and `latest` for a final release) with a signed
-   provenance attestation; see [headless](headless.md). The image is only pushed for a tagged release, never from a
+   provenance attestation; see [headless](headless.md). Experimentally, the same run also publishes `<version>-copa`, the image patched with Copacetic (see `docs/ci.md`); it is skipped if Copa or its smoke test fails. The image is only pushed for a tagged release, never from a
    branch or a dry run, and only once `checks` has passed. It builds beside the binary, so a failure in the binary job
    (for example a missing signing key) does not stop the image from being pushed; the GitHub release is only created
    when both finish.

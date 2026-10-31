@@ -1,0 +1,161 @@
+name: Copa patch
+description: >-
+  Scans a container image with Trivy, patches it with Copacetic (OS packages, and Go binaries through
+  Copa's experimental rebuild), rescans and smoke-tests the patched image, and writes a Markdown
+  before/after report to copa-report.md. The image must be in a registry the runner can reach (a
+  local registry on localhost:5000 works). The patched image is loaded into the local Docker daemon
+  as <image without tag>:<patched-tag>; pushing it is up to the caller. Never fails the calling job:
+  look at the `copa-outcome` and `smoke-outcome` outputs. Experimental, see docs/ci.md.
+
+inputs:
+  image:
+    description: Image with a tag, in a registry (e.g. ghcr.io/org/app:1.2.3).
+    required: true
+  patched-tag:
+    description: Tag of the patched image (e.g. 1.2.3-copa).
+    required: true
+  copa-version:
+    description: Copacetic release to build with `go install` (e.g. v0.15.0).
+    required: true
+  trivy-version:
+    description: Trivy release for the scans (e.g. v0.76.1).
+    required: true
+
+outputs:
+  patched-image:
+    description: Reference of the patched image in the local Docker daemon.
+    value: ${{ steps.names.outputs.patched }}
+  copa-outcome:
+    description: Outcome of the patch step (success, failure).
+    value: ${{ steps.copa.outcome }}
+  smoke-outcome:
+    description: Outcome of the smoke test of the patched image (success, failure, skipped).
+    value: ${{ steps.smoke.outcome }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version-file: .tool-versions
+        cache: false
+
+    - name: Install Copa and create the builder
+      shell: bash
+      env:
+        COPA_VERSION: ${{ inputs.copa-version }}
+      run: |
+        GOTOOLCHAIN=auto go install "github.com/project-copacetic/copacetic@${COPA_VERSION}"
+        # The runner's default Docker builder has no `docker` exporter, which Copa needs to load the
+        # patched image. A docker-container builder has one; host network lets it reach a local registry.
+        docker buildx create --name copa --driver docker-container --driver-opt network=host --bootstrap
+
+    - id: names
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+        PATCHED_TAG: ${{ inputs.patched-tag }}
+      run: echo "patched=${IMAGE%:*}:${PATCHED_TAG}" >> "$GITHUB_OUTPUT"
+
+    # os and library findings, as Copa's docs ask for; HIGH and CRITICAL with a fix.
+    - name: Scan before
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      env:
+        TRIVY_PKG_TYPES: os,library
+      with:
+        scan-type: image
+        image-ref: ${{ inputs.image }}
+        scanners: vuln
+        severity: HIGH,CRITICAL
+        ignore-unfixed: true
+        format: json
+        output: before.json
+        exit-code: '0'
+        version: ${{ inputs.trivy-version }}
+
+    - name: Patch with Copa
+      id: copa
+      continue-on-error: true
+      shell: bash
+      env:
+        COPA_EXPERIMENTAL: '1'
+        IMAGE: ${{ inputs.image }}
+        PATCHED_TAG: ${{ inputs.patched-tag }}
+      run: |
+        "$(go env GOPATH)/bin/copacetic" patch -i "$IMAGE" -r before.json -t "$PATCHED_TAG" \
+          --pkg-types library --toolchain-patch-level --addr docker-container://buildx_buildkit_copa0 2>&1 | tee copa.log
+
+    - name: Scan after
+      if: steps.copa.outcome == 'success'
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      env:
+        TRIVY_PKG_TYPES: os,library
+      with:
+        scan-type: image
+        image-ref: ${{ steps.names.outputs.patched }}
+        scanners: vuln
+        severity: HIGH,CRITICAL
+        ignore-unfixed: true
+        format: json
+        output: after.json
+        exit-code: '0'
+        version: ${{ inputs.trivy-version }}
+
+    # The patched image must still start and serve the UI, and its podman must still run.
+    - name: Smoke test the patched image
+      id: smoke
+      if: steps.copa.outcome == 'success'
+      continue-on-error: true
+      shell: bash
+      env:
+        PATCHED: ${{ steps.names.outputs.patched }}
+      run: |
+        docker run --rm --entrypoint /usr/local/bin/podman "$PATCHED" --version
+        docker run -d --name smoke -p 8080:8080 -e WAILS_SERVER_HOST=0.0.0.0 "$PATCHED"
+        for i in $(seq 1 30); do
+          curl -fsS -o /dev/null http://127.0.0.1:8080/ && exit 0
+          sleep 1
+        done
+        docker logs smoke
+        exit 1
+
+    - name: Report
+      if: ${{ !cancelled() }}
+      shell: bash
+      env:
+        COPA_VERSION: ${{ inputs.copa-version }}
+        IMAGE: ${{ inputs.image }}
+        PATCHED: ${{ steps.names.outputs.patched }}
+        COPA_OUTCOME: ${{ steps.copa.outcome }}
+        SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+      run: |
+        count() { jq '[.Results[]?.Vulnerabilities[]?] | length' "$1"; }
+        per() { jq -r '.Results[]? | select((.Vulnerabilities // []) | length > 0) | "| `\(.Target)` | \(.Vulnerabilities | length) |"' "$1"; }
+        {
+          echo '## Trivy scan of the Copa-patched headless image'
+          echo
+          echo "Experimental: Copa \`${COPA_VERSION}\` (Go binary rebuild), patch step **${COPA_OUTCOME}**, smoke test **${SMOKE_OUTCOME:-skipped}**."
+          echo
+          if [ -f after.json ]; then
+            echo "HIGH and CRITICAL findings with a fix: **$(count before.json)** before, **$(count after.json)** after (\`${PATCHED##*:}\`)."
+          else
+            echo "HIGH and CRITICAL findings with a fix: **$(count before.json)**. No patched image was produced."
+          fi
+          echo
+          echo '| Target (before) | Findings |'
+          echo '|---|---|'
+          per before.json
+          if [ -f after.json ]; then
+            echo
+            echo '| Target (after) | Findings |'
+            echo '|---|---|'
+            per after.json
+          fi
+          echo
+          echo '<details><summary>Copa log (last 40 lines)</summary>'
+          echo
+          echo '```'
+          tail -n 40 copa.log 2>/dev/null || echo 'no log'
+          echo '```'
+          echo '</details>'
+        } | tee copa-report.md >> "$GITHUB_STEP_SUMMARY"
