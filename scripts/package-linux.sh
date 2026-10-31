@@ -11,16 +11,9 @@
 #   scripts/package-linux.sh <binary> <version> <outdir>
 set -euo pipefail
 
-bin="${1:?usage: package-linux.sh <binary> <version> <outdir>}"
-version="${2:?usage: package-linux.sh <binary> <version> <outdir>}"
-out="${3:?usage: package-linux.sh <binary> <version> <outdir>}"
-app="${APP:-trivy-scanner}"
-
-bin="$(realpath "$bin")"
-out="$(realpath -m "$out")"
-cd "$(dirname "$0")/.."
-
-[ -x "$bin" ] || { echo "package-linux: $bin is not an executable file" >&2; exit 1; }
+script=package-linux
+# shellcheck source=lib/package-args.sh
+source "$(dirname "$0")/lib/package-args.sh" "$@"
 command -v wails3 >/dev/null || { echo "package-linux: wails3 not on PATH (make wails3-install)" >&2; exit 1; }
 if [ -n "${PKG_SIGNING_KEY_FILE:-}" ]; then
   PKG_SIGNING_KEY_FILE="$(realpath "$PKG_SIGNING_KEY_FILE")"

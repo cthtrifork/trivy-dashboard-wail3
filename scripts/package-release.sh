@@ -12,16 +12,9 @@
 #   scripts/package-release.sh <binary> <version> <outdir>
 set -euo pipefail
 
-bin="${1:?usage: package-release.sh <binary> <version> <outdir>}"
-version="${2:?usage: package-release.sh <binary> <version> <outdir>}"
-out="${3:?usage: package-release.sh <binary> <version> <outdir>}"
-app="${APP:-trivy-scanner}"
-
-bin="$(realpath "$bin")"
-out="$(realpath -m "$out")"
-cd "$(dirname "$0")/.."
-
-[ -x "$bin" ] || { echo "package-release: $bin is not an executable file" >&2; exit 1; }
+script=package-release
+# shellcheck source=lib/package-args.sh
+source "$(dirname "$0")/lib/package-args.sh" "$@"
 
 stage="$(mktemp -d)"
 trap 'rm -rf "${stage:?}"' EXIT
