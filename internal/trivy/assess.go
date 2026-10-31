@@ -186,7 +186,9 @@ var rules = []rule{
 			add("no user interaction", 3, true)
 		}
 		// Impact: what an attacker gets. Confidentiality and integrity weigh more than availability
-		// because a DoS ends when the attack does, a leak or a tampered response does not.
+		// because a DoS ends when the attack does, a leak or a tampered response does not. Availability
+		// scores nothing: severity already rates it, and exploitation evidence (EPSS, KEV) lifts a DoS
+		// that is really being used.
 		for _, im := range []struct {
 			name          string
 			keys          []string
@@ -194,7 +196,7 @@ var rules = []rule{
 		}{
 			{"confidentiality", []string{"C", "VC"}, 4, 2},
 			{"integrity", []string{"I", "VI"}, 4, 2},
-			{"availability", []string{"A", "VA"}, 2, 1},
+			{"availability", []string{"A", "VA"}, 0, 0},
 		} {
 			lvl := ""
 			for _, k := range im.keys {
@@ -202,10 +204,10 @@ var rules = []rule{
 					break
 				}
 			}
-			switch lvl {
-			case "H", "C":
+			switch {
+			case (lvl == "H" || lvl == "C") && im.high != 0:
 				add(im.name+" high", im.high, false)
-			case "L", "P":
+			case (lvl == "L" || lvl == "P") && im.limited != 0:
 				add(im.name+" limited", im.limited, false)
 			}
 		}

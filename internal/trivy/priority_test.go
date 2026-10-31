@@ -416,14 +416,24 @@ func TestVectorRuleWeighsImpact(t *testing.T) {
 	leak := Vulnerability{ID: "LEAK", Severity: "HIGH", Fixed: "2", Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"}
 	Assess(&dos)
 	Assess(&leak)
-	if p, _ := reasonPoints(dos, "Vector"); p != 16 { // 6+2+3+3 exploitability, availability high +2
-		t.Errorf("dos vector points = %d, want 16", p)
+	if p, _ := reasonPoints(dos, "Vector"); p != 14 { // 6+2+3+3 exploitability, availability scores nothing
+		t.Errorf("dos vector points = %d, want 14", p)
 	}
 	if p, _ := reasonPoints(leak, "Vector"); p != 22 { // 14 + 4 + 4
 		t.Errorf("leak vector points = %d, want 22", p)
 	}
 	if leak.Priority <= dos.Priority {
 		t.Errorf("leak %d should outrank dos %d", leak.Priority, dos.Priority)
+	}
+	// A plain network DoS with a fix and no exploitation evidence is Plan; EPSS lifts it.
+	if dos.Tier != TierPlan {
+		t.Errorf("network DoS tier = %s (%d), want Plan", dos.Tier, dos.Priority)
+	}
+	hot := dos
+	hot.HasEPSS, hot.EPSS = true, 0.6
+	Assess(&hot)
+	if hot.Tier != TierSoon && hot.Tier != TierNow {
+		t.Errorf("DoS with EPSS 60%% tier = %s, want Fix soon or Act now", hot.Tier)
 	}
 	// Without exploitation evidence nothing reaches Act now.
 	crit := Vulnerability{ID: "C", Severity: "CRITICAL", Fixed: "2", Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}
