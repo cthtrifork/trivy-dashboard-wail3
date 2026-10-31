@@ -1,42 +1,30 @@
-# Sourced by screenshots.sh and lighthouse.sh: builds the headless server and starts it on recorded
-# fixtures (TRIVY_SCANNER_FAKE_PODMAN=1) with a throwaway VEX store and cache, so nothing touches podman.
-#
-#   source scripts/lib/fake-app.sh   (from the repo root, after `set -euo pipefail`)
-#   start_fake_app <port> [command prefix...]
+# Sourced by screenshots.sh and lighthouse.sh: run the headless server on recorded fixtures, no podman.
 
-tmp="$(mktemp -d)"
-pid=""
-cleanup() {
-  [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
-  rm -rf "${tmp:?}"
-}
-trap cleanup EXIT
-
-start_fake_app() {
-  local port="$1"
-  shift
-
-  echo "building the frontend…"
+fake_app_build() {
   make frontend
+  CGO_ENABLED=0 go build -tags server -o "$1/app" .
+}
 
-  echo "building (server mode)…"
-  CGO_ENABLED=0 go build -tags server -o "$tmp/app" .
+fake_app_start() {
+  local dir="$1" port="$2"
 
-  "$@" env \
-    TRIVY_SCANNER_FAKE_PODMAN=1 \
-    TRIVY_SCANNER_VEX_FILE="$tmp/vex.json" \
-    XDG_CACHE_HOME="$tmp/cache" \
+  TRIVY_SCANNER_FAKE_PODMAN=1 \
+    TRIVY_SCANNER_VEX_FILE="$dir/vex.json" \
+    XDG_CACHE_HOME="$dir/cache" \
     WAILS_SERVER_HOST=127.0.0.1 \
     WAILS_SERVER_PORT="$port" \
-    "$tmp/app" >"$tmp/app.log" 2>&1 &
-  pid=$!
+    "$dir/app" >"$dir/app.log" 2>&1 &
+  echo $! >"$dir/app.pid"
 
   for _ in $(seq 1 50); do
     curl -fsS -o /dev/null "http://127.0.0.1:${port}/" 2>/dev/null && return 0
-    kill -0 "$pid" 2>/dev/null || { cat "$tmp/app.log"; echo "app exited early"; exit 1; }
     sleep 0.2
   done
+  cat "$dir/app.log" >&2
   echo "app did not answer on port $port" >&2
-  cat "$tmp/app.log" >&2
-  exit 1
+  return 1
+}
+
+fake_app_stop() {
+  [ -f "$1/app.pid" ] && kill "$(cat "$1/app.pid")" 2>/dev/null || true
 }
