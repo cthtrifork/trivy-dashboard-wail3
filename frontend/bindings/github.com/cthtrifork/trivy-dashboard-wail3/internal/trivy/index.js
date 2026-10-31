@@ -17,6 +17,7 @@ export {
     Rating,
     Reason,
     Rescored,
+    RuleSummaries,
     Rules,
     SBOMSummary,
     ScanRequest,

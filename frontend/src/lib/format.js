@@ -1,10 +1,9 @@
 import { Browser } from "@wailsio/runtime";
-// Lowest CVSS v3 score of each severity band. Advisories such as GHSA ids often carry a severity but no
-// vector, and a blank score next to a HIGH pill reads as harmless; show the band floor, marked with "~".
-const CVSS_FLOOR = { CRITICAL: 9, HIGH: 7, MEDIUM: 4, LOW: 0.1 };
-export const cvssFloor = (severity) => CVSS_FLOOR[severity] ?? 0;
-// Score used to order rows: reported CVSS, else the band floor, so an unscored HIGH sorts with the 7s.
-export const effectiveScore = (v) => v.score || cvssFloor(v.severity);
+// Advisories such as GHSA ids often carry a severity but no vector, and a blank score next to a HIGH pill
+// reads as harmless. Go supplies the default (scoreEstimate: the floor of the severity band, the same
+// number the rules score from); show it marked with "~".
+// Score used to order rows: reported CVSS, else the estimate, so an unscored HIGH sorts with the 7s.
+export const effectiveScore = (v) => v.score || v.scoreEstimate || 0;
 // Trivy's data-source ids as people know them; anything else is shown as Trivy names it.
 const SOURCES = {
   redhat: "Red Hat",

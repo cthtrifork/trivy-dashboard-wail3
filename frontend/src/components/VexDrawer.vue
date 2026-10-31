@@ -2,7 +2,7 @@
 import { computed, reactive, ref, watch } from "vue";
 import { ScanService } from "../lib/api.js";
 import { assessing, result, vex, findingsById, errText, lsGet, lsSet, KEYS } from "../store.js";
-import { JUSTIFICATION_PLAIN, STATUS_LABEL, cvssFloor, detailUrl, openUrl, tierStyle } from "../lib/format.js";
+import { JUSTIFICATION_PLAIN, STATUS_LABEL, detailUrl, openUrl, tierStyle } from "../lib/format.js";
 import { glance } from "../lib/glance.js";
 import Chip from "./Chip.vue";
 import CopyId from "./CopyId.vue";
@@ -160,7 +160,7 @@ async function clear() {
           <a v-if="link" class="id" :href="link" title="Open CVE details" @click.prevent="openUrl(link)">{{ v.id }} ↗</a>
           <span v-else class="id">{{ v.id }}</span>
           <CopyId :text="v.id" />
-          <Chip title="CVSS severity">{{ v.severity }}{{ v.score ? ` ${v.score.toFixed(1)}` : cvssFloor(v.severity) ? ` ~${cvssFloor(v.severity).toFixed(1)} est.` : "" }}</Chip>
+          <Chip title="CVSS severity">{{ v.severity }}{{ v.score ? ` ${v.score.toFixed(1)}` : v.scoreEstimate ? ` ~${v.scoreEstimate.toFixed(1)} est.` : "" }}</Chip>
           <span class="sev tier" :style="tierStyle(v.tier)" :title="v.tierWhy">{{ v.tier }} · {{ v.priority }}</span>
           <a v-if="link" class="drawer-adv" :href="link" @click.prevent="openUrl(link)">Full advisory</a>
         </div>

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from "vue";
-import { rules, setRules, builtinPresets, userPresets, allPresets, activePreset, savePreset, deletePreset } from "../store.js";
+import { rules, ruleHelp, setRules, builtinPresets, userPresets, allPresets, activePreset, savePreset, deletePreset } from "../store.js";
 
 const name = ref("");
 const active = activePreset;
@@ -61,7 +61,7 @@ function save() {
         <label class="chk"
           ><input type="checkbox" :checked="rules.kevEnabled" @change="set({ kevEnabled: $event.target.checked })" /> <b>KEV</b></label
         >
-        <span>Listed in CISA's Known Exploited Vulnerabilities: +50, +10 more if used in ransomware.</span>
+        <span>{{ ruleHelp.kev }}</span>
         <label class="chk sub"
           ><input
             type="checkbox"
@@ -77,7 +77,7 @@ function save() {
         <label class="chk"
           ><input type="checkbox" :checked="rules.epssEnabled" @change="set({ epssEnabled: $event.target.checked })" /> <b>EPSS</b></label
         >
-        <span>Exploitation probability: +10 from the cutoff, +22 from "high", +35 (and Fix soon) from "very high".</span>
+        <span>{{ ruleHelp.epss }}</span>
         <span class="nums">
           <label
             >cutoff
@@ -123,15 +123,15 @@ function save() {
           ><input type="checkbox" :checked="rules.severityEnabled" @change="set({ severityEnabled: $event.target.checked })" />
           <b>Severity</b></label
         >
-        <span>CVSS severity: critical +30, high +25, medium +10, low +3, unknown +5.</span>
+        <span>{{ ruleHelp.severity }}</span>
       </div>
 
       <div class="rule-row">
         <label class="chk"
           ><input type="checkbox" :checked="rules.vectorEnabled" @change="set({ vectorEnabled: $event.target.checked })" />
-          <b>Attack vector</b></label
+          <b>Attack vector and impact</b></label
         >
-        <span>Network +10, adjacent +4, physical −2; low complexity +3; no privileges +5; no user interaction +4.</span>
+        <span>{{ ruleHelp.vector }}</span>
       </div>
 
       <div class="rule-row">
@@ -139,7 +139,7 @@ function save() {
           ><input type="checkbox" :checked="rules.fixEnabled" @change="set({ fixEnabled: $event.target.checked })" />
           <b>Fix availability</b></label
         >
-        <span>Fix exists +5, none yet −3, vendor will not fix −5.</span>
+        <span>{{ ruleHelp.fix }}</span>
         <label class="chk sub"
           ><input type="checkbox" :checked="rules.fixedOnly" @change="set({ fixedOnly: $event.target.checked })" /> fixed only: findings
           without a fix score 0 (Monitor)</label

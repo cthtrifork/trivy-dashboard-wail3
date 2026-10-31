@@ -2,6 +2,7 @@ package trivy
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -126,10 +127,12 @@ var rules = []rule{
 		if !c.r.SeverityEnabled {
 			return nil
 		}
-		pts := map[string]int{"CRITICAL": 30, "HIGH": 25, "MEDIUM": 10, "LOW": 3, "UNKNOWN": 5}[c.v.Severity]
+		pts := SeverityPoints[c.v.Severity]
 		txt := fmt.Sprintf("%s severity", strings.ToLower(c.v.Severity))
 		if c.v.Score > 0 {
 			txt += fmt.Sprintf(" (CVSS %.1f)", c.v.Score)
+		} else if f := cvssFloor[c.v.Severity]; f > 0 {
+			txt += fmt.Sprintf(" (no CVSS score: ~%.1f est.)", f)
 		}
 		return &Reason{"Severity", txt + ": how bad it is if exploited", pts, fmt.Sprintf("severity %s → +%d", c.v.Severity, pts)}
 	}},
@@ -139,38 +142,80 @@ var rules = []rule{
 		}
 		av := c.vec.M["AV"]
 		if av == "" {
-			return nil
+			// No usable CVSS vector: score the vector from the CVSS score instead of 0, otherwise a
+			// finding without one ranks below identical ones that have it. A missing score falls back
+			// to the floor of the severity band, as the UI shows it (see effectiveScore).
+			score := effectiveScore(c.v)
+			if score == 0 {
+				return nil
+			}
+			pts := int(math.Round(score * vectorPerCVSSPoint))
+			src := fmt.Sprintf("CVSS %.1f", score)
+			if c.v.Score == 0 {
+				src = fmt.Sprintf("~%.1f, the lowest score of %s severity", score, strings.ToLower(c.v.Severity))
+			}
+			return &Reason{"Vector", "no CVSS vector is published: the vector is estimated from the score (" + src + ")", pts,
+				fmt.Sprintf("no vector, score %.1f × %.1f → %+d (estimate)", score, vectorPerCVSSPoint, pts)}
 		}
-		pts := 0
+		pts, ease := 0, 0
 		var parts []string
-		add := func(label string, n int) {
+		add := func(label string, n int, exploit bool) {
 			pts += n
+			if exploit {
+				ease += n
+			}
 			parts = append(parts, fmt.Sprintf("%s %+d", label, n))
 		}
 		switch av {
 		case "N":
-			add("network", 10)
+			add("network", PointsNetwork, true)
 		case "A":
-			add("adjacent network", 4)
+			add("adjacent network", PointsAdjacent, true)
 		case "P":
-			add("physical access", -2)
+			add("physical access", PointsPhysical, true)
 		}
 		if c.vec.M["AC"] == "L" {
-			add("low complexity", 3)
+			add("low complexity", PointsLowComplexity, true)
 		}
 		if c.vec.M["PR"] == "N" {
-			add("no privileges needed", 5)
+			add("no privileges needed", PointsNoPrivileges, true)
 		} else if c.vec.M["Au"] == "N" {
-			add("no authentication", 5)
+			add("no authentication", PointsNoPrivileges, true)
 		}
 		if c.vec.M["UI"] == "N" {
-			add("no user interaction", 4)
+			add("no user interaction", PointsNoInteraction, true)
 		}
-		rule := fmt.Sprintf("attack vector → %+d", pts)
+		// Impact: what an attacker gets. Confidentiality and integrity weigh more than availability
+		// because a DoS ends when the attack does, a leak or a tampered response does not. Availability
+		// scores nothing: severity already rates it, and exploitation evidence (EPSS, KEV) lifts a DoS
+		// that is really being used.
+		for _, im := range []struct {
+			name          string
+			keys          []string
+			high, limited int
+		}{
+			{"confidentiality", []string{"C", "VC"}, PointsImpactHigh, PointsImpactLimited},
+			{"integrity", []string{"I", "VI"}, PointsImpactHigh, PointsImpactLimited},
+			{"availability", []string{"A", "VA"}, PointsAvailabilityHigh, PointsAvailabilityLimited},
+		} {
+			lvl := ""
+			for _, k := range im.keys {
+				if lvl = c.vec.M[k]; lvl != "" {
+					break
+				}
+			}
+			switch {
+			case (lvl == "H" || lvl == "C") && im.high != 0:
+				add(im.name+" high", im.high, false)
+			case (lvl == "L" || lvl == "P") && im.limited != 0:
+				add(im.name+" limited", im.limited, false)
+			}
+		}
+		rule := fmt.Sprintf("attack vector and impact → %+d", pts)
 		if len(parts) > 0 {
 			rule += " (" + strings.Join(parts, ", ") + ")"
 		}
-		return &Reason{"Vector", "attack vector makes exploitation " + ease(pts), pts, rule}
+		return &Reason{"Vector", "attack vector makes exploitation " + easeText(ease), pts, rule}
 	}},
 	{"fix", func(c *ruleCtx) *Reason {
 		if !c.r.FixEnabled {
@@ -178,11 +223,11 @@ var rules = []rule{
 		}
 		switch {
 		case c.v.Fixed != "":
-			return &Reason{"Fix", "a fixed version exists (" + c.v.Fixed + "): remediation is an upgrade away", 5, "fix available → +5"}
+			return &Reason{"Fix", "a fixed version exists (" + c.v.Fixed + "): remediation is an upgrade away", PointsFix, fmt.Sprintf("fix available → +%d", PointsFix)}
 		case strings.Contains(strings.ToLower(c.v.Status), "end_of_life"), strings.Contains(strings.ToLower(c.v.Status), "will_not_fix"):
-			return &Reason{"Fix", "the vendor will not fix this: plan mitigation or replacement", -5, "vendor will not fix → -5"}
+			return &Reason{"Fix", "the vendor will not fix this: plan mitigation or replacement", PointsWontFix, fmt.Sprintf("vendor will not fix → %d", PointsWontFix)}
 		default:
-			return &Reason{"Fix", "no fix is available yet: mitigate or accept the risk", -3, "no fix available → -3"}
+			return &Reason{"Fix", "no fix is available yet: mitigate or accept the risk", PointsNoFix, fmt.Sprintf("no fix available → %d", PointsNoFix)}
 		}
 	}},
 }
@@ -192,13 +237,39 @@ func pctText(p float64) string {
 	return strconv.FormatFloat(p*100, 'f', -1, 64) + "%"
 }
 
-func ease(pts int) string {
+// cvssFloor is the lowest CVSS base score of each severity band. It is the one definition of the
+// default score: Vulnerability.ScoreEstimate carries it to the UI, which shows it marked "~".
+var cvssFloor = map[string]float64{"CRITICAL": 9, "HIGH": 7, "MEDIUM": 4, "LOW": 0.1}
+
+// scoreEstimate is the default score of a finding without one: the floor of its severity band, or 0
+// when a score was published or the severity is unrated.
+func scoreEstimate(score float64, severity string) float64 {
+	if score > 0 {
+		return 0
+	}
+	return cvssFloor[severity]
+}
+
+// effectiveScore is the reported CVSS score, else the floor of the severity band (0 when unrated).
+func effectiveScore(v *Vulnerability) float64 {
+	if v.Score > 0 {
+		return v.Score
+	}
+	return cvssFloor[v.Severity]
+}
+
+// vectorPerCVSSPoint turns a CVSS score into vector-and-impact points when there is no vector.
+// Real vectors of 7.5 and 9.8 earn 16 to 24 points here, which is about 2.4 per score point.
+const vectorPerCVSSPoint = 2.4
+
+// easeText words the exploitability part of the vector score (at most 14).
+func easeText(pts int) string {
 	switch {
-	case pts >= 18:
+	case pts >= 11:
 		return "very easy"
-	case pts >= 10:
+	case pts >= 6:
 		return "relatively easy"
-	case pts >= 4:
+	case pts >= 2:
 		return "harder"
 	}
 	return "difficult"
@@ -210,13 +281,17 @@ func Assess(v *Vulnerability) { AssessWith(v, DefaultRules()) }
 // AssessWith fills in the vector, priority score, tier, reasons and the
 // human-readable attack assessment of v from its current signals, under rules r.
 func AssessWith(v *Vulnerability, r Rules) {
-	c := &ruleCtx{r: r.Normalize(), v: v, vec: ParseVector(v.Vector), text: strings.ToLower(v.Title + " " + v.Description)}
-	applyRules(c)
-	v.Attack = describeAttack(c)
+	applyRules(newRuleCtx(r.Normalize(), v))
 }
 
-// applyRules sets everything about v that depends on the rules: reasons, score, tier and the
-// sentence saying which threshold decided the tier.
+// newRuleCtx gathers what the rules read about v. r must already be normalized.
+func newRuleCtx(r Rules, v *Vulnerability) *ruleCtx {
+	return &ruleCtx{r: r, v: v, vec: ParseVector(v.Vector), text: strings.ToLower(v.Title + " " + v.Description)}
+}
+
+// applyRules sets everything about v that depends on the rules: reasons, score, tier, the sentence
+// saying which threshold decided the tier, and the attack text (which says when exploitation is
+// likely, by the EPSS "high" threshold in force).
 func applyRules(c *ruleCtx) {
 	v, r := c.v, c.r
 	v.Reasons = nil
@@ -250,6 +325,7 @@ func applyRules(c *ruleCtx) {
 	default:
 		v.Tier, v.TierWhy = TierMonitor, fmt.Sprintf("Monitor: score %d < %d", v.Priority, r.TierPlan)
 	}
+	v.Attack = describeAttack(c)
 }
 
 func abs(n int) int {
@@ -317,7 +393,7 @@ func describeAttack(c *ruleCtx) string {
 	switch {
 	case c.v.KEV:
 		out += " This is being exploited in the real world."
-	case c.v.HasEPSS && c.v.EPSS >= 0.1:
+	case c.r.EPSSEnabled && c.v.HasEPSS && c.v.EPSS >= c.r.EPSSHigh:
 		out += " Exploitation is considered likely."
 	}
 	if m["AV"] == "L" {
