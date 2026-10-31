@@ -10,7 +10,7 @@ const WHO = {
 const EFFECT = { C: "read data they should not", I: "change data they should not", A: "knock it offline" };
 const IMPACT = { C: "Confidentiality", I: "Integrity", A: "Availability" };
 
-const metric = (vector, key) => new RegExp(`(?:^|/)${key}:([A-Z])`).exec(vector || "")?.[1];
+export const metric = (vector, key) => new RegExp(`(?:^|/)${key}:([A-Z])`).exec(vector || "")?.[1];
 
 function needs(vector) {
   const pr = metric(vector, "PR");
