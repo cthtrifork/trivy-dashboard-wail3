@@ -115,7 +115,7 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
     <span class="kv">→</span>
     <span class="chk"
       >Target
-      <TagInput id="cmp-b" v-model="cmpForm.b" :tags="repoTags" label="Target tag" :disabled="comparing" @open="ensureTags(cmpBase.repo)"
+      <TagInput id="cmp-b" v-model="cmpForm.b" :tags="repoTags" label="Target tag or image" placeholder="tag, digest or another image" :disabled="comparing" @open="ensureTags(cmpBase.repo)"
     /></span>
     <button id="cmp-go" type="submit" :disabled="comparing || !cmpBase.repo || !cmpBase.tag">Compare</button>
     <button id="cmp-cancel" type="button" v-show="comparing" @click="cancel">Cancel</button>
@@ -123,7 +123,7 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
   <div id="cmp-out" class="scroll">
     <ScanPending v-if="!data && comparing" kind="table" :cols="5" />
     <div v-else-if="!data" class="empty">
-      Pick a target tag to compare the scanned image against and see what changed: vulnerabilities added and removed, and package changes.
+      Pick a target tag, or type another image (for example cgr.dev/chainguard/static:latest), to compare the scanned image against and see what changed: vulnerabilities added and removed, and package changes.
     </div>
     <template v-else>
       <div class="sides">

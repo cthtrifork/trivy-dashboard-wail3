@@ -14,6 +14,8 @@
 }
 #cmp-form .tag-wrap {
   width: 180px;
+  flex: 1 1 260px;
+  max-width: 440px;
 }
 #cmp-form .tag-input,
 #cmp-form #cmp-repo,
