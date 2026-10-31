@@ -1,9 +1,6 @@
 package selfupdate
 
 import (
-	"archive/tar"
-	"bytes"
-	"compress/gzip"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -119,20 +116,11 @@ func packageRelease(t *testing.T, version string) (files map[string][]byte, orde
 	}
 	raw := "trivy-scanner_linux_amd64"
 	archive := "trivy-scanner_" + version + "_linux_amd64.tar.gz"
-	var tgz bytes.Buffer
-	gz := gzip.NewWriter(&tgz)
-	tw := tar.NewWriter(gz)
-	if err := tw.WriteHeader(&tar.Header{Name: "trivy-scanner", Mode: 0o755, Size: int64(len(binary))}); err != nil {
-		t.Fatal(err)
-	}
-	_, _ = tw.Write(binary)
-	_ = tw.Close()
-	_ = gz.Close()
 	var sums strings.Builder
 	for _, f := range []struct {
 		name string
 		data []byte
-	}{{raw, binary}, {archive, tgz.Bytes()}} {
+	}{{raw, binary}, {archive, []byte("stand-in tarball")}} {
 		if err := os.WriteFile(filepath.Join(out, f.name), f.data, 0o755); err != nil {
 			t.Fatal(err)
 		}

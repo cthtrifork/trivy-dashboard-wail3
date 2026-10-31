@@ -205,11 +205,7 @@ jobs:
           # written after the SBOM is added (below).
           mkdir -p dist
           cp "$built" "dist/${APP}_linux_amd64"
-          stage="$(mktemp -d)"
-          cp "$built" "$stage/${APP}"
-          cp README.md LICENSE "$stage/"
-          tar -C "$stage" -czf "dist/${APP}_${VERSION}_linux_amd64.tar.gz" .
-          rm -rf "$stage"
+          tar -czf "dist/${APP}_${VERSION}_linux_amd64.tar.gz" -C "$(dirname "$built")" "$APP" -C "$PWD" README.md LICENSE
 
       # The .deb and .rpm come from the same binary, via `wails3 tool package` (nfpm) and
       # build/linux/nfpm/nfpm.yaml, which also installs the .desktop file and icons. A release is
