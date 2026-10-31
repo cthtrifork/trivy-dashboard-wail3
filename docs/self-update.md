@@ -31,8 +31,7 @@ by that package manager instead. Inside an AppImage the updater replaces the `.A
 
 ## The release contract
 
-The updater picks assets by name, so the names are an interface. `scripts/package-release.sh` produces them and
-`release.yml` publishes them:
+The updater picks assets by name, so the names are an interface. `release.yml` builds and publishes them:
 
 | Asset | For | Notes |
 |---|---|---|
@@ -77,7 +76,7 @@ The version is stamped into the binary with `-ldflags "-X github.com/cthtrifork/
 
 ## Tests
 
-- `internal/selfupdate` runs the **real** `package-release.sh`, serves its output from a fake GitHub API, and checks the
+- `internal/selfupdate` lays out a release like `release.yml` does, serves it from a fake GitHub API, and checks the
   updater's provider picks the raw binary, gets the right digest and downloads identical bytes. It also covers version
   comparison, refusing releases without a digest, and the writable-directory check.
 - `internal/app/update_test.go` checks that non-release builds cannot update.

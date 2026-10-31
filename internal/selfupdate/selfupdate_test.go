@@ -1,15 +1,18 @@
 package selfupdate
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -100,29 +103,44 @@ func newFakeGitHub(t *testing.T, tag string, files map[string][]byte, order []st
 	return &fakeGitHub{srv}
 }
 
-// packageRelease runs the real scripts/package-release.sh on a stand-in binary and
-// returns its output files, in the order a release would list them.
+// packageRelease lays out a stand-in release the way release.yml does (raw binary,
+// tarball, SHA256SUMS) and returns its files, in the order a release would list them.
 func packageRelease(t *testing.T, version string) (files map[string][]byte, order []string, binary []byte) {
 	t.Helper()
 	if runtime.GOOS != "linux" {
 		t.Skip("the release is packaged on Linux")
 	}
-	for _, tool := range []string{"bash", "sha256sum", "tar"} {
-		if _, err := exec.LookPath(tool); err != nil {
-			t.Skipf("%s not available", tool)
-		}
-	}
 	binary = make([]byte, 4096)
 	_, _ = rand.Read(binary)
 	dir := t.TempDir()
-	bin := filepath.Join(dir, "built")
-	if err := os.WriteFile(bin, binary, 0o755); err != nil {
+	out := filepath.Join(dir, "dist")
+	if err := os.MkdirAll(out, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	out := filepath.Join(dir, "dist")
-	cmd := exec.Command("bash", "../../scripts/package-release.sh", bin, version, out)
-	if msg, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("package-release.sh: %v\n%s", err, msg)
+	raw := "trivy-scanner_linux_amd64"
+	archive := "trivy-scanner_" + version + "_linux_amd64.tar.gz"
+	var tgz bytes.Buffer
+	gz := gzip.NewWriter(&tgz)
+	tw := tar.NewWriter(gz)
+	if err := tw.WriteHeader(&tar.Header{Name: "trivy-scanner", Mode: 0o755, Size: int64(len(binary))}); err != nil {
+		t.Fatal(err)
+	}
+	_, _ = tw.Write(binary)
+	_ = tw.Close()
+	_ = gz.Close()
+	var sums strings.Builder
+	for _, f := range []struct {
+		name string
+		data []byte
+	}{{raw, binary}, {archive, tgz.Bytes()}} {
+		if err := os.WriteFile(filepath.Join(out, f.name), f.data, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		sum := sha256.Sum256(f.data)
+		fmt.Fprintf(&sums, "%x  %s\n", sum, f.name)
+	}
+	if err := os.WriteFile(filepath.Join(out, "SHA256SUMS"), []byte(sums.String()), 0o644); err != nil {
+		t.Fatal(err)
 	}
 	entries, err := os.ReadDir(out)
 	if err != nil {
