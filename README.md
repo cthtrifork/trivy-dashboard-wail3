@@ -12,7 +12,7 @@ Scan a container image with [Trivy](https://trivy.dev), then see each vulnerabil
 4. **Assess** with plain-language guidance, and keep the decision for new tags.
 5. **Share** your decisions as clean, valid OpenVEX, and bring in other people's.
 
-Screenshots are not committed. The draft [Screenshots preview](../../pulls?q=is%3Apr+is%3Aopen+head%3Abot%2Fupdate-screenshots) PR shows the current ones (Files changed), and `make screenshots` renders them locally.
+![Priorities view with an expanded row showing the reasons for its rank](https://raw.githubusercontent.com/cthtrifork/trivy-dashboard-wail3/bot/update-screenshots/docs/screenshots/01b-priorities-expanded-row.png)
 
 ## Install
 
