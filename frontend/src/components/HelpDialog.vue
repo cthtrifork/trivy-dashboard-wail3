@@ -113,8 +113,7 @@ const glossary = [
         "Aqua Security's open source scanner. It runs in a throwaway container and prints JSON that this app turns into the shortlist.",
       ],
       ["podman", "The container engine that runs Trivy. The app needs only the client; the engine can be remote."],
-      ["Trivy DB", "The vulnerability database Trivy downloads and keeps in its cache, so later scans are fast."],
-      ["Server (headless) mode", "A build without a native window that serves the UI on loopback. Reach it through an SSH tunnel."],
+      ["Trivy DB", "The vulnerability database Trivy downloads and keeps in its cache, so later scans are fast.", "wide"],
     ],
   },
 ];
@@ -145,14 +144,13 @@ const ENV_GROUPS = [
   ["Proxy and certificates", "cards", ["HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY", "TRIVY_SCANNER_CA_BUNDLE"]],
   ["Podman", "cards3", ["PODMAN", "CONTAINER_HOST", "DOCKER_HOST"]],
   ["Data sources", "list", ["TRIVY_SCANNER_VEX_FILE", "TRIVY_SCANNER_EPSS_URL", "TRIVY_SCANNER_KEV_URL"]],
-  ["Server mode and user dirs", "cards", ["WAILS_SERVER_HOST", "WAILS_SERVER_PORT", "XDG_CACHE_HOME", "XDG_CONFIG_HOME"]],
+  ["User dirs", "cards", ["XDG_CACHE_HOME", "XDG_CONFIG_HOME"]],
 ];
 
 const behaviour = computed(() =>
   [
-    ["Mode", mode.value?.fixtures ? "Demo (recorded data)" : "Real podman"],
     ["Version", cfg.value?.version],
-    ["Platform", cfg.value?.platform + (cfg.value?.headless ? " · server mode" : "")],
+    ["Platform", cfg.value?.platform],
     ["Scanner image", mode.value?.trivyImage || "default"],
     ["Podman", cfg.value ? cfg.value.podman + (cfg.value.remote ? " (remote)" : " (local)") : ""],
   ].filter(([, v]) => v),

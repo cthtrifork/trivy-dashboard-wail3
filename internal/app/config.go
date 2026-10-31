@@ -30,7 +30,6 @@ type ConfigEnv struct {
 type AppConfig struct {
 	Version  string       `json:"version"`
 	Platform string       `json:"platform"`
-	Headless bool         `json:"headless"`
 	Podman   string       `json:"podman"`
 	Remote   bool         `json:"remote"`
 	Paths    []ConfigPath `json:"paths"`
@@ -42,7 +41,6 @@ func (s *ScanService) Config() AppConfig {
 	c := AppConfig{
 		Version:  version,
 		Platform: runtime.GOOS + "/" + runtime.GOARCH,
-		Headless: headless,
 		Podman:   trivy.PodmanBin(),
 		Remote:   trivy.Remote(),
 	}
