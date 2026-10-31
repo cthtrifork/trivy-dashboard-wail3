@@ -61,7 +61,7 @@ jobs:
         id: podman
         run: echo "url=https://github.com/containers/podman@$(sed -n 's/^ARG PODMAN_VERSION=//p' build/docker/headless.Dockerfile)" >> "$GITHUB_OUTPUT"
 
-      - uses: ./.github/actions/copa-patch
+      - uses: $/.github/actions/copa-patch
         with:
           image: localhost:5000/trivy-scanner:latest
           patched-tag: patched

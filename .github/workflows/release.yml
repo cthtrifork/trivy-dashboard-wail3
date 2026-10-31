@@ -489,7 +489,7 @@ jobs:
         run: echo "url=https://github.com/containers/podman@$(sed -n 's/^ARG PODMAN_VERSION=//p' build/docker/headless.Dockerfile)" >> "$GITHUB_OUTPUT"
 
       - id: copa
-        uses: ./.github/actions/copa-patch
+        uses: $/.github/actions/copa-patch
         with:
           image: ghcr.io/${{ github.repository }}:${{ needs.meta.outputs.version }}
           patched-tag: ${{ needs.meta.outputs.version }}-copa
