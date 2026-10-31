@@ -11,7 +11,7 @@ import ScanPending from "./ScanPending.vue";
 import VexBox from "./VexBox.vue";
 import WhereItLives from "./WhereItLives.vue";
 import SuppressedRow from "./SuppressedRow.vue";
-import { cvssText } from "../lib/glance.js";
+import { cvssText, metric } from "../lib/glance.js";
 import { useVirtualList } from "../lib/virtual.js";
 import { findingPath, indexNodes } from "../lib/where.js";
 
@@ -148,7 +148,7 @@ async function land(t) {
 // "post": the tab has been switched to by then, so the list has a size to scroll in.
 watch(prioTarget, (t) => t && land(t), { flush: "post" });
 watch(result, () => (landed.value = null));
-const attackVector = (v) => /AV:([NALP])/.exec(v.vector)?.[1];
+const attackVector = (v) => (metric(v.vector, "AV") in AV ? metric(v.vector, "AV") : undefined);
 
 defineExpose({ count: computed(() => pool.value.length) });
 </script>
