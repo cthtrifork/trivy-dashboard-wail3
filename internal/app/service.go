@@ -321,6 +321,10 @@ func (s *ScanService) UpdateDB(trivyImage string) (bool, error) {
 // RulePresets returns the built-in scoring presets.
 func (s *ScanService) RulePresets() []trivy.Preset { return trivy.Presets() }
 
+// RuleHelp returns what each scoring rule adds, in words, for the scoring panel. It is written from
+// the constants the rules use, so the text cannot drift from the points applied.
+func (s *ScanService) RuleHelp() trivy.RuleSummaries { return trivy.RuleHelp() }
+
 // Rescore re-ranks the findings of the latest scan under the given rules, best first. Each
 // entry's Index points into the scan result's vulnerabilities. It returns nothing before a scan.
 func (s *ScanService) Rescore(rules trivy.Rules) []trivy.Rescored {

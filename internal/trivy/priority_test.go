@@ -3,6 +3,7 @@ package trivy
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -298,16 +299,17 @@ func TestRulesTuning(t *testing.T) {
 }
 
 func TestRescoreOrder(t *testing.T) {
+	const vec = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L" // same for all: the order below comes from the other signals
 	vulns := []Vulnerability{
-		{ID: "A", Severity: "CRITICAL"},
-		{ID: "B", Severity: "LOW", HasEPSS: true, EPSS: 0.9},
-		{ID: "C", Severity: "HIGH", Fixed: "2"},
+		{ID: "A", Severity: "HIGH", Vector: vec},
+		{ID: "B", Severity: "LOW", Vector: vec, HasEPSS: true, EPSS: 0.9},
+		{ID: "C", Severity: "HIGH", Vector: vec, Fixed: "2"},
 	}
 	for i := range vulns {
 		Assess(&vulns[i])
 	}
 	bal := Rescore(vulns, DefaultRules())
-	if bal[0].Index != 1 { // EPSS 90% outranks a critical without exploitation evidence
+	if bal[0].Index != 1 { // EPSS 90% outranks a high without exploitation evidence
 		t.Errorf("balanced order: %+v", bal)
 	}
 	sev := Rules{SeverityEnabled: true, TierNow: 70, TierSoon: 45, TierPlan: 25}
@@ -397,5 +399,168 @@ func TestMatchingEntries(t *testing.T) {
 	got := MatchingEntries(entries, []Vulnerability{{Key: "CVE-2|b"}})
 	if len(got) != 1 || got[0].Key != "CVE-2|b" {
 		t.Fatalf("got %+v", got)
+	}
+}
+
+func reasonPoints(v Vulnerability, signal string) (int, bool) {
+	for _, r := range v.Reasons {
+		if r.Signal == signal {
+			return r.Points, true
+		}
+	}
+	return 0, false
+}
+
+// Impact counts: a network leak/tamper outranks a network DoS of the same severity and exploitability.
+func TestVectorRuleWeighsImpact(t *testing.T) {
+	dos := Vulnerability{ID: "DOS", Severity: "HIGH", Fixed: "2", Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"}
+	leak := Vulnerability{ID: "LEAK", Severity: "HIGH", Fixed: "2", Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"}
+	Assess(&dos)
+	Assess(&leak)
+	if p, _ := reasonPoints(dos, "Vector"); p != 14 { // 6+2+3+3 exploitability, availability scores nothing
+		t.Errorf("dos vector points = %d, want 14", p)
+	}
+	if p, _ := reasonPoints(leak, "Vector"); p != 22 { // 14 + 4 + 4
+		t.Errorf("leak vector points = %d, want 22", p)
+	}
+	if leak.Priority <= dos.Priority {
+		t.Errorf("leak %d should outrank dos %d", leak.Priority, dos.Priority)
+	}
+	// A plain network DoS with a fix and no exploitation evidence is Plan; EPSS lifts it.
+	if dos.Tier != TierPlan {
+		t.Errorf("network DoS tier = %s (%d), want Plan", dos.Tier, dos.Priority)
+	}
+	hot := dos
+	hot.HasEPSS, hot.EPSS = true, 0.6
+	Assess(&hot)
+	if hot.Tier != TierSoon && hot.Tier != TierNow {
+		t.Errorf("DoS with EPSS 60%% tier = %s, want Fix soon or Act now", hot.Tier)
+	}
+	// Without exploitation evidence nothing reaches Act now.
+	crit := Vulnerability{ID: "C", Severity: "CRITICAL", Fixed: "2", Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}
+	Assess(&crit)
+	if crit.Tier == TierNow {
+		t.Errorf("critical without exploitation evidence reached Act now: %d", crit.Priority)
+	}
+	// CVSS 4.0 and 2.0 impact metrics are read too.
+	for _, vec := range []string{"CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N", "AV:N/AC:L/Au:N/C:C/I:C/A:N"} {
+		v := Vulnerability{ID: "X", Severity: "HIGH", Vector: vec}
+		Assess(&v)
+		if p, _ := reasonPoints(v, "Vector"); p < 19 { // v2 has no user-interaction metric
+			t.Errorf("%s: vector points = %d, want impact counted", vec, p)
+		}
+	}
+}
+
+// A finding with no CVSS vector gets a severity-based estimate instead of ranking below identical ones.
+func TestMissingVectorIsEstimated(t *testing.T) {
+	with := Vulnerability{ID: "A", Severity: "HIGH", Fixed: "2", Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"}
+	without := Vulnerability{ID: "B", Severity: "HIGH", Fixed: "2"}
+	Assess(&with)
+	Assess(&without)
+	p, ok := reasonPoints(without, "Vector")
+	if !ok || p != 17 { // no score: the HIGH floor 7.0 × 2.4
+		t.Fatalf("estimate = %d, %v", p, ok)
+	}
+	scored := Vulnerability{ID: "S", Severity: "HIGH", Score: 7.5, Fixed: "2"}
+	Assess(&scored)
+	if p, _ := reasonPoints(scored, "Vector"); p != 18 { // a reported score is used as is
+		t.Errorf("scored estimate = %d, want 18", p)
+	}
+	if d := without.Priority - with.Priority; d < -3 || d > 3 {
+		t.Errorf("without=%d with=%d: the estimate should land near a real network vector", without.Priority, with.Priority)
+	}
+	if u := (Vulnerability{ID: "U", Severity: "UNKNOWN"}); true {
+		Assess(&u)
+		if _, ok := reasonPoints(u, "Vector"); ok {
+			t.Error("an unrated finding gets no vector estimate")
+		}
+	}
+}
+
+// UNKNOWN severity scores nothing, so it cannot outrank a rated LOW.
+func TestUnknownSeverityScoresZero(t *testing.T) {
+	unk := Vulnerability{ID: "U", Severity: "UNKNOWN", Fixed: "2"}
+	low := Vulnerability{ID: "L", Severity: "LOW", Fixed: "2"}
+	Assess(&unk)
+	Assess(&low)
+	if p, _ := reasonPoints(unk, "Severity"); p != 0 {
+		t.Errorf("unknown severity points = %d", p)
+	}
+	if unk.Priority >= low.Priority {
+		t.Errorf("unknown %d should rank below low %d", unk.Priority, low.Priority)
+	}
+}
+
+// "Exploitation is considered likely" follows the EPSS high threshold in force, and Rescore carries
+// the attack text so the UI's text moves with the rules.
+func TestAttackTextFollowsEPSSThreshold(t *testing.T) {
+	v := Vulnerability{ID: "E", Severity: "HIGH", HasEPSS: true, EPSS: 0.15, Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}
+	const likely = "Exploitation is considered likely"
+	Assess(&v)
+	if !strings.Contains(v.Attack, likely) {
+		t.Fatalf("EPSS 15%% is above the default high of 10%%: %s", v.Attack)
+	}
+	r := DefaultRules()
+	r.EPSSHigh, r.EPSSVeryHigh = 0.2, 0.5
+	got := Rescore([]Vulnerability{v}, r)
+	if strings.Contains(got[0].Attack, likely) {
+		t.Errorf("EPSS 15%% is below a high of 20%%, but the rescored text says it is likely: %s", got[0].Attack)
+	}
+	r = DefaultRules()
+	r.EPSSEnabled = false
+	if got := Rescore([]Vulnerability{v}, r); strings.Contains(got[0].Attack, likely) {
+		t.Errorf("EPSS rule off: the text should not claim likely exploitation: %s", got[0].Attack)
+	}
+	if got := Rescore([]Vulnerability{v}, DefaultRules()); !strings.Contains(got[0].Attack, likely) {
+		t.Errorf("default rules: %s", got[0].Attack)
+	}
+}
+
+// The scoring panel's text is written from the constants the rules use. Every number in it must be
+// what a finding actually scores, so the two cannot drift again.
+func TestRuleHelpMatchesAppliedPoints(t *testing.T) {
+	h := RuleHelp()
+	for _, c := range []struct{ text, want string }{
+		{h.KEV, fmt.Sprintf("+%d, +%d more", PointsKEV, PointsKEVRansomware)},
+		{h.EPSS, fmt.Sprintf("+%d from the cutoff, +%d from \"high\", +%d", PointsEPSSLow, PointsEPSSHigh, PointsEPSSVeryHigh)},
+		{h.Fix, fmt.Sprintf("Fix exists +%d, none yet %d, vendor will not fix %d", PointsFix, PointsNoFix, PointsWontFix)},
+		{h.Vector, "availability scores nothing"},
+	} {
+		if !strings.Contains(c.text, c.want) {
+			t.Errorf("%q is missing %q", c.text, c.want)
+		}
+	}
+	// What the rules apply, read back from real assessments.
+	for sev, want := range SeverityPoints {
+		v := Vulnerability{ID: "S", Severity: sev, Fixed: "2"}
+		Assess(&v)
+		if got, _ := reasonPoints(v, "Severity"); got != want {
+			t.Errorf("%s: rule gives %d, SeverityPoints %d", sev, got, want)
+		}
+		if want > 0 && !strings.Contains(h.Severity, fmt.Sprintf("%s +%d", strings.ToLower(sev), want)) {
+			t.Errorf("severity text lacks %s +%d: %s", sev, want, h.Severity)
+		}
+	}
+	for _, c := range []struct {
+		vec  string
+		want int
+		desc string
+	}{
+		{"CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N", PointsNetwork, "network only"},
+		{"CVSS:3.1/AV:A/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N", PointsAdjacent, "adjacent only"},
+		{"CVSS:3.1/AV:P/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N", PointsPhysical, "physical only"},
+		{"CVSS:3.1/AV:L/AC:L/PR:H/UI:R/S:U/C:N/I:N/A:N", PointsLowComplexity, "low complexity only"},
+		{"CVSS:3.1/AV:L/AC:H/PR:N/UI:R/S:U/C:N/I:N/A:N", PointsNoPrivileges, "no privileges only"},
+		{"CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:N/I:N/A:N", PointsNoInteraction, "no interaction only"},
+		{"CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:U/C:H/I:N/A:N", PointsImpactHigh, "confidentiality high"},
+		{"CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:U/C:N/I:L/A:N", PointsImpactLimited, "integrity limited"},
+		{"CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:H", PointsAvailabilityHigh, "availability high"},
+	} {
+		v := Vulnerability{ID: "V", Severity: "LOW", Vector: c.vec}
+		Assess(&v)
+		if got, _ := reasonPoints(v, "Vector"); got != c.want {
+			t.Errorf("%s: vector rule gives %d, constant %d", c.desc, got, c.want)
+		}
 	}
 }

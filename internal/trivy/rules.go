@@ -1,6 +1,10 @@
 package trivy
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+	"strings"
+)
 
 // Points each rule adds. They are constants on purpose: a rule can be switched off or have its
 // thresholds moved, but never re-weighted, so every score is a sum of numbers the UI prints.
@@ -10,7 +14,59 @@ const (
 	PointsEPSSVeryHigh  = 35
 	PointsEPSSHigh      = 22
 	PointsEPSSLow       = 10
+
+	// Vector and impact: exploitability (at most 14), then what an attacker gets. Availability scores
+	// nothing: a DoS ends with the attack, severity already rates it, and EPSS or KEV lifts a DoS that
+	// is really exploited.
+	PointsNetwork             = 6
+	PointsAdjacent            = 2
+	PointsPhysical            = -2
+	PointsLowComplexity       = 2
+	PointsNoPrivileges        = 3 // also "no authentication" in CVSS v2
+	PointsNoInteraction       = 3
+	PointsImpactHigh          = 4 // confidentiality and integrity, each
+	PointsImpactLimited       = 2
+	PointsAvailabilityHigh    = 0
+	PointsAvailabilityLimited = 0
+
+	PointsFix     = 5
+	PointsNoFix   = -3
+	PointsWontFix = -5
 )
+
+// SeverityPoints is what the Severity rule adds for each rating.
+var SeverityPoints = map[string]int{"CRITICAL": 30, "HIGH": 25, "MEDIUM": 10, "LOW": 3, "UNKNOWN": 0}
+
+// RuleSummaries is the one-line description of what each rule adds, written from the same constants
+// the rules use, so the scoring panel cannot show points that differ from the ones applied.
+type RuleSummaries struct {
+	KEV      string `json:"kev"`
+	EPSS     string `json:"epss"`
+	Severity string `json:"severity"`
+	Vector   string `json:"vector"`
+	Fix      string `json:"fix"`
+}
+
+// RuleHelp returns the summaries for the scoring panel.
+func RuleHelp() RuleSummaries {
+	sev := func(name string) string { return fmt.Sprintf("%s %+d", strings.ToLower(name), SeverityPoints[name]) }
+	impact := "Confidentiality or integrity impact high %+d, limited %+d each"
+	if PointsAvailabilityHigh == 0 && PointsAvailabilityLimited == 0 {
+		impact += "; availability scores nothing"
+	} else {
+		impact += fmt.Sprintf("; availability high %+d, limited %+d", PointsAvailabilityHigh, PointsAvailabilityLimited)
+	}
+	return RuleSummaries{
+		KEV: fmt.Sprintf("Listed in CISA's Known Exploited Vulnerabilities: +%d, +%d more if used in ransomware.", PointsKEV, PointsKEVRansomware),
+		EPSS: fmt.Sprintf("Exploitation probability: +%d from the cutoff, +%d from \"high\", +%d (and Fix soon) from \"very high\".",
+			PointsEPSSLow, PointsEPSSHigh, PointsEPSSVeryHigh),
+		Severity: fmt.Sprintf("CVSS severity: %s, %s, %s, %s, unknown %d.", sev("CRITICAL"), sev("HIGH"), sev("MEDIUM"), sev("LOW"), SeverityPoints["UNKNOWN"]),
+		Vector: fmt.Sprintf("Network %+d, adjacent %+d, physical %+d; low complexity %+d; no privileges %+d; no user interaction %+d. ", PointsNetwork, PointsAdjacent, PointsPhysical, PointsLowComplexity, PointsNoPrivileges, PointsNoInteraction) +
+			fmt.Sprintf(impact, PointsImpactHigh, PointsImpactLimited) +
+			fmt.Sprintf(". No vector: the CVSS score × %.1f.", vectorPerCVSSPoint),
+		Fix: fmt.Sprintf("Fix exists %+d, none yet %+d, vendor will not fix %+d.", PointsFix, PointsNoFix, PointsWontFix),
+	}
+}
 
 // Rules is the tunable part of the priority score: which rules apply and where their thresholds
 // sit. The zero value switches everything off; use DefaultRules for the standard behaviour.
@@ -96,6 +152,7 @@ type Rescored struct {
 	Tier     string   `json:"tier"`
 	TierWhy  string   `json:"tierWhy"`
 	Reasons  []Reason `json:"reasons"`
+	Attack   string   `json:"attack"` // the attack text follows the EPSS threshold, so it is rescored too
 }
 
 // Rescore re-ranks vulns under r without touching them.
@@ -105,7 +162,7 @@ func Rescore(vulns []Vulnerability, r Rules) []Rescored {
 	idx := make([]int, len(vulns))
 	for i := range vulns {
 		scored[i] = vulns[i]
-		applyRules(&ruleCtx{r: r, v: &scored[i], vec: ParseVector(vulns[i].Vector)})
+		applyRules(newRuleCtx(r, &scored[i]))
 		idx[i] = i
 	}
 	slices.SortStableFunc(idx, func(a, b int) int {
@@ -120,7 +177,7 @@ func Rescore(vulns []Vulnerability, r Rules) []Rescored {
 	out := make([]Rescored, len(idx))
 	for n, i := range idx {
 		v := &scored[i]
-		out[n] = Rescored{Index: i, Priority: v.Priority, Tier: v.Tier, TierWhy: v.TierWhy, Reasons: v.Reasons}
+		out[n] = Rescored{Index: i, Priority: v.Priority, Tier: v.Tier, TierWhy: v.TierWhy, Reasons: v.Reasons, Attack: v.Attack}
 	}
 	return out
 }

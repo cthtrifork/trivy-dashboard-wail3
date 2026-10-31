@@ -64,6 +64,10 @@ type Vulnerability struct {
 	URL         string  `json:"url"`
 	Target      string  `json:"target"`
 	Score       float64 `json:"score"`
+	// ScoreEstimate stands in for Score when no source published one: the floor of the severity
+	// band, the only place that default is defined (see cvssFloor). 0 when Score is set or the
+	// finding is unrated. The UI shows it with a "~" and the rules score from it.
+	ScoreEstimate float64 `json:"scoreEstimate"`
 	// ScoreSource is the data source Score came from (see pickScore) and Ratings lists what every
 	// source said, so the UI can show why a MEDIUM carries a 9.1 from somewhere else.
 	ScoreSource string   `json:"scoreSource"`
@@ -441,6 +445,7 @@ func parseVulns(data []byte, res *ScanResult) error {
 		}
 		Results []struct {
 			Target          string
+			Class           string
 			Vulnerabilities []struct {
 				VulnerabilityID  string
 				PkgName          string
@@ -477,12 +482,14 @@ func parseVulns(data []byte, res *ScanResult) error {
 				sev = "UNKNOWN"
 			}
 			score, scoreSource := pickScore(v.CVSS)
+			sev = alignSeverity(sev, r.Class, scoreSource, v.VendorSeverity)
 			vector := pickVector(v.CVSS, scoreSource)
+			estimate := scoreEstimate(score, sev)
 			res.SeverityCounts[sev]++
 			res.Vulnerabilities = append(res.Vulnerabilities, Vulnerability{
 				ID: v.VulnerabilityID, Package: v.PkgName, Installed: v.InstalledVersion,
 				Fixed: v.FixedVersion, Severity: sev, Status: v.Status, Title: v.Title,
-				Description: v.Description, URL: v.PrimaryURL, Target: r.Target, Score: score, ScoreSource: scoreSource, Ratings: ratings(v.VendorSeverity, v.CVSS),
+				Description: v.Description, URL: v.PrimaryURL, Target: r.Target, Score: score, ScoreEstimate: estimate, ScoreSource: scoreSource, Ratings: ratings(v.VendorSeverity, v.CVSS),
 				PURL: v.PkgIdentifier.PURL, Vector: vector,
 				Key: VEXKey(v.VulnerabilityID, v.PkgIdentifier.PURL, v.PkgName, v.InstalledVersion),
 			})
@@ -514,7 +521,23 @@ func ranksBefore(a, b *Vulnerability) bool {
 	if severityRank[a.Severity] != severityRank[b.Severity] {
 		return severityRank[a.Severity] < severityRank[b.Severity]
 	}
-	return a.Score > b.Score
+	return effectiveScore(a) > effectiveScore(b)
+}
+
+// alignSeverity makes the severity band come from the same source as the CVSS score. Trivy picks its
+// own severity source (GitHub's advisory database for language packages), the score comes from
+// pickScore, and one outlier can disagree with every other source: GHSA rated a CVE CRITICAL where
+// Red Hat, NVD and the distros said HIGH and all three CVSS scores were 7.5. OS packages keep Trivy's
+// severity, which is the distribution's own judgement and may rightly differ from CVSS (a 9.8 that
+// the distro rates low because of how it ships). Without a severity from the score's source, Trivy's stays.
+func alignSeverity(sev, class, scoreSource string, vendor map[string]int) string {
+	if class == "os-pkgs" || scoreSource == "" {
+		return sev
+	}
+	if s, ok := vendorSeverity[vendor[scoreSource]]; ok {
+		return s
+	}
+	return sev
 }
 
 // pickScore prefers Red Hat's CVSS score (v3, else v2), then NVD's, then the highest score any source

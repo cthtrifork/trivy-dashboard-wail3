@@ -23,6 +23,7 @@ import {
   refreshFootprint,
 } from "../store.js";
 import { pct } from "../lib/format.js";
+import { builtinPresets } from "../store.js";
 import TagInput from "./TagInput.vue";
 import Chip from "./Chip.vue";
 import ScanPending from "./ScanPending.vue";
@@ -74,6 +75,8 @@ async function run() {
 }
 
 const sum = (m) => Object.values(m).reduce((x, y) => x + y, 0);
+// Compare uses the balanced rules (docs/scoring.md), so its EPSS chip follows that preset's "high" threshold.
+const balancedEpssHigh = computed(() => builtinPresets.value[0]?.rules.epssHigh ?? Number.POSITIVE_INFINITY);
 const net = computed(() => (data.value ? sum(data.value.added) - sum(data.value.removed) : 0));
 const verdictColor = computed(() => (net.value < 0 ? "#2fb344" : net.value > 0 ? "var(--CRITICAL)" : "var(--mute)"));
 const kinds = computed(() => (view.value === "vulns" ? ["added", "removed", "unchanged"] : ["added", "removed", "upgraded", "downgraded"]));
@@ -208,7 +211,7 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
                 <td>{{ x.cause }}</td>
                 <td>
                   <Chip v-if="x.vuln.kev" kind="hot">KEV</Chip>{{ " " }}
-                  <Chip v-if="x.vuln.hasEpss && x.vuln.epss >= 0.1" kind="warm">EPSS {{ pct(x.vuln.epss) }}</Chip>
+                  <Chip v-if="x.vuln.hasEpss && x.vuln.epss >= balancedEpssHigh" kind="warm">EPSS {{ pct(x.vuln.epss) }}</Chip>
                 </td>
               </tr>
             </tbody>
