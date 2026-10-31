@@ -4,8 +4,7 @@
 [![Security](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/security.yml)
 [![Release](https://img.shields.io/github/v/release/cthtrifork/trivy-dashboard-wail3)](https://github.com/cthtrifork/trivy-dashboard-wail3/releases)
 
-Desktop app: enter a container image reference, and Trivy runs inside a local
-Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/engine.go`](internal/trivy/engine.go); choose another version under **Options → Trivy version**).
+Scan a container image for vulnerabilities with [Trivy](https://trivy.dev), which runs in a local Podman container, and get a ranked shortlist of what to fix first instead of a wall of CVEs.
 
 - **Priorities** – the landing view: a ranked shortlist instead of 150 CVEs, filterable by CVSS severity and by tier. An explainable 0–100 score combines CISA **KEV**, **EPSS**, CVSS severity, attack vector and fix availability. Tiers: Act now / Fix soon / Plan / Monitor. Tuning: [`docs/scoring.md`](docs/scoring.md).
 - **VEX editor** – assess a finding as `affected`, `not_affected`, `fixed` or `under_investigation`, export or import OpenVEX (v0.2.0). Assessments are stored per image repository in `<user config dir>/trivy-scanner/vex.json`; resolved findings are hidden from the shortlist.
@@ -16,36 +15,16 @@ Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/
 
 Screenshots are not committed. The draft [Screenshots preview](../../pulls?q=is%3Apr+is%3Aopen+head%3Abot%2Fupdate-screenshots) PR shows the current ones (Files changed), and `make screenshots` renders them locally.
 
-## Requirements
-- Go 1.27+, [Wails v3 CLI](https://v3.wails.io) (`make wails3-install`)
-- Node 20.19+ or 22.12+ for the Vue frontend (`frontend/`); CI and the container images use the version in `.tool-versions`
-- Linux: GTK4 + WebKitGTK 6 dev packages; macOS/Windows: native webview
-- `podman` on PATH (override with `PODMAN=/path/to/podman`)
+## Install
 
-## Run
-    make frontend    # builds frontend/dist, which the binary embeds
-    make run         # or: wails3 dev. Real podman, real scans
-    make build       # production build
-    make test        # replays recorded fixtures, no podman needed
-    make demo        # dev builds only: the app on recorded data
+Linux amd64 packages (`.deb`, `.rpm`), a tarball and signed checksums are on the [releases page](https://github.com/cthtrifork/trivy-dashboard-wail3/releases). Needs GTK4, WebKitGTK 6 and `podman`. Steps and signature check: [`docs/install.md`](docs/install.md). Release builds can [self-update](docs/self-update.md).
 
-`make help` lists all tasks. Without GTK, use the dev container (`make dev`, [`docs/devcontainer.md`](docs/devcontainer.md)).
-
-## Notes
-- The Trivy cache is a host directory (`~/.cache/trivy-scanner/trivy` on Linux); set `TRIVY_SCANNER_CACHE` to change it. The vulnerability DB is checked once per session and scans run with `--skip-db-update`. See [`docs/architecture.md`](docs/architecture.md#trivy-cache).
-- The image field remembers the last 8 scanned images (with their Critical/High counts) in the browser/webview. Focus the field, pick one with ↑/↓ and press Enter to rescan, or Tab to fill it in.
-- Private registries: pass credentials via *Options* (`TRIVY_USERNAME`/`TRIVY_PASSWORD`). Locally-built images not in a registry are not scanned.
-- EPSS and KEV feeds can be overridden with `TRIVY_SCANNER_EPSS_URL` / `TRIVY_SCANNER_KEV_URL`; the VEX store with `TRIVY_SCANNER_VEX_FILE`.
-- Release builds can self-update: [`docs/self-update.md`](docs/self-update.md).
-
-## More
+## Documentation
+- Configuration, cache and private registries: [`docs/configuration.md`](docs/configuration.md)
+- Build from source: [`docs/development.md`](docs/development.md)
 - Headless server over an SSH tunnel: [`docs/headless.md`](docs/headless.md)
-- Wails MCP server (development only): [`docs/mcp.md`](docs/mcp.md)
 - Network activity and offline behaviour: [`docs/network.md`](docs/network.md)
-- Window lifecycle: [`docs/lifecycle.md`](docs/lifecycle.md)
-- UI conventions: [`docs/ux-design-sheet.md`](docs/ux-design-sheet.md)
-- CI, screenshots and releases: [`docs/ci.md`](docs/ci.md), [`docs/releasing.md`](docs/releasing.md)
-- Recorded fixtures for tests and demo mode: [`internal/trivy/fixtures`](internal/trivy/fixtures/README.md)
-- Contributors and AI agents: [`AGENTS.md`](AGENTS.md)
 
-The release binary is built on Ubuntu 24.04 and needs GTK4, WebKitGTK 6 and `podman` on the machine that runs it.
+## Contributing and licence
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Released under the [MIT licence](LICENSE).
