@@ -91,7 +91,7 @@ runs:
         version: ${{ inputs.trivy-version }}
 
     # A docker-container builder cannot see the daemon's images, so the small image Copa patches goes
-    # through a registry of its own (port 5001, so it cannot clash with another one on 5000).
+    # through a throwaway local registry on port 5000 (host network, so the builder reaches it).
     - name: Build the small image with only the binary
       shell: bash
       env:
@@ -99,12 +99,13 @@ runs:
         BINARY: ${{ inputs.binary }}
         BASE: ${{ inputs.base-image }}
       run: |
-        docker run -d --name copa-registry --network host -e REGISTRY_HTTP_ADDR=:5001 mirror.gcr.io/library/registry:3
-        for i in $(seq 1 20); do curl -fsS -o /dev/null http://localhost:5001/v2/ && break; sleep 1; done
+        docker run -d --name copa-registry --network host mirror.gcr.io/library/registry:3
+        for i in $(seq 1 20); do curl -fsS -o /dev/null http://localhost:5000/v2/ && break; sleep 1; done
+        curl -fsS -o /dev/null http://localhost:5000/v2/ || { docker logs copa-registry; exit 1; }
         mkdir -p "$RUNNER_TEMP/copa-mini"
         printf 'FROM %s AS src\nFROM %s\nCOPY --from=src %s %s\n' "$IMAGE" "$BASE" "$BINARY" "$BINARY" > "$RUNNER_TEMP/copa-mini/Dockerfile"
-        docker build -t localhost:5001/copa-mini:latest "$RUNNER_TEMP/copa-mini"
-        docker push localhost:5001/copa-mini:latest
+        docker build -t localhost:5000/copa-mini:latest "$RUNNER_TEMP/copa-mini"
+        docker push localhost:5000/copa-mini:latest
 
     - name: Scan the small image
       uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -112,7 +113,7 @@ runs:
         TRIVY_PKG_TYPES: os,library
       with:
         scan-type: image
-        image-ref: localhost:5001/copa-mini:latest
+        image-ref: localhost:5000/copa-mini:latest
         scanners: vuln
         severity: HIGH,CRITICAL
         ignore-unfixed: true
@@ -131,7 +132,7 @@ runs:
       run: |
         args=(--pkg-types library --toolchain-patch-level --addr docker-container://buildx_buildkit_copa0)
         [ -n "$GO_VCS_URL" ] && args+=(--go-vcs-url "$GO_VCS_URL")
-        "$(go env GOPATH)/bin/copacetic" patch -i localhost:5001/copa-mini:latest -r mini-before.json -t patched "${args[@]}" 2>&1 | tee copa.log
+        "$(go env GOPATH)/bin/copacetic" patch -i localhost:5000/copa-mini:latest -r mini-before.json -t patched "${args[@]}" 2>&1 | tee copa.log
 
     # Layer the patched binary over the original image, so everything else stays as it was.
     - name: Put the patched binary into the image
@@ -144,7 +145,7 @@ runs:
         PATCHED: ${{ steps.names.outputs.patched }}
       run: |
         mkdir -p "$RUNNER_TEMP/copa-final"
-        printf 'FROM %s\nCOPY --from=localhost:5001/copa-mini:patched %s %s\n' "$IMAGE" "$BINARY" "$BINARY" > "$RUNNER_TEMP/copa-final/Dockerfile"
+        printf 'FROM %s\nCOPY --from=localhost:5000/copa-mini:patched %s %s\n' "$IMAGE" "$BINARY" "$BINARY" > "$RUNNER_TEMP/copa-final/Dockerfile"
         docker build -t "$PATCHED" "$RUNNER_TEMP/copa-final"
 
     - name: Scan after
