@@ -4,20 +4,15 @@
 [![Security](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/security.yml)
 [![Release](https://img.shields.io/github/v/release/cthtrifork/trivy-dashboard-wail3)](https://github.com/cthtrifork/trivy-dashboard-wail3/releases)
 
-Scan a container image with [Trivy](https://trivy.dev), which runs in a local Podman container, then decide what each finding means for you. The app ranks the findings, explains each one in plain language, and records your decisions as [OpenVEX](https://openvex.dev) statements, so you triage a shortlist instead of a wall of CVEs.
+Scan a container image with [Trivy](https://trivy.dev) (run in a local Podman container), then decide what each finding means for you. Findings are ranked and explained, and your decisions are recorded as [OpenVEX](https://openvex.dev).
 
-- **Priorities** – the landing view: a ranked shortlist, filterable by CVSS severity and by tier (Act now / Fix soon / Plan / Monitor). Every score is a sum of readable reasons from CISA **KEV**, **EPSS**, CVSS severity, attack vector and fix availability, each shown with its points, so you can see why a finding ranks where it does. Switch rules on or off, move thresholds and save presets: [`docs/scoring.md`](docs/scoring.md).
-- **Assessment help** – the VEX editor opens with what you need to decide:
-  - the CVSS vector in plain words (who can exploit it, what they need, what they can do), with the full breakdown and the ratings behind the headline score
-  - where the package lives, as the route from the image through its dependencies
-  - the other components that carry the same CVE, so one assessment can cover them all
-  - a status (`affected`, `not_affected`, `fixed`, `under_investigation`), an OpenVEX justification and an impact statement, with example wording for each choice
-  - an optional review date (30 or 90 days, or your own), after which the finding returns to the list marked as expired
-- **VEX** – assessments are kept per image repository, so they carry over to new tags; resolved findings leave the shortlist. Export or import OpenVEX (v0.2.0).
-- **Compare** – scan two tags or digests and diff them: severity deltas, vulnerabilities added / removed / unchanged, and package changes.
-- **Vulnerabilities** – severity cards, search, sortable table, details. Trivy ignore rules and vendor statuses can hide findings you have already settled.
-- **Dependencies and SBOM** – an interactive graph of the dependency tree, where a selected component shows its route from the image and its blast radius, and the CycloneDX component list with search and type filters.
-- **Help** – a built-in help dialog explains the terms (KEV, EPSS, VEX statuses, justifications, SBOM).
+- **Priorities** – a ranked shortlist by tier (Act now / Fix soon / Plan / Monitor). Each score is a sum of readable reasons (CISA **KEV**, **EPSS**, CVSS severity, attack vector, fix availability) with tunable rules and presets: [`docs/scoring.md`](docs/scoring.md).
+- **Assessment help** – the VEX editor shows the CVSS vector in plain words, where the package lives, and the other components with the same CVE. It offers example wording per status and justification, and an optional review date after which the finding returns to the list.
+- **VEX** – assessments are stored per image repository and carry over to new tags. Export or import OpenVEX (v0.2.0).
+- **Compare** – diff two tags or digests: severity deltas, added / removed vulnerabilities, package changes.
+- **Vulnerabilities** – severity cards, search, sortable table, details; ignore rules and vendor statuses hide settled findings.
+- **Dependencies and SBOM** – dependency graph with each component's route from the image and blast radius; CycloneDX component list.
+- **Help** – a built-in dialog explains KEV, EPSS, VEX statuses, justifications and SBOM.
 
 Screenshots are not committed. The draft [Screenshots preview](../../pulls?q=is%3Apr+is%3Aopen+head%3Abot%2Fupdate-screenshots) PR shows the current ones (Files changed), and `make screenshots` renders them locally.
 
