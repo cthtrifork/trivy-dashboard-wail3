@@ -9,19 +9,27 @@ const props = defineProps({
   id: { type: String, default: "tag" },
   label: { type: String, default: "Tag" },
   placeholder: { type: String, default: "tag or digest" },
+  images: { type: Array, default: () => [] }, // whole image references offered under the tags (Compare's "Recently scanned"): { value, meta }
+  hint: { type: String, default: "" }, // a closing line in the list that is not an option
 });
 const emit = defineEmits(["update:modelValue", "open"]);
 
 const TAG_LATEST = 5,
-  TAG_MAX = 50;
+  TAG_MAX = 50,
+  IMAGE_MAX = 3;
 const open = ref(false);
 const idx = ref(-1);
 const typed = ref(false);
-const options = computed(() => {
-  const q = props.modelValue.trim().toLowerCase();
-  if (!typed.value || !q) return props.tags.slice(0, TAG_LATEST);
-  return props.tags.filter((t) => t.toLowerCase().includes(q)).slice(0, TAG_MAX);
-});
+const query = computed(() => (typed.value ? props.modelValue.trim().toLowerCase() : ""));
+const tagOptions = computed(() =>
+  query.value ? props.tags.filter((t) => t.toLowerCase().includes(query.value)).slice(0, TAG_MAX) : props.tags.slice(0, TAG_LATEST),
+);
+const imageEntries = computed(() => (query.value ? props.images.filter((e) => e.value.toLowerCase().includes(query.value)) : props.images).slice(0, IMAGE_MAX));
+const imageOptions = computed(() => imageEntries.value.map((e) => e.value));
+// The note shown beside an option: only the image entries have one.
+const metaOf = (i) => imageEntries.value[i - tagOptions.value.length]?.meta;
+// One flat list so the arrow keys walk both groups; the template shows a heading before each.
+const options = computed(() => [...tagOptions.value, ...imageOptions.value]);
 const shown = computed(() => open.value && options.value.length > 0);
 
 function show(ev) {
@@ -90,19 +98,22 @@ function onKey(ev) {
       ▾
     </button>
     <div :id="id + '-list'" class="tag-list" v-show="shown" role="listbox" :aria-label="label + 's'">
-      <div class="recent-head" aria-hidden="true">{{ typed && modelValue.trim() ? "Matching tags" : "Latest tags" }}</div>
-      <div
-        v-for="(t, i) in options"
-        :id="id + '-opt-' + i"
-        :key="t"
-        role="option"
-        tabindex="-1"
-        :aria-selected="i === idx"
-        :class="{ active: i === idx }"
-        @mousedown.prevent="pick(t)"
-      >
-        <span class="recent-name">{{ t }}</span>
-      </div>
+      <div v-if="tagOptions.length" class="recent-head" aria-hidden="true">{{ query ? "Matching tags" : "Latest tags" }}</div>
+      <template v-for="(t, i) in options" :key="(i >= tagOptions.length ? 'i:' : 't:') + t">
+        <div v-if="i === tagOptions.length" class="recent-head" aria-hidden="true">Recently scanned</div>
+        <div
+          :id="id + '-opt-' + i"
+          role="option"
+          tabindex="-1"
+          :aria-selected="i === idx"
+          :class="{ active: i === idx }"
+          @mousedown.prevent="pick(t)"
+        >
+          <span class="recent-name">{{ t }}</span>
+          <span v-if="metaOf(i)" class="recent-when">{{ metaOf(i) }}</span>
+        </div>
+      </template>
+      <div v-if="hint" class="recent-head hint" aria-hidden="true">{{ hint }}</div>
     </div>
   </div>
 </template>

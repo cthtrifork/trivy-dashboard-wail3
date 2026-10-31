@@ -198,9 +198,26 @@ export const image = ref(hashImage() || lsGet(KEYS.image));
 const RECENT_MAX = 8;
 export const recent = ref(lsJSON(KEYS.recentImages, []).filter((e) => e?.image));
 function addRecent(imageRef, r) {
-  const entry = { image: imageRef, at: Date.now(), crit: r.severityCounts?.CRITICAL || 0, high: r.severityCounts?.HIGH || 0 };
+  const entry = {
+    image: imageRef,
+    at: Date.now(),
+    crit: r.severityCounts?.CRITICAL || 0,
+    high: r.severityCounts?.HIGH || 0,
+    total: r.vulnerabilities?.length ?? 0,
+  };
   recent.value = [entry, ...recent.value.filter((e) => e.image !== imageRef)].slice(0, RECENT_MAX);
   lsSet(KEYS.recentImages, JSON.stringify(recent.value));
+}
+// recentSummary is what a recent-images entry found: "0 vulnerabilities", or with the critical and high
+// counts when withSeverity. Entries saved before the total was kept return just those counts (or "").
+export function recentSummary(e, withSeverity = false) {
+  const parts = [];
+  if (typeof e.total === "number") parts.push(`${e.total} ${e.total === 1 ? "vulnerability" : "vulnerabilities"}`);
+  if (withSeverity || typeof e.total !== "number") {
+    if (e.crit) parts.push(`${e.crit} critical`);
+    if (e.high) parts.push(`${e.high} high`);
+  }
+  return parts.join(" · ");
 }
 // Compare: the base is the image at the top (read only); only the target tag is its own.
 export const cmpForm = reactive({ b: lsGet(KEYS.cmpTarget) });
