@@ -34,8 +34,10 @@ yet tested on Fedora; please report problems). Remove: `sudo dnf remove trivy-sc
 
 ## Verify the download (recommended)
 
-Check the checksum, then the signature. Compare the key fingerprint with the one in the release log or the README before
-trusting the key.
+Check the checksum, then the signature. The key is published with every release, and its fingerprint is printed in the
+"Signing packages with PGP key" line of that release's workflow log (Actions tab, `Release` workflow). Before trusting
+the key, compare the fingerprint with that line and with the one from an earlier release you already trust: it should
+not change between releases.
 
 ```sh
 sha256sum --ignore-missing -c SHA256SUMS
