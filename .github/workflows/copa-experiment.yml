@@ -49,6 +49,17 @@ jobs:
       - name: Build the image
         run: docker build -t trivy-scanner --build-arg VERSION=copa -f build/docker/headless.Dockerfile .
 
+      # The runner's default Docker builder has no `docker` exporter, which Copa needs to load the
+      # patched image. A docker-container buildx builder has one, but cannot see the daemon's local
+      # images, so the image goes through a local registry (host network, so the builder reaches it).
+      - name: Start a local registry and a buildx builder
+        run: |
+          docker run -d --name registry --network host mirror.gcr.io/library/registry:3
+          docker tag trivy-scanner localhost:5000/trivy-scanner:latest
+          for i in $(seq 1 20); do curl -fsS -o /dev/null http://localhost:5000/v2/ && break; sleep 1; done
+          docker push localhost:5000/trivy-scanner:latest
+          docker buildx create --name copa --driver docker-container --driver-opt network=host --bootstrap
+
       # os and library findings, as Copa's docs ask for; HIGH and CRITICAL with a fix.
       - name: Scan before
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -70,10 +81,11 @@ jobs:
         continue-on-error: true
         env:
           COPA_EXPERIMENTAL: '1'
+          IMAGE: localhost:5000/trivy-scanner:latest
         shell: bash
         run: |
-          "$(go env GOPATH)/bin/copacetic" patch -i trivy-scanner -r before.json -t patched \
-            --pkg-types library --toolchain-patch-level --addr docker:// 2>&1 | tee copa.log
+          "$(go env GOPATH)/bin/copacetic" patch -i "$IMAGE" -r before.json -t patched \
+            --pkg-types library --toolchain-patch-level --addr docker-container://buildx_buildkit_copa0 2>&1 | tee copa.log
 
       - name: Scan after
         if: steps.copa.outcome == 'success'
@@ -82,7 +94,7 @@ jobs:
           TRIVY_PKG_TYPES: os,library
         with:
           scan-type: image
-          image-ref: trivy-scanner:patched
+          image-ref: localhost:5000/trivy-scanner:patched
           scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
@@ -97,8 +109,8 @@ jobs:
         if: steps.copa.outcome == 'success'
         continue-on-error: true
         run: |
-          docker run --rm --entrypoint /usr/local/bin/podman trivy-scanner:patched --version
-          docker run -d --name smoke -p 8080:8080 -e WAILS_SERVER_HOST=0.0.0.0 trivy-scanner:patched
+          docker run --rm --entrypoint /usr/local/bin/podman localhost:5000/trivy-scanner:patched --version
+          docker run -d --name smoke -p 8080:8080 -e WAILS_SERVER_HOST=0.0.0.0 localhost:5000/trivy-scanner:patched
           for i in $(seq 1 30); do
             curl -fsS -o /dev/null http://127.0.0.1:8080/ && exit 0
             sleep 1
