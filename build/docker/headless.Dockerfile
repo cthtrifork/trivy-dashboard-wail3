@@ -25,15 +25,16 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 FROM mirror.gcr.io/library/alpine:3.24 AS podman
 # renovate: datasource=github-releases depName=containers/podman
 ARG PODMAN_VERSION=v6.1.4
-# SHA-256 of the release tarballs for PODMAN_VERSION (the release's `shasums` file). Update both
-# with the version: a bump that forgets them fails the build here instead of shipping unchecked.
-ARG PODMAN_SHA256_amd64=af1f85c22214088a0a9986b9c82b4c9b5b74eda8ecaa6c8cca82b1a63f339b4a
-ARG PODMAN_SHA256_arm64=1d7c2a3241b56effa68c724359fb30e603a802699b2b7b20fe2fae5ff6819601
 ARG TARGETARCH
-RUN wget -q -O /tmp/podman.tgz "https://github.com/containers/podman/releases/download/${PODMAN_VERSION}/podman-remote-static-linux_${TARGETARCH}.tar.gz" \
- && eval "expected=\$PODMAN_SHA256_${TARGETARCH}" \
- && echo "${expected}  /tmp/podman.tgz" | sha256sum -c - \
- && tar -xzf /tmp/podman.tgz -C /tmp \
+# The tarball is checked against the `shasums` file of the same release, so a Renovate bump of
+# PODMAN_VERSION needs no hash edit. That catches a corrupt or mismatched download, not a
+# compromised release (both files come from the same place).
+RUN base="https://github.com/containers/podman/releases/download/${PODMAN_VERSION}" \
+ && file="podman-remote-static-linux_${TARGETARCH}.tar.gz" \
+ && wget -q -O "/tmp/${file}" "${base}/${file}" \
+ && wget -q -O /tmp/shasums "${base}/shasums" \
+ && (cd /tmp && grep " ${file}\$" shasums | sha256sum -c -) \
+ && tar -xzf "/tmp/${file}" -C /tmp \
  && install -m 0755 "/tmp/bin/podman-remote-static-linux_${TARGETARCH}" /podman \
  && install -d -m 0777 /data-skel
 
