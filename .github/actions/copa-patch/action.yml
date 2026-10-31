@@ -20,6 +20,13 @@ inputs:
   trivy-version:
     description: Trivy release for the scans (e.g. v0.76.1).
     required: true
+  go-vcs-url:
+    description: >-
+      Source of the Go binaries to rebuild, as repo@ref (e.g. https://github.com/containers/podman@v6.1.4).
+      Needed when the image's own source label points elsewhere, as it does for an image built on a
+      base image's labels: Copa would clone the base image's repository instead.
+    required: false
+    default: ''
 
 outputs:
   patched-image:
@@ -81,9 +88,11 @@ runs:
         COPA_EXPERIMENTAL: '1'
         IMAGE: ${{ inputs.image }}
         PATCHED_TAG: ${{ inputs.patched-tag }}
+        GO_VCS_URL: ${{ inputs.go-vcs-url }}
       run: |
-        "$(go env GOPATH)/bin/copacetic" patch -i "$IMAGE" -r before.json -t "$PATCHED_TAG" \
-          --pkg-types library --toolchain-patch-level --addr docker-container://buildx_buildkit_copa0 2>&1 | tee copa.log
+        args=(--pkg-types library --toolchain-patch-level --addr docker-container://buildx_buildkit_copa0)
+        [ -n "$GO_VCS_URL" ] && args+=(--go-vcs-url "$GO_VCS_URL")
+        "$(go env GOPATH)/bin/copacetic" patch -i "$IMAGE" -r before.json -t "$PATCHED_TAG" "${args[@]}" 2>&1 | tee copa.log
 
     - name: Scan after
       if: steps.copa.outcome == 'success'
