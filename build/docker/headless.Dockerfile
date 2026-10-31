@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
     go build -tags server,production -trimpath -ldflags "-w -s -X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=${VERSION}" -o /out/trivy-scanner .
 
 # The app only needs the podman *client*: scans run on the host's podman through its API socket.
-# Upstream's static podman-remote runs on distroless (Alpine's is linked against musl). Keep
+# Upstream's static podman-remote runs on a static base like Chainguard's (Alpine's is linked against musl). Keep
 # PODMAN_VERSION close to the host's podman; Renovate bumps it.
 FROM mirror.gcr.io/library/alpine:3.24 AS podman
 # renovate: datasource=github-releases depName=containers/podman
@@ -31,11 +31,11 @@ RUN wget -q -O /tmp/podman.tgz "https://github.com/containers/podman/releases/do
  && install -m 0755 "/tmp/bin/podman-remote-static-linux_${TARGETARCH}" /podman \
  && install -d -m 0777 /data-skel
 
-# Unprivileged user (nonroot, uid 65532). Distroless has no shell to create /data, so it is made in
+# Unprivileged user (nonroot, uid 65532, the image default). Chainguard static has no shell to create /data, so it is made in
 # the stage above, world-writable: the run commands in docs/headless.md use
 # `--userns=keep-id`, which runs the process as the host user (the owner of the podman socket),
 # not as 65532, and that user must be able to write to the data volume.
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:18f4cc26c9ffa7f20a359298be7deadac5c607c8e03a02b8119f1a5fc2f82c99
+FROM cgr.dev/chainguard/static:latest
 COPY --from=podman /podman /usr/local/bin/podman
 COPY --from=podman --chown=65532:65532 --chmod=0777 /data-skel /data
 # The project's OpenVEX statements. Scanners do not discover this on their own: pass it with
