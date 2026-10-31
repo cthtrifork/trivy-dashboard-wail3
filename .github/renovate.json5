@@ -21,6 +21,8 @@
   minimumReleaseAge: "2 days",
   internalChecksFilter: "strict",
   postUpdateOptions: ["gomodTidy"],
+  // Global (self-hosted) option: the only command Renovate may run after an update, see the podman rule below.
+  allowedCommands: ["^scripts/podman-checksums\\.sh$"],
   // Commits go through GitHub's API as the GitHub App, so they are verified (signed) without a key.
   platformCommit: "enabled",
 
@@ -39,6 +41,16 @@
 
   // Rules apply in order and a later rule wins, so the general ones come first.
   packageRules: [
+    {
+      // headless.Dockerfile pins the SHA-256 of the podman-remote tarballs next to PODMAN_VERSION.
+      // After a bump the script rewrites them from the release's shasums file, in the same commit.
+      matchDepNames: ["containers/podman"],
+      postUpgradeTasks: {
+        commands: ["scripts/podman-checksums.sh"],
+        fileFilters: ["build/docker/headless.Dockerfile"],
+        executionMode: "branch",
+      },
+    },
     {
       // Patch and digest updates merge by themselves once CI is green. Only meaningful when CI runs
       // on Renovate's PRs, which the GitHub App token makes happen (see renovate.yml), and with branch
