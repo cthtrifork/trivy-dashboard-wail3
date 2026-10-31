@@ -1021,6 +1021,14 @@ export class Rescored {
              */
             this["reasons"] = [];
         }
+        if (!("attack" in $$source)) {
+            /**
+             * the attack text follows the EPSS threshold, so it is rescored too
+             * @member
+             * @type {string}
+             */
+            this["attack"] = "";
+        }
 
         Object.assign(this, $$source);
     }
@@ -1037,6 +1045,66 @@ export class Rescored {
             $$parsedSource["reasons"] = $$createField4_0($$parsedSource["reasons"]);
         }
         return new Rescored(/** @type {Partial<Rescored>} */($$parsedSource));
+    }
+}
+
+/**
+ * RuleSummaries is the one-line description of what each rule adds, written from the same constants
+ * the rules use, so the scoring panel cannot show points that differ from the ones applied.
+ */
+export class RuleSummaries {
+    /**
+     * Creates a new RuleSummaries instance.
+     * @param {Partial<RuleSummaries>} [$$source = {}] - The source object to create the RuleSummaries.
+     */
+    constructor($$source = {}) {
+        if (!("kev" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["kev"] = "";
+        }
+        if (!("epss" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["epss"] = "";
+        }
+        if (!("severity" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["severity"] = "";
+        }
+        if (!("vector" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["vector"] = "";
+        }
+        if (!("fix" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["fix"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new RuleSummaries instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {RuleSummaries}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new RuleSummaries(/** @type {Partial<RuleSummaries>} */($$parsedSource));
     }
 }
 
@@ -1742,6 +1810,16 @@ export class Vulnerability {
              */
             this["score"] = 0;
         }
+        if (!("scoreEstimate" in $$source)) {
+            /**
+             * ScoreEstimate stands in for Score when no source published one: the floor of the severity
+             * band, the only place that default is defined (see cvssFloor). 0 when Score is set or the
+             * finding is unrated. The UI shows it with a "~" and the rules score from it.
+             * @member
+             * @type {number}
+             */
+            this["scoreEstimate"] = 0;
+        }
         if (!("scoreSource" in $$source)) {
             /**
              * ScoreSource is the data source Score came from (see pickScore) and Ratings lists what every
@@ -1883,14 +1961,14 @@ export class Vulnerability {
      * @returns {Vulnerability}
      */
     static createFrom($$source = {}) {
-        const $$createField12_0 = $$createType25;
-        const $$createField26_0 = $$createType11;
+        const $$createField13_0 = $$createType25;
+        const $$createField27_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ratings" in $$parsedSource) {
-            $$parsedSource["ratings"] = $$createField12_0($$parsedSource["ratings"]);
+            $$parsedSource["ratings"] = $$createField13_0($$parsedSource["ratings"]);
         }
         if ("reasons" in $$parsedSource) {
-            $$parsedSource["reasons"] = $$createField26_0($$parsedSource["reasons"]);
+            $$parsedSource["reasons"] = $$createField27_0($$parsedSource["reasons"]);
         }
         return new Vulnerability(/** @type {Partial<Vulnerability>} */($$parsedSource));
     }

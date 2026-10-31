@@ -124,7 +124,7 @@ const { scroller, rows: visible, before, after, vMeasure } = useVirtualList(rows
           <td class="mono wrap">{{ v.installed }}</td>
           <td class="mono wrap">{{ v.fixed || "—" }}</td>
           <td>
-            <CvssMeter :score="v.score" :severity="v.severity" :style="sevStyle(v.severity)" />
+            <CvssMeter :score="v.score" :estimate="v.scoreEstimate" :style="sevStyle(v.severity)" />
           </td>
           <td>{{ v.hasEpss ? pct(v.epss) : "—" }}</td>
           <td>

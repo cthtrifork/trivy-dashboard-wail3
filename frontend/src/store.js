@@ -92,6 +92,8 @@ export const assessing = shallowRef(null);
 // Built-in presets come from Go; the user's own live in localStorage next to the Trivy version.
 export const rules = reactive({});
 export const builtinPresets = ref([]);
+// What each rule adds, in words, written by Go from the constants the rules use.
+export const ruleHelp = ref({});
 export const userPresets = ref([]);
 const lsJSON = (k, fallback) => {
   try {
@@ -130,6 +132,7 @@ async function rerank() {
       tier: o.tier,
       tierWhy: o.tierWhy,
       reasons: o.reasons,
+      attack: o.attack,
     }));
   } catch (err) {
     setStatus("Could not apply the scoring rules: " + errText(err), { err: true });
@@ -160,6 +163,7 @@ export function deletePreset(name) {
 async function initRules() {
   try {
     builtinPresets.value = (await ScanService.RulePresets()) || [];
+    ruleHelp.value = (await ScanService.RuleHelp()) || {};
   } catch (err) {
     return setStatus("Could not load scoring presets: " + errText(err), { err: true });
   }

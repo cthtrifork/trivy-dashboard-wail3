@@ -136,7 +136,7 @@ Found while running the UI; not fixed by this sheet.
 ## Key flows
 
 - **Scan**: type an image, Enter or Scan. Status line shows progress; Cancel is available while it runs and removes the container. Results land on Priorities.
-- **Triage**: stat cards summarise tiers; toolbar filters (`Show top 10`, Hide resolved by VEX, Only with a fix) re-filter without rescanning. A summary line states the effect ("29 findings → 0 worth acting on · 2 hidden by VEX").
+- **Triage**: stat cards summarise tiers; toolbar filters (`Show top 10`, Hide resolved by VEX, Only with a fix) re-filter without rescanning. A summary line states the effect ("20 CVEs → 0 worth acting on · 2 hidden by VEX"); each CVE is listed once, with its other affected components noted on the row.
 - **Tune**: Scoring rules disclosure re-ranks immediately; the header shows the active preset name, or `custom`.
 - **Record a decision**: Add VEX assessment on a card, (opens a docked drawer), then Export VEX (n) next to Scan to review and export OpenVEX. With no assessments yet that button reads Import VEX, and its dialog ends with a Generate… band (with an optional severity limit) that marks findings under investigation and opens the export dialog; once there are assessments, its dropdown offers Import / merge VEX. The import dialog's one dropdown, Findings the file does not cover, leaves them alone or marks them from a chosen severity up.
 - **Explore**: Vulnerabilities (filterable table, row details), Dependencies (canvas graph: select, focus, all components), SBOM list, Compare two scans.
