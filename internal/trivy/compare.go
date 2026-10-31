@@ -11,11 +11,12 @@ import (
 	"github.com/distribution/reference"
 )
 
-// CompareRequest asks for two tags (or digests) of one image to be compared.
+// CompareRequest asks for two images to be compared: two tags (or digests) of Repo, or Repo:TagA
+// against any other image when TagB is a full reference (see targetRef).
 type CompareRequest struct {
 	Repo          string `json:"repo"`
 	TagA          string `json:"tagA"` // base
-	TagB          string `json:"tagB"` // target
+	TagB          string `json:"tagB"` // target: a tag or digest of Repo, or a full image reference
 	Username      string `json:"username"`
 	Password      string `json:"password"`
 	IgnoreUnfixed bool   `json:"ignoreUnfixed"`
@@ -99,12 +100,12 @@ func (s *Scanner) Compare(parent context.Context, req CompareRequest) (*CompareR
 	if err != nil {
 		return nil, err
 	}
-	refB, err := tagRef(req.Repo, req.TagB)
+	refB, err := targetRef(req.Repo, req.TagB)
 	if err != nil {
 		return nil, err
 	}
-	if refA == refB {
-		return nil, errors.New("choose two different tags")
+	if sameImage(refA, refB) {
+		return nil, errors.New("choose two different images")
 	}
 	ctx, release, err := s.begin(parent)
 	if err != nil {
@@ -128,6 +129,20 @@ func (s *Scanner) Compare(parent context.Context, req CompareRequest) (*CompareR
 		return nil, fmt.Errorf("scanning %s: %w", refB, err)
 	}
 	return Diff(a, b), nil
+}
+
+// targetRef resolves the compare target. A tag never contains "/", "@" or ":" (a "sha256:" digest
+// aside), so a value with one of them is a full image reference to a different image, such as
+// "cgr.dev/chainguard/static:latest@sha256:...". Anything else is a tag or digest of repo.
+func targetRef(repo, target string) (string, error) {
+	target = NormalizeImage(target)
+	if i := strings.IndexAny(target, "/@:"); i >= 0 && !strings.HasPrefix(target, "sha256:") {
+		if _, err := validImage(target); err != nil {
+			return "", err
+		}
+		return target, nil
+	}
+	return tagRef(repo, target)
 }
 
 // tagRef joins a repository and a tag or digest.

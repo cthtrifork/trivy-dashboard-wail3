@@ -101,7 +101,7 @@ const glossary = [
     items: [
       ["SBOM", "Software Bill of Materials: the list of packages and libraries inside the image (the SBOM tab)."],
       ["Dependency graph", "Which components pull in which, to trace a vulnerable package back to the thing that included it."],
-      ["Compare", "Scans two tags of one image repository side by side to show what was fixed, added or left unchanged."],
+      ["Compare", "Scans the image at the top and a target side by side to show what was fixed, added or left unchanged. The target is another tag of the same repository, or any other image reference (type the full name, with a tag or digest)."],
     ],
   },
   {
