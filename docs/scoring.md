@@ -10,10 +10,12 @@ Open **Scoring rules** above the Priorities list. Changes re-rank immediately (t
 |---|---|---|
 | KEV | +50, +10 if used in ransomware | on/off; "always Act now" |
 | EPSS | +10 from the cutoff, +22 from *high*, +35 from *very high* | on/off; the three thresholds (percent). *Very high* also forces Fix soon |
-| Severity | critical +30, high +25, medium +10, low +3, unknown +5 | on/off |
-| Attack vector (from the same source as the CVSS score: Red Hat, else NVD, else the highest) | network +10, adjacent +4, physical −2; low complexity +3; no privileges +5; no user interaction +4 | on/off |
+| Severity | critical +30, high +25, medium +10, low +3, unknown 0 (unrated scores nothing, so it cannot outrank a rated low) | on/off |
+| Attack vector and impact (from the same source as the CVSS score: Red Hat, else NVD, else the highest) | exploitability: network +6, adjacent +2, physical −2; low complexity +2; no privileges +3; no user interaction +3 (at most 14). Impact: confidentiality and integrity high +4 / limited +2 each; availability high +2 / limited +1. No published vector: a stand-in by severity (critical +17, high +13, medium +8, low +3, none for unknown), shown as an estimate | on/off |
 | Fix availability | fix +5, none −3, will not fix −5 | on/off; **fixed only** (no fix → score 0, Monitor) |
 | Tiers | | minimum score for Act now / Fix soon / Plan |
+
+The vector rule is kept small on purpose: severity already comes from the same CVSS data, so a large vector weight would count one number twice. Impact is weighed unevenly because a denial of service ends with the attack, while a leak or tampered response does not. Without KEV or EPSS the highest possible score is 30 + 14 + 10 + 5 = 59, so nothing reaches Act now (70) on CVSS alone.
 
 Points are deliberately not editable: you choose which rules apply and where their thresholds sit, so a score can always be recomputed by hand from what the card shows. The score is capped to 0–100. Out-of-order thresholds are repaired on the Go side (cutoff ≤ high ≤ very high, plan ≤ soon ≤ now).
 

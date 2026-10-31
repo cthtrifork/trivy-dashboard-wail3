@@ -32,7 +32,19 @@ const AV = { N: "Network", A: "Adjacent", L: "Local", P: "Physical" };
 const isResolved = (v) => suppresses(vex.value.get(v.key));
 const all = computed(() => vulns.value);
 const hidden = computed(() => all.value.filter((v) => prio.hideResolved && isResolved(v)));
-const open = computed(() => all.value.filter((v) => !(prio.hideResolved && isResolved(v)) && (!prio.fixableOnly || v.fixed)));
+const openFindings = computed(() => all.value.filter((v) => !(prio.hideResolved && isResolved(v)) && (!prio.fixableOnly || v.fixed)));
+// One CVE often hits several components (Go's stdlib and golang.org/x/net carry the same net/http fix).
+// The ranked list shows each CVE once, as its best-ranked finding, and notes the other components, so the
+// top 10 are ten CVEs rather than five CVEs twice. VEX statements stay per component: they run before this.
+const byId = computed(() => {
+  const m = new Map();
+  for (const v of openFindings.value) (m.get(v.id) ?? m.set(v.id, []).get(v.id)).push(v);
+  return m;
+});
+const open = computed(() => openFindings.value.filter((v) => byId.value.get(v.id)[0] === v));
+const others = (v) => byId.value.get(v.id)?.slice(1) ?? [];
+const othersText = (v) => others(v).map((o) => `${o.package} ${o.installed}`).join(", ");
+const distinct = (list) => new Set(list.map((v) => v.id)).size;
 // The suppressed list is not virtualised, so it is paged to keep the DOM small.
 // One CVE hits several components (a module and its sub-packages, a library bundled twice): group by
 // id so it appears once with the components as children. Pages count groups, not findings.
@@ -66,9 +78,9 @@ const kevN = computed(() => open.value.filter((v) => v.kev).length);
 
 const note = computed(
   () =>
-    `${all.value.length} findings → ${actN.value} worth acting on` +
+    `${distinct(all.value)} CVEs → ${actN.value} worth acting on` +
     (kevN.value ? `, ${kevN.value} known exploited` : "") +
-    (hidden.value.length ? ` · ${hidden.value.length} hidden by VEX` : ""),
+    (hidden.value.length ? ` · ${distinct(hidden.value)} hidden by VEX` : ""),
 );
 const signals = computed(() => {
   const en = result.value?.enrichment || {};
@@ -113,9 +125,12 @@ const toggleRow = (v) => flip(expanded, cardKey(v));
 const landed = ref(null); // { key, id, label, from }
 const supOpen = ref(false);
 async function land(t) {
-  const v = all.value.find((x) => cardKey(x) === t.key);
-  if (!v) return;
-  landed.value = { key: t.key, id: v.id, label: `${v.package} ${v.installed}`, from: t.from };
+  const hit = all.value.find((x) => cardKey(x) === t.key);
+  if (!hit) return;
+  // A finding folded into another component's row of the same CVE lands on that row.
+  const v = (!(prio.hideResolved && isResolved(hit)) && byId.value.get(hit.id)?.[0]) || hit;
+  t = { ...t, key: cardKey(v) };
+  landed.value = { key: t.key, id: v.id, label: `${hit.package} ${hit.installed}`, from: t.from };
   if (prio.hideResolved && isResolved(v)) {
     supPage.value = Math.floor(supGroups.value.findIndex((g) => g.id === v.id) / SUPPRESSED_PAGE);
     supOpen.value = true;
@@ -241,6 +256,7 @@ defineExpose({ count: computed(() => pool.value.length) });
               <span v-else class="id">{{ v.id }}</span>
               <CopyId :text="v.id" />
               <span class="mono">{{ v.package }} {{ v.installed }}</span>
+              <span v-if="others(v).length" class="kv" :title="`The same CVE also affects: ${othersText(v)}`">+{{ others(v).length }} more {{ others(v).length === 1 ? "component" : "components" }}</span>
             </span>
           </span>
           <span class="ptier"

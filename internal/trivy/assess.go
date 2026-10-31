@@ -126,7 +126,7 @@ var rules = []rule{
 		if !c.r.SeverityEnabled {
 			return nil
 		}
-		pts := map[string]int{"CRITICAL": 30, "HIGH": 25, "MEDIUM": 10, "LOW": 3, "UNKNOWN": 5}[c.v.Severity]
+		pts := map[string]int{"CRITICAL": 30, "HIGH": 25, "MEDIUM": 10, "LOW": 3, "UNKNOWN": 0}[c.v.Severity]
 		txt := fmt.Sprintf("%s severity", strings.ToLower(c.v.Severity))
 		if c.v.Score > 0 {
 			txt += fmt.Sprintf(" (CVSS %.1f)", c.v.Score)
@@ -139,38 +139,73 @@ var rules = []rule{
 		}
 		av := c.vec.M["AV"]
 		if av == "" {
-			return nil
+			// No usable CVSS vector (typically no source published one): the severity rule already
+			// scores the rating, so give the vector a typical value for that rating instead of 0.
+			// Otherwise a finding without CVSS ranks below identical ones that have it.
+			pts, ok := vectorEstimate[c.v.Severity]
+			if !ok {
+				return nil
+			}
+			return &Reason{"Vector", "no CVSS vector is published: assumes a typical attack vector for " + strings.ToLower(c.v.Severity) + " severity", pts,
+				fmt.Sprintf("no vector, severity %s → %+d (estimate)", c.v.Severity, pts)}
 		}
-		pts := 0
+		pts, ease := 0, 0
 		var parts []string
-		add := func(label string, n int) {
+		add := func(label string, n int, exploit bool) {
 			pts += n
+			if exploit {
+				ease += n
+			}
 			parts = append(parts, fmt.Sprintf("%s %+d", label, n))
 		}
 		switch av {
 		case "N":
-			add("network", 10)
+			add("network", 6, true)
 		case "A":
-			add("adjacent network", 4)
+			add("adjacent network", 2, true)
 		case "P":
-			add("physical access", -2)
+			add("physical access", -2, true)
 		}
 		if c.vec.M["AC"] == "L" {
-			add("low complexity", 3)
+			add("low complexity", 2, true)
 		}
 		if c.vec.M["PR"] == "N" {
-			add("no privileges needed", 5)
+			add("no privileges needed", 3, true)
 		} else if c.vec.M["Au"] == "N" {
-			add("no authentication", 5)
+			add("no authentication", 3, true)
 		}
 		if c.vec.M["UI"] == "N" {
-			add("no user interaction", 4)
+			add("no user interaction", 3, true)
 		}
-		rule := fmt.Sprintf("attack vector → %+d", pts)
+		// Impact: what an attacker gets. Confidentiality and integrity weigh more than availability
+		// because a DoS ends when the attack does, a leak or a tampered response does not.
+		for _, im := range []struct {
+			name          string
+			keys          []string
+			high, limited int
+		}{
+			{"confidentiality", []string{"C", "VC"}, 4, 2},
+			{"integrity", []string{"I", "VI"}, 4, 2},
+			{"availability", []string{"A", "VA"}, 2, 1},
+		} {
+			lvl := ""
+			for _, k := range im.keys {
+				if lvl = c.vec.M[k]; lvl != "" {
+					break
+				}
+			}
+			switch lvl {
+			case "H", "C":
+				add(im.name+" high", im.high, false)
+			case "L", "P":
+				add(im.name+" limited", im.limited, false)
+			}
+		}
+		rule := fmt.Sprintf("attack vector and impact → %+d", pts)
 		if len(parts) > 0 {
 			rule += " (" + strings.Join(parts, ", ") + ")"
 		}
-		return &Reason{"Vector", "attack vector makes exploitation " + ease(pts), pts, rule}
+		return &Reason{"Vector", "attack vector makes exploitation " + easeText(ease), pts, rule}
 	}},
 	{"fix", func(c *ruleCtx) *Reason {
 		if !c.r.FixEnabled {
@@ -192,13 +227,18 @@ func pctText(p float64) string {
 	return strconv.FormatFloat(p*100, 'f', -1, 64) + "%"
 }
 
-func ease(pts int) string {
+// vectorEstimate is the Vector rule's stand-in when a finding has no CVSS vector: roughly the
+// median vector-and-impact points of findings with that severity.
+var vectorEstimate = map[string]int{"CRITICAL": 17, "HIGH": 13, "MEDIUM": 8, "LOW": 3}
+
+// easeText words the exploitability part of the vector score (at most 14).
+func easeText(pts int) string {
 	switch {
-	case pts >= 18:
+	case pts >= 11:
 		return "very easy"
-	case pts >= 10:
+	case pts >= 6:
 		return "relatively easy"
-	case pts >= 4:
+	case pts >= 2:
 		return "harder"
 	}
 	return "difficult"
