@@ -130,6 +130,7 @@ async function rerank() {
       tier: o.tier,
       tierWhy: o.tierWhy,
       reasons: o.reasons,
+      attack: o.attack,
     }));
   } catch (err) {
     setStatus("Could not apply the scoring rules: " + errText(err), { err: true });

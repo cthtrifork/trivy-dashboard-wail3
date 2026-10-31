@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, reactive, ref, watch } from "vue";
-import { prioTarget, result, scanning, showInGraph, vulns, vex } from "../store.js";
+import { prioTarget, result, rules, scanning, showInGraph, vulns, vex } from "../store.js";
 import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import CopyId from "./CopyId.vue";
@@ -270,7 +270,7 @@ defineExpose({ count: computed(() => pool.value.length) });
             <Chip v-if="v.kev && v.kevRansomware" kind="hot">Ransomware use</Chip>
             <Chip
               v-if="v.hasEpss"
-              :kind="v.epss >= 0.1 ? 'warm' : ''"
+              :kind="rules.epssEnabled && v.epss >= rules.epssHigh ? 'warm' : ''"
               :title="`Exploitation probability in the next 30 days; percentile ${(v.epssPercentile * 100).toFixed(1)}`"
               >EPSS {{ pct(v.epss) }}</Chip
             >

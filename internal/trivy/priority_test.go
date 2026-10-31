@@ -490,3 +490,28 @@ func TestUnknownSeverityScoresZero(t *testing.T) {
 		t.Errorf("unknown %d should rank below low %d", unk.Priority, low.Priority)
 	}
 }
+
+// "Exploitation is considered likely" follows the EPSS high threshold in force, and Rescore carries
+// the attack text so the UI's text moves with the rules.
+func TestAttackTextFollowsEPSSThreshold(t *testing.T) {
+	v := Vulnerability{ID: "E", Severity: "HIGH", HasEPSS: true, EPSS: 0.15, Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}
+	const likely = "Exploitation is considered likely"
+	Assess(&v)
+	if !strings.Contains(v.Attack, likely) {
+		t.Fatalf("EPSS 15%% is above the default high of 10%%: %s", v.Attack)
+	}
+	r := DefaultRules()
+	r.EPSSHigh, r.EPSSVeryHigh = 0.2, 0.5
+	got := Rescore([]Vulnerability{v}, r)
+	if strings.Contains(got[0].Attack, likely) {
+		t.Errorf("EPSS 15%% is below a high of 20%%, but the rescored text says it is likely: %s", got[0].Attack)
+	}
+	r = DefaultRules()
+	r.EPSSEnabled = false
+	if got := Rescore([]Vulnerability{v}, r); strings.Contains(got[0].Attack, likely) {
+		t.Errorf("EPSS rule off: the text should not claim likely exploitation: %s", got[0].Attack)
+	}
+	if got := Rescore([]Vulnerability{v}, DefaultRules()); !strings.Contains(got[0].Attack, likely) {
+		t.Errorf("default rules: %s", got[0].Attack)
+	}
+}

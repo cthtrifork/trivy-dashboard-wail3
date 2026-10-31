@@ -96,6 +96,7 @@ type Rescored struct {
 	Tier     string   `json:"tier"`
 	TierWhy  string   `json:"tierWhy"`
 	Reasons  []Reason `json:"reasons"`
+	Attack   string   `json:"attack"` // the attack text follows the EPSS threshold, so it is rescored too
 }
 
 // Rescore re-ranks vulns under r without touching them.
@@ -105,7 +106,7 @@ func Rescore(vulns []Vulnerability, r Rules) []Rescored {
 	idx := make([]int, len(vulns))
 	for i := range vulns {
 		scored[i] = vulns[i]
-		applyRules(&ruleCtx{r: r, v: &scored[i], vec: ParseVector(vulns[i].Vector)})
+		applyRules(newRuleCtx(r, &scored[i]))
 		idx[i] = i
 	}
 	slices.SortStableFunc(idx, func(a, b int) int {
@@ -120,7 +121,7 @@ func Rescore(vulns []Vulnerability, r Rules) []Rescored {
 	out := make([]Rescored, len(idx))
 	for n, i := range idx {
 		v := &scored[i]
-		out[n] = Rescored{Index: i, Priority: v.Priority, Tier: v.Tier, TierWhy: v.TierWhy, Reasons: v.Reasons}
+		out[n] = Rescored{Index: i, Priority: v.Priority, Tier: v.Tier, TierWhy: v.TierWhy, Reasons: v.Reasons, Attack: v.Attack}
 	}
 	return out
 }

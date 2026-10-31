@@ -1021,6 +1021,14 @@ export class Rescored {
              */
             this["reasons"] = [];
         }
+        if (!("attack" in $$source)) {
+            /**
+             * the attack text follows the EPSS threshold, so it is rescored too
+             * @member
+             * @type {string}
+             */
+            this["attack"] = "";
+        }
 
         Object.assign(this, $$source);
     }

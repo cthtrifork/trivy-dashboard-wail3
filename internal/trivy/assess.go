@@ -281,13 +281,17 @@ func Assess(v *Vulnerability) { AssessWith(v, DefaultRules()) }
 // AssessWith fills in the vector, priority score, tier, reasons and the
 // human-readable attack assessment of v from its current signals, under rules r.
 func AssessWith(v *Vulnerability, r Rules) {
-	c := &ruleCtx{r: r.Normalize(), v: v, vec: ParseVector(v.Vector), text: strings.ToLower(v.Title + " " + v.Description)}
-	applyRules(c)
-	v.Attack = describeAttack(c)
+	applyRules(newRuleCtx(r.Normalize(), v))
 }
 
-// applyRules sets everything about v that depends on the rules: reasons, score, tier and the
-// sentence saying which threshold decided the tier.
+// newRuleCtx gathers what the rules read about v. r must already be normalized.
+func newRuleCtx(r Rules, v *Vulnerability) *ruleCtx {
+	return &ruleCtx{r: r, v: v, vec: ParseVector(v.Vector), text: strings.ToLower(v.Title + " " + v.Description)}
+}
+
+// applyRules sets everything about v that depends on the rules: reasons, score, tier, the sentence
+// saying which threshold decided the tier, and the attack text (which says when exploitation is
+// likely, by the EPSS "high" threshold in force).
 func applyRules(c *ruleCtx) {
 	v, r := c.v, c.r
 	v.Reasons = nil
@@ -321,6 +325,7 @@ func applyRules(c *ruleCtx) {
 	default:
 		v.Tier, v.TierWhy = TierMonitor, fmt.Sprintf("Monitor: score %d < %d", v.Priority, r.TierPlan)
 	}
+	v.Attack = describeAttack(c)
 }
 
 func abs(n int) int {
@@ -388,7 +393,7 @@ func describeAttack(c *ruleCtx) string {
 	switch {
 	case c.v.KEV:
 		out += " This is being exploited in the real world."
-	case c.v.HasEPSS && c.v.EPSS >= 0.1:
+	case c.r.EPSSEnabled && c.v.HasEPSS && c.v.EPSS >= c.r.EPSSHigh:
 		out += " Exploitation is considered likely."
 	}
 	if m["AV"] == "L" {
