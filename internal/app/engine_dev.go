@@ -25,7 +25,7 @@ func newEngine() (trivy.Engine, Mode) {
 	m := Mode{
 		Fixtures: true,
 		Detail: "Demo mode (" + fakePodmanFlag + " is set): scans replay recorded Trivy output for traefik, " +
-			"not a live scan, and EPSS/KEV lookups are off. Unset the variable to use podman.",
+			"not a live scan, and EPSS/KEV lookups are off.",
 		Repo: "traefik",
 	}
 	if tags, err := e.ListTags(context.Background(), m.Repo); err == nil { // newest first, then "latest"
