@@ -6,6 +6,7 @@ import {
   vex,
   image,
   recent,
+  recentSummary,
   split,
   imageRepo,
   imageTag,
@@ -243,6 +244,7 @@ onMounted(() => {
             >
               <span class="recent-name">{{ e.image }}</span>
               <span class="recent-when">{{ ago(e.at) }}</span>
+              <span v-if="typeof e.total === 'number'" class="recent-when recent-total">{{ recentSummary(e) }}</span>
               <span v-for="t in [sevTag(e.crit, 'CRITICAL'), sevTag(e.high, 'HIGH')]" :key="t.sev" v-show="t.n" class="sev" :style="t.style"
                 >{{ t.n }} {{ t.sev[0] }}</span
               >

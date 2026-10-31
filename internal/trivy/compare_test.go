@@ -265,6 +265,26 @@ func TestInvalidImageRefs(t *testing.T) {
 	}
 }
 
+func TestTargetRef(t *testing.T) {
+	const d = "sha256:fc42af33e643f20d08baf03cddcc1c02ba57052dfb02edb0d79f3fc47bcea8d9"
+	for target, want := range map[string]string{
+		"2.0":                                   "gcr.io/d/static:2.0",
+		d:                                       "gcr.io/d/static@" + d,
+		"cgr.dev/chainguard/static:latest@" + d: "cgr.dev/chainguard/static:latest@" + d,
+		"alpine:3.20":                           "alpine:3.20",
+		"docker://ghcr.io/a/b":                  "ghcr.io/a/b",
+	} {
+		if got, err := targetRef("gcr.io/d/static", target); err != nil || got != want {
+			t.Errorf("targetRef(%q) = %q, %v; want %q", target, got, err, want)
+		}
+	}
+	for _, bad := range []string{"--bad", "a/--b", "Bad/Upper:x", "x@sha256:short"} {
+		if _, err := targetRef("gcr.io/d/static", bad); err == nil {
+			t.Errorf("targetRef(%q) accepted", bad)
+		}
+	}
+}
+
 type tagsEngine struct {
 	Engine
 	tags []string
