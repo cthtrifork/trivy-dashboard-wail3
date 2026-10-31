@@ -152,18 +152,6 @@ export function PodmanVersion() {
 }
 
 /**
- * Rescore re-ranks the findings of the latest scan under the given rules, best first. Each
- * entry's Index points into the scan result's vulnerabilities. It returns nothing before a scan.
- * @param {trivy$0.Rules} rules
- * @returns {$CancellablePromise<trivy$0.Rescored[]>}
- */
-export function Rescore(rules) {
-    return $Call.ByID(117990306, rules).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType8($result);
-    }));
-}
-
-/**
  * RestartToUpdate swaps the staged binary in and relaunches the app.
  * @returns {$CancellablePromise<void>}
  */
@@ -184,23 +172,12 @@ export function RestoreScan(res) {
 }
 
 /**
- * RuleHelp returns what each scoring rule adds, in words, for the scoring panel. It is written from
- * the constants the rules use, so the text cannot drift from the points applied.
- * @returns {$CancellablePromise<trivy$0.RuleSummaries>}
- */
-export function RuleHelp() {
-    return $Call.ByID(1293256368).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType9($result);
-    }));
-}
-
-/**
  * RulePresets returns the built-in scoring presets.
  * @returns {$CancellablePromise<trivy$0.Preset[]>}
  */
 export function RulePresets() {
     return $Call.ByID(2795329317).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType11($result);
+        return $$createType8($result);
     }));
 }
 
@@ -212,7 +189,7 @@ export function RulePresets() {
  */
 export function Scan(req) {
     return $Call.ByID(833560712, req).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType13($result);
+        return $$createType10($result);
     }));
 }
 
@@ -223,7 +200,7 @@ export function Scan(req) {
  */
 export function SplitImage(ref) {
     return $Call.ByID(1978002968, ref).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType14($result);
+        return $$createType11($result);
     }));
 }
 
@@ -244,7 +221,7 @@ export function UpdateDB(trivyImage) {
  */
 export function UpdateInfo() {
     return $Call.ByID(2877341576).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType15($result);
+        return $$createType12($result);
     }));
 }
 
@@ -287,7 +264,7 @@ export function VEXExport(image, author, role, onlyCurrent) {
  */
 export function VEXImport(image, doc, markRest, minSeverity) {
     return $Call.ByID(1138230009, image, doc, markRest, minSeverity).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType16($result);
+        return $$createType13($result);
     }));
 }
 
@@ -298,7 +275,7 @@ export function VEXImport(image, doc, markRest, minSeverity) {
  */
 export function VEXList(image) {
     return $Call.ByID(1476021980, image).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType18($result);
+        return $$createType15($result);
     }));
 }
 
@@ -337,7 +314,7 @@ export function VEXSave(image, author, role, onlyCurrent) {
  */
 export function VEXSet(image, e) {
     return $Call.ByID(537230204, image, e).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType17($result);
+        return $$createType14($result);
     }));
 }
 
@@ -360,15 +337,12 @@ const $$createType3 = $models.AppConfig.createFrom;
 const $$createType4 = $models.Footprint.createFrom;
 const $$createType5 = $Create.Array($Create.Any);
 const $$createType6 = $models.Mode.createFrom;
-const $$createType7 = trivy$0.Rescored.createFrom;
+const $$createType7 = trivy$0.Preset.createFrom;
 const $$createType8 = $Create.Array($$createType7);
-const $$createType9 = trivy$0.RuleSummaries.createFrom;
-const $$createType10 = trivy$0.Preset.createFrom;
-const $$createType11 = $Create.Array($$createType10);
-const $$createType12 = trivy$0.ScanResult.createFrom;
-const $$createType13 = $Create.Nullable($$createType12);
-const $$createType14 = $models.ImageParts.createFrom;
-const $$createType15 = $models.UpdateInfo.createFrom;
-const $$createType16 = trivy$0.ImportReport.createFrom;
-const $$createType17 = trivy$0.VEXEntry.createFrom;
-const $$createType18 = $Create.Array($$createType17);
+const $$createType9 = trivy$0.ScanResult.createFrom;
+const $$createType10 = $Create.Nullable($$createType9);
+const $$createType11 = $models.ImageParts.createFrom;
+const $$createType12 = $models.UpdateInfo.createFrom;
+const $$createType13 = trivy$0.ImportReport.createFrom;
+const $$createType14 = trivy$0.VEXEntry.createFrom;
+const $$createType15 = $Create.Array($$createType14);

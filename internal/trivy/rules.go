@@ -1,10 +1,6 @@
 package trivy
 
-import (
-	"fmt"
-	"slices"
-	"strings"
-)
+import ()
 
 // Points each rule adds. They are constants on purpose: a rule can be switched off or have its
 // thresholds moved, but never re-weighted, so every score is a sum of numbers the UI prints.
@@ -36,37 +32,6 @@ const (
 
 // SeverityPoints is what the Severity rule adds for each rating.
 var SeverityPoints = map[string]int{"CRITICAL": 30, "HIGH": 25, "MEDIUM": 10, "LOW": 3, "UNKNOWN": 0}
-
-// RuleSummaries is the one-line description of what each rule adds, written from the same constants
-// the rules use, so the scoring panel cannot show points that differ from the ones applied.
-type RuleSummaries struct {
-	KEV      string `json:"kev"`
-	EPSS     string `json:"epss"`
-	Severity string `json:"severity"`
-	Vector   string `json:"vector"`
-	Fix      string `json:"fix"`
-}
-
-// RuleHelp returns the summaries for the scoring panel.
-func RuleHelp() RuleSummaries {
-	sev := func(name string) string { return fmt.Sprintf("%s %+d", strings.ToLower(name), SeverityPoints[name]) }
-	impact := "Confidentiality or integrity impact high %+d, limited %+d each"
-	if PointsAvailabilityHigh == 0 && PointsAvailabilityLimited == 0 {
-		impact += "; availability scores nothing"
-	} else {
-		impact += fmt.Sprintf("; availability high %+d, limited %+d", PointsAvailabilityHigh, PointsAvailabilityLimited)
-	}
-	return RuleSummaries{
-		KEV: fmt.Sprintf("Listed in CISA's Known Exploited Vulnerabilities: +%d, +%d more if used in ransomware.", PointsKEV, PointsKEVRansomware),
-		EPSS: fmt.Sprintf("Exploitation probability: +%d from the cutoff, +%d from \"high\", +%d (and Fix soon) from \"very high\".",
-			PointsEPSSLow, PointsEPSSHigh, PointsEPSSVeryHigh),
-		Severity: fmt.Sprintf("CVSS severity: %s, %s, %s, %s, unknown %d.", sev("CRITICAL"), sev("HIGH"), sev("MEDIUM"), sev("LOW"), SeverityPoints["UNKNOWN"]),
-		Vector: fmt.Sprintf("Network %+d, adjacent %+d, physical %+d; low complexity %+d; no privileges %+d; no user interaction %+d. ", PointsNetwork, PointsAdjacent, PointsPhysical, PointsLowComplexity, PointsNoPrivileges, PointsNoInteraction) +
-			fmt.Sprintf(impact, PointsImpactHigh, PointsImpactLimited) +
-			fmt.Sprintf(". No vector: the CVSS score × %.1f.", vectorPerCVSSPoint),
-		Fix: fmt.Sprintf("Fix exists %+d, none yet %+d, vendor will not fix %+d.", PointsFix, PointsNoFix, PointsWontFix),
-	}
-}
 
 // Rules is the tunable part of the priority score: which rules apply and where their thresholds
 // sit. The zero value switches everything off; use DefaultRules for the standard behaviour.
@@ -142,42 +107,4 @@ func Presets() []Preset {
 		{"strict", "A short list: EPSS counts from 5%, findings without a fix are dropped, and the tiers start higher.", strict},
 		{"exploited only", "Ranks by KEV and EPSS alone; severity, vector and fix availability add nothing.", exploited},
 	}
-}
-
-// Rescored is one finding's outcome under a set of rules. Index points into the slice that was
-// rescored; the result is ordered best-ranked first.
-type Rescored struct {
-	Index    int      `json:"index"`
-	Priority int      `json:"priority"`
-	Tier     string   `json:"tier"`
-	TierWhy  string   `json:"tierWhy"`
-	Reasons  []Reason `json:"reasons"`
-	Attack   string   `json:"attack"` // the attack text follows the EPSS threshold, so it is rescored too
-}
-
-// Rescore re-ranks vulns under r without touching them.
-func Rescore(vulns []Vulnerability, r Rules) []Rescored {
-	r = r.Normalize()
-	scored := make([]Vulnerability, len(vulns))
-	idx := make([]int, len(vulns))
-	for i := range vulns {
-		scored[i] = vulns[i]
-		applyRules(newRuleCtx(r, &scored[i]))
-		idx[i] = i
-	}
-	slices.SortStableFunc(idx, func(a, b int) int {
-		switch {
-		case ranksBefore(&scored[a], &scored[b]):
-			return -1
-		case ranksBefore(&scored[b], &scored[a]):
-			return 1
-		}
-		return 0
-	})
-	out := make([]Rescored, len(idx))
-	for n, i := range idx {
-		v := &scored[i]
-		out[n] = Rescored{Index: i, Priority: v.Priority, Tier: v.Tier, TierWhy: v.TierWhy, Reasons: v.Reasons, Attack: v.Attack}
-	}
-	return out
 }
