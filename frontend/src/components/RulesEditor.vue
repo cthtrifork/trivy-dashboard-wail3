@@ -123,15 +123,15 @@ function save() {
           ><input type="checkbox" :checked="rules.severityEnabled" @change="set({ severityEnabled: $event.target.checked })" />
           <b>Severity</b></label
         >
-        <span>CVSS severity: critical +30, high +25, medium +10, low +3, unknown +5.</span>
+        <span>CVSS severity: critical +30, high +25, medium +10, low +3, unknown 0.</span>
       </div>
 
       <div class="rule-row">
         <label class="chk"
           ><input type="checkbox" :checked="rules.vectorEnabled" @change="set({ vectorEnabled: $event.target.checked })" />
-          <b>Attack vector</b></label
+          <b>Attack vector and impact</b></label
         >
-        <span>Network +10, adjacent +4, physical −2; low complexity +3; no privileges +5; no user interaction +4.</span>
+        <span>Network +6, adjacent +2, physical −2; low complexity +2; no privileges +3; no user interaction +3. Confidentiality or integrity impact high +4, limited +2 each; availability scores nothing. No vector: the CVSS score × 2.4.</span>
       </div>
 
       <div class="rule-row">
