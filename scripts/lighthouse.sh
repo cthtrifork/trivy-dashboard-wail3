@@ -11,7 +11,12 @@ port="${LIGHTHOUSE_PORT:-18081}"
 # shellcheck source=lib/fake-app.sh
 source scripts/lib/fake-app.sh
 
-start_fake_app "$port"
+tmp="$(mktemp -d)"
+trap 'fake_app_stop "$tmp"; rm -rf "$tmp"' EXIT
+
+fake_app_build "$tmp"
+
+fake_app_start "$tmp" "$port"
 
 mkdir -p "$out"
 LIGHTHOUSE_URL="http://127.0.0.1:${port}/" node scripts/lighthouse.mjs "$out"

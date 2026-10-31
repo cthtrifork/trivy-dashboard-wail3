@@ -10,9 +10,17 @@ port="${SCREENSHOT_PORT:-18080}"
 # shellcheck source=lib/fake-app.sh
 source scripts/lib/fake-app.sh
 
+tmp="$(mktemp -d)"
+trap 'fake_app_stop "$tmp"; rm -rf "$tmp"' EXIT
+
+fake_app_build "$tmp"
+
 # The proxy variables are dropped for the app so the Help dialog's environment section looks the same
 # on every machine.
-start_fake_app "$port" env -u HTTPS_PROXY -u HTTP_PROXY -u NO_PROXY -u https_proxy -u http_proxy -u no_proxy
+(
+  unset HTTPS_PROXY HTTP_PROXY NO_PROXY https_proxy http_proxy no_proxy
+  fake_app_start "$tmp" "$port"
+)
 
 mkdir -p "$out"
 node scripts/screenshots.mjs "http://127.0.0.1:${port}/" "$out"
