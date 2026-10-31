@@ -75,7 +75,7 @@ Rules: never use a new hex in a component, add a token. Color is never the only 
 | Stat card | 4 px left border in tier/severity color, big number over uppercase label | clickable; `off` = 40% opacity when its filter is disabled |
 | Chip | outlined pill, 11 px, `--mute` text; kinds: `hot` (solid red, KEV), `warm` (orange outline: EPSS ≥ 10%, network vector, expired VEX), `vex` (accent outline, VEX status) | facts about a finding: severity + CVSS, KEV, EPSS, attack vector, fix versions |
 | Tier pill | filled pill, top right of a finding card | |
-| Disclosure (`details`) | `▸` summary in `--mute` | Scoring rules, Score · why, Suppressed by VEX (n), Options |
+| Disclosure (`details`) | `▸` summary in `--mute` | Score · why, Suppressed by VEX (n), Options |
 | Banner | full-width strip under the header | demo mode warning only |
 
 ### Finding row (Priorities)
@@ -105,7 +105,7 @@ Observed by running the headless server in demo mode (`TRIVY_SCANNER_FAKE_PODMAN
 
 | Tab | Top to bottom |
 |---|---|
-| Priorities | Severity and Priority segmented filters with counts, Scoring rules disclosure, toolbar (Show top 10/25/all, Hide resolved by VEX, Only with a fix, effect summary), one-line ranking note, column header row (Severity, CVSS, Finding, Priority, Fix; each with an explanatory tooltip) and finding rows |
+| Priorities | Severity and Priority segmented filters with counts, toolbar (Show top 10/25/all, Hide resolved by VEX, Only with a fix, effect summary), one-line ranking note, column header row (Severity, CVSS, Finding, Priority, Fix; each with an explanatory tooltip) and finding rows |
 | Vulnerabilities | severity stat cards (Critical → Unknown) that double as filters, text filter plus "n shown", sortable table with explanatory header tooltips: Priority (tier pill), Severity, ID, Package, Installed, Fixed in, CVSS (number plus bar), EPSS, Signals, Title; rows expand for details |
 | Dependencies | search, All / OS / Application segmented control, Vulnerable paths only, Severity select (at least critical/high/medium/low, by the worst finding in the component or its dependencies), Focus select, All labels, Fit, "n of N components"; canvas graph with legend and a right-hand inspector ("Click a node to inspect it."). Node color = kind, orange ring = vulnerable via dependency, size = vulnerability count. Scroll zooms, drag pans, double-click fits |
 | SBOM | one-sentence summary of the image, type stat cards (accent border, not severity colors), filter plus format ("CycloneDX"), sortable table: Name, Version, Type, License, Package URL |
@@ -130,14 +130,13 @@ Found while running the UI; not fixed by this sheet.
 
 - **Vulnerabilities CVE links use the browser default blue** (`rgb(0,0,238)`) instead of `--accent`, which is close to unreadable on the dark background. Priorities links use `--accent`. Links should share one style.
 - **At 800 px** the demo banner wraps and the open Options popover covers the right-hand tabs. Usable.
-- **At 500 px** the tab bar is clipped (Compare and Log are off-screen), the page scrolls horizontally, the Priorities toolbar overflows, and the Scoring rules card leaves a large blank gap. 700 px has no horizontal scroll.
+- **At 500 px** the tab bar is clipped (Compare and Log are off-screen), the page scrolls horizontally, the Priorities toolbar overflows. 700 px has no horizontal scroll.
 - **Vulnerabilities links** also affected the VEX drawer (CVE link, Full advisory); both are fixed by PR #44 (`a { color: var(--accent) }`).
 
 ## Key flows
 
 - **Scan**: type an image, Enter or Scan. Status line shows progress; Cancel is available while it runs and removes the container. Results land on Priorities.
 - **Triage**: stat cards summarise tiers; toolbar filters (`Show top 10`, Hide resolved by VEX, Only with a fix) re-filter without rescanning. A summary line states the effect ("20 CVEs → 0 worth acting on · 2 hidden by VEX"); each CVE is listed once, with its other affected components noted on the row.
-- **Tune**: Scoring rules disclosure re-ranks immediately; the header shows the active preset name, or `custom`.
 - **Record a decision**: Add VEX assessment on a card, (opens a docked drawer), then Export VEX (n) next to Scan to review and export OpenVEX. With no assessments yet that button reads Import VEX, and its dialog ends with a Generate… band (with an optional severity limit) that marks findings under investigation and opens the export dialog; once there are assessments, its dropdown offers Import / merge VEX. The import dialog's one dropdown, Findings the file does not cover, leaves them alone or marks them from a chosen severity up.
 - **Explore**: Vulnerabilities (filterable table, row details), Dependencies (canvas graph: select, focus, all components), SBOM list, Compare two scans.
 

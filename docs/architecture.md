@@ -9,7 +9,7 @@ frontend (Vue 3)     ──Wails bindings──►  ScanService (internal/app/se
                                    ├─ Engine ── PodmanEngine ──► podman run aquasec/trivy image …
                                    │         └─ FixtureEngine (dev builds + TRIVY_SCANNER_FAKE_PODMAN only)
                                    ├─ Enricher ── EPSS + CISA KEV (cached in the user cache dir)
-                                   ├─ assess.go, rules.go ── rule engine: score, tier, attack-vector text; tunable Rules, presets, Rescore (docs/scoring.md)
+                                   ├─ assess.go, rules.go ── rule engine: score, tier, attack-vector text; tunable Rules (docs/scoring.md)
                                    ├─ compare.go ── diff two scans (vulns and packages)
                                    └─ vex.go ── VEXStore (JSON file) + OpenVEX export
 ```

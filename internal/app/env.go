@@ -16,8 +16,6 @@ type settings struct {
 	KEVURL     string `env:"TRIVY_SCANNER_KEV_URL" desc:"CISA KEV feed URL, for an air-gapped mirror." def:"https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"`
 	FakePodman bool   `env:"TRIVY_SCANNER_FAKE_PODMAN"`
 
-	WailsHost string `env:"WAILS_SERVER_HOST" desc:"Listen address in server mode. Keep it on loopback." def:"127.0.0.1"`
-	WailsPort string `env:"WAILS_SERVER_PORT" desc:"Listen port in server mode." def:"8080"`
 	XDGCache  string `env:"XDG_CACHE_HOME" desc:"Moves the user cache dir (Linux)." def:"~/.cache"`
 	XDGConfig string `env:"XDG_CONFIG_HOME" desc:"Moves the user config dir (Linux)." def:"~/.config"`
 }

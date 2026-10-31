@@ -135,7 +135,7 @@ func TestRestoreScanLetsVEXCallsSeeTheRememberedScan(t *testing.T) {
 		t.Fatalf("after restore: marked %d, err = %v", n, err)
 	}
 	s.RestoreScan(nil) // nothing to restore must not wipe what is there
-	if len(s.latest) != 1 {
+	if len(s.found[trivy.ImageRepo(image)]) != 1 {
 		t.Errorf("RestoreScan(nil) cleared the findings")
 	}
 }

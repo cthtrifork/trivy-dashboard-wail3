@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -298,36 +299,26 @@ func TestRulesTuning(t *testing.T) {
 	}
 }
 
-func TestRescoreOrder(t *testing.T) {
-	const vec = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L" // same for all: the order below comes from the other signals
-	vulns := []Vulnerability{
-		{ID: "A", Severity: "HIGH", Vector: vec},
-		{ID: "B", Severity: "LOW", Vector: vec, HasEPSS: true, EPSS: 0.9},
-		{ID: "C", Severity: "HIGH", Vector: vec, Fixed: "2"},
+func TestVocabularyMatchesTheEngine(t *testing.T) {
+	v := Vocab()
+	if len(v.Severities) != len(severityRank) {
+		t.Fatalf("severities %v vs rank table %v", v.Severities, severityRank)
 	}
-	for i := range vulns {
-		Assess(&vulns[i])
-	}
-	bal := Rescore(vulns, DefaultRules())
-	if bal[0].Index != 1 { // EPSS 90% outranks a high without exploitation evidence
-		t.Errorf("balanced order: %+v", bal)
-	}
-	sev := Rules{SeverityEnabled: true, TierNow: 70, TierSoon: 45, TierPlan: 25}
-	got := Rescore(vulns, sev)
-	if got[0].Index != 0 || got[1].Index != 2 || got[2].Index != 1 {
-		t.Errorf("severity-only order: %+v", got)
-	}
-	if vulns[1].Priority == 0 || len(vulns[1].Reasons) == 0 {
-		t.Error("Rescore must not modify its input")
-	}
-	// Balanced must reproduce what the scan computed.
-	for n, r := range bal {
-		if r.Priority != vulns[r.Index].Priority || r.Tier != vulns[r.Index].Tier {
-			t.Errorf("row %d differs from Assess: %+v vs %+v", n, r, vulns[r.Index])
+	for i, s := range v.Severities {
+		if severityRank[s] != i {
+			t.Errorf("%s is listed at %d but ranks %d", s, i, severityRank[s])
 		}
 	}
-	if len(Presets()) < 2 || Presets()[0].Name != "balanced" || Presets()[0].Rules != DefaultRules() {
-		t.Error("balanced must be the first preset and equal the default rules")
+	if len(v.Tiers) != 4 || v.Tiers[0] != TierNow || v.Tiers[3] != TierMonitor {
+		t.Errorf("tiers %v", v.Tiers)
+	}
+	if v.EPSSHigh != DefaultRules().EPSSHigh {
+		t.Errorf("EPSS high %v, rules say %v", v.EPSSHigh, DefaultRules().EPSSHigh)
+	}
+	for _, st := range DefaultIgnoreStatus {
+		if !slices.Contains(v.VendorStatuses, st) {
+			t.Errorf("default ignored status %q is not in the vendor list %v", st, v.VendorStatuses)
+		}
 	}
 }
 
@@ -492,8 +483,7 @@ func TestUnknownSeverityScoresZero(t *testing.T) {
 	}
 }
 
-// "Exploitation is considered likely" follows the EPSS high threshold in force, and Rescore carries
-// the attack text so the UI's text moves with the rules.
+// "Exploitation is considered likely" follows the EPSS high threshold in force.
 func TestAttackTextFollowsEPSSThreshold(t *testing.T) {
 	v := Vulnerability{ID: "E", Severity: "HIGH", HasEPSS: true, EPSS: 0.15, Vector: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}
 	const likely = "Exploitation is considered likely"
@@ -503,43 +493,53 @@ func TestAttackTextFollowsEPSSThreshold(t *testing.T) {
 	}
 	r := DefaultRules()
 	r.EPSSHigh, r.EPSSVeryHigh = 0.2, 0.5
-	got := Rescore([]Vulnerability{v}, r)
-	if strings.Contains(got[0].Attack, likely) {
-		t.Errorf("EPSS 15%% is below a high of 20%%, but the rescored text says it is likely: %s", got[0].Attack)
+	got := v
+	applyRules(newRuleCtx(r.Normalize(), &got))
+	if strings.Contains(got.Attack, likely) {
+		t.Errorf("EPSS 15%% is below a high of 20%%, but the text says it is likely: %s", got.Attack)
 	}
 	r = DefaultRules()
 	r.EPSSEnabled = false
-	if got := Rescore([]Vulnerability{v}, r); strings.Contains(got[0].Attack, likely) {
-		t.Errorf("EPSS rule off: the text should not claim likely exploitation: %s", got[0].Attack)
-	}
-	if got := Rescore([]Vulnerability{v}, DefaultRules()); !strings.Contains(got[0].Attack, likely) {
-		t.Errorf("default rules: %s", got[0].Attack)
+	got = v
+	applyRules(newRuleCtx(r.Normalize(), &got))
+	if strings.Contains(got.Attack, likely) {
+		t.Errorf("EPSS rule off: the text should not claim likely exploitation: %s", got.Attack)
 	}
 }
 
-// The scoring panel's text is written from the constants the rules use. Every number in it must be
-// what a finding actually scores, so the two cannot drift again.
+// The points the help text and docs quote are the constants the rules use; each must be what a
+// finding actually scores.
+// The Help dialog's scoring text is written from the constants and default rules. Every number in
+// it must be what a finding actually scores, so the two cannot drift.
 func TestRuleHelpMatchesAppliedPoints(t *testing.T) {
-	h := RuleHelp()
+	h, d := RuleHelp(), DefaultRules()
 	for _, c := range []struct{ text, want string }{
 		{h.KEV, fmt.Sprintf("+%d, +%d more", PointsKEV, PointsKEVRansomware)},
-		{h.EPSS, fmt.Sprintf("+%d from the cutoff, +%d from \"high\", +%d", PointsEPSSLow, PointsEPSSHigh, PointsEPSSVeryHigh)},
+		{h.EPSS, fmt.Sprintf("%g%% +%d, %g%% +%d, %g%% +%d", d.EPSSCutoff*100, PointsEPSSLow, d.EPSSHigh*100, PointsEPSSHigh, d.EPSSVeryHigh*100, PointsEPSSVeryHigh)},
 		{h.Fix, fmt.Sprintf("Fix exists +%d, none yet %d, vendor will not fix %d", PointsFix, PointsNoFix, PointsWontFix)},
-		{h.Vector, "availability scores nothing"},
+		{h.Vector, fmt.Sprintf("Network +%d", PointsNetwork)},
+		{h.Vector, fmt.Sprintf("adds up to +%d", PointsLowComplexity+PointsNoPrivileges+PointsNoInteraction)},
+		{h.Vector, "availability adds nothing"},
+		{h.Tiers, fmt.Sprintf("Act now %d+, Fix soon %d+, Plan %d+", d.TierNow, d.TierSoon, d.TierPlan)},
 	} {
 		if !strings.Contains(c.text, c.want) {
 			t.Errorf("%q is missing %q", c.text, c.want)
 		}
 	}
+	for sev, want := range SeverityPoints {
+		if want > 0 && !strings.Contains(h.Severity, fmt.Sprintf("%s +%d", strings.ToLower(sev), want)) {
+			t.Errorf("severity text lacks %s +%d: %s", sev, want, h.Severity)
+		}
+	}
+}
+
+func TestRulePointsMatchConstants(t *testing.T) {
 	// What the rules apply, read back from real assessments.
 	for sev, want := range SeverityPoints {
 		v := Vulnerability{ID: "S", Severity: sev, Fixed: "2"}
 		Assess(&v)
 		if got, _ := reasonPoints(v, "Severity"); got != want {
 			t.Errorf("%s: rule gives %d, SeverityPoints %d", sev, got, want)
-		}
-		if want > 0 && !strings.Contains(h.Severity, fmt.Sprintf("%s +%d", strings.ToLower(sev), want)) {
-			t.Errorf("severity text lacks %s +%d: %s", sev, want, h.Severity)
 		}
 	}
 	for _, c := range []struct {

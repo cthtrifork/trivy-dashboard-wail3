@@ -2,7 +2,6 @@ package trivy
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 )
 
@@ -45,26 +44,34 @@ type RuleSummaries struct {
 	Severity string `json:"severity"`
 	Vector   string `json:"vector"`
 	Fix      string `json:"fix"`
+	// Tiers says where each tier starts and that the score is capped.
+	Tiers string `json:"tiers"`
 }
 
-// RuleHelp returns the summaries for the scoring panel.
+// RuleHelp returns the summaries for the scoring panel, kept short: the points per signal, not the
+// full rule text (each finding lists the exact rules that fired).
 func RuleHelp() RuleSummaries {
-	sev := func(name string) string { return fmt.Sprintf("%s %+d", strings.ToLower(name), SeverityPoints[name]) }
-	impact := "Confidentiality or integrity impact high %+d, limited %+d each"
+	d := DefaultRules()
+	pct := func(f float64) string { return fmt.Sprintf("%g%%", f*100) }
+	sev := func(name string) string {
+		return fmt.Sprintf("%s %+d", strings.ToLower(name), SeverityPoints[name])
+	}
+	kev := fmt.Sprintf("%+d, %+d more with ransomware use", PointsKEV, PointsKEVRansomware)
+	if d.KEVForceNow {
+		kev += ". Always Act now"
+	}
+	vector := fmt.Sprintf("Network %+d (physical %+d); an easy attack adds up to %+d; high confidentiality or integrity impact %+d",
+		PointsNetwork, PointsPhysical, PointsLowComplexity+PointsNoPrivileges+PointsNoInteraction, PointsImpactHigh)
 	if PointsAvailabilityHigh == 0 && PointsAvailabilityLimited == 0 {
-		impact += "; availability scores nothing"
-	} else {
-		impact += fmt.Sprintf("; availability high %+d, limited %+d", PointsAvailabilityHigh, PointsAvailabilityLimited)
+		vector += "; availability adds nothing"
 	}
 	return RuleSummaries{
-		KEV: fmt.Sprintf("Listed in CISA's Known Exploited Vulnerabilities: +%d, +%d more if used in ransomware.", PointsKEV, PointsKEVRansomware),
-		EPSS: fmt.Sprintf("Exploitation probability: +%d from the cutoff, +%d from \"high\", +%d (and Fix soon) from \"very high\".",
-			PointsEPSSLow, PointsEPSSHigh, PointsEPSSVeryHigh),
-		Severity: fmt.Sprintf("CVSS severity: %s, %s, %s, %s, unknown %d.", sev("CRITICAL"), sev("HIGH"), sev("MEDIUM"), sev("LOW"), SeverityPoints["UNKNOWN"]),
-		Vector: fmt.Sprintf("Network %+d, adjacent %+d, physical %+d; low complexity %+d; no privileges %+d; no user interaction %+d. ", PointsNetwork, PointsAdjacent, PointsPhysical, PointsLowComplexity, PointsNoPrivileges, PointsNoInteraction) +
-			fmt.Sprintf(impact, PointsImpactHigh, PointsImpactLimited) +
-			fmt.Sprintf(". No vector: the CVSS score × %.1f.", vectorPerCVSSPoint),
-		Fix: fmt.Sprintf("Fix exists %+d, none yet %+d, vendor will not fix %+d.", PointsFix, PointsNoFix, PointsWontFix),
+		KEV:      kev,
+		EPSS:     fmt.Sprintf("%s %+d, %s %+d, %s %+d and Fix soon", pct(d.EPSSCutoff), PointsEPSSLow, pct(d.EPSSHigh), PointsEPSSHigh, pct(d.EPSSVeryHigh), PointsEPSSVeryHigh),
+		Severity: fmt.Sprintf("%s, %s, %s, %s", sev("CRITICAL"), sev("HIGH"), sev("MEDIUM"), sev("LOW")),
+		Vector:   vector,
+		Fix:      fmt.Sprintf("Fix exists %+d, none yet %+d, vendor will not fix %+d", PointsFix, PointsNoFix, PointsWontFix),
+		Tiers:    fmt.Sprintf("Act now %d+, Fix soon %d+, Plan %d+, otherwise Monitor. Score is capped at 100", d.TierNow, d.TierSoon, d.TierPlan),
 	}
 }
 
@@ -117,67 +124,4 @@ func (r Rules) Normalize() Rules {
 	r.TierSoon = min(max(r.TierSoon, r.TierPlan), 100)
 	r.TierNow = min(max(r.TierNow, r.TierSoon), 100)
 	return r
-}
-
-// Preset is a named, built-in set of rules.
-type Preset struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Rules       Rules  `json:"rules"`
-}
-
-// Presets returns the built-in presets, "balanced" (the default) first.
-func Presets() []Preset {
-	strict := DefaultRules()
-	strict.EPSSCutoff, strict.EPSSHigh = 0.05, 0.2
-	strict.FixedOnly = true
-	strict.TierNow, strict.TierSoon, strict.TierPlan = 80, 55, 35
-
-	exploited := DefaultRules()
-	exploited.SeverityEnabled, exploited.VectorEnabled, exploited.FixEnabled = false, false, false
-	exploited.TierNow, exploited.TierSoon, exploited.TierPlan = 50, 20, 10
-
-	return []Preset{
-		{"balanced", "Exploitation evidence first, then severity, reachability and fix availability. The default.", DefaultRules()},
-		{"strict", "A short list: EPSS counts from 5%, findings without a fix are dropped, and the tiers start higher.", strict},
-		{"exploited only", "Ranks by KEV and EPSS alone; severity, vector and fix availability add nothing.", exploited},
-	}
-}
-
-// Rescored is one finding's outcome under a set of rules. Index points into the slice that was
-// rescored; the result is ordered best-ranked first.
-type Rescored struct {
-	Index    int      `json:"index"`
-	Priority int      `json:"priority"`
-	Tier     string   `json:"tier"`
-	TierWhy  string   `json:"tierWhy"`
-	Reasons  []Reason `json:"reasons"`
-	Attack   string   `json:"attack"` // the attack text follows the EPSS threshold, so it is rescored too
-}
-
-// Rescore re-ranks vulns under r without touching them.
-func Rescore(vulns []Vulnerability, r Rules) []Rescored {
-	r = r.Normalize()
-	scored := make([]Vulnerability, len(vulns))
-	idx := make([]int, len(vulns))
-	for i := range vulns {
-		scored[i] = vulns[i]
-		applyRules(newRuleCtx(r, &scored[i]))
-		idx[i] = i
-	}
-	slices.SortStableFunc(idx, func(a, b int) int {
-		switch {
-		case ranksBefore(&scored[a], &scored[b]):
-			return -1
-		case ranksBefore(&scored[b], &scored[a]):
-			return 1
-		}
-		return 0
-	})
-	out := make([]Rescored, len(idx))
-	for n, i := range idx {
-		v := &scored[i]
-		out[n] = Rescored{Index: i, Priority: v.Priority, Tier: v.Tier, TierWhy: v.TierWhy, Reasons: v.Reasons, Attack: v.Attack}
-	}
-	return out
 }

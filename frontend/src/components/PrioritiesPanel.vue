@@ -1,13 +1,12 @@
 <script setup>
 import { computed, nextTick, reactive, ref, watch } from "vue";
-import { prioTarget, result, rules, scanning, showInGraph, vulns, vex } from "../store.js";
+import { prioTarget, result, scanning, showInGraph, SEVERITIES, TIERS, vocab, vulns, vex } from "../store.js";
 import { suppresses, isExpired, TIER_COLOR, tierStyle, STATUS_LABEL, COLUMN_HELP, pct, detailUrl, openUrl } from "../lib/format.js";
 import Chip from "./Chip.vue";
 import CopyId from "./CopyId.vue";
 import CvssBreakdown from "./CvssBreakdown.vue";
 import CvssMeter from "./CvssMeter.vue";
 import Ratings from "./Ratings.vue";
-import RulesEditor from "./RulesEditor.vue";
 import ScanPending from "./ScanPending.vue";
 import VexBox from "./VexBox.vue";
 import WhereItLives from "./WhereItLives.vue";
@@ -17,8 +16,6 @@ import { useVirtualList } from "../lib/virtual.js";
 import { findingPath, indexNodes } from "../lib/where.js";
 
 const prio = reactive({ top: 10, hideResolved: true, fixableOnly: false, groupBy: "none" });
-const TIERS = Object.keys(TIER_COLOR);
-const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
 // Empty set = no filter. Both are view filters that run after ranking, like the toolbar ones.
 const sevFilter = reactive(new Set());
 const tierFilter = reactive(new Set());
@@ -188,7 +185,6 @@ defineExpose({ count: computed(() => pool.value.length) });
     </div>
     <button v-if="filtered" type="button" class="ghost" id="prio-clear" @click="clearFilters">Clear filters</button>
   </div>
-  <RulesEditor />
   <div class="toolbar">
     <label class="chk"
       >Show
@@ -270,7 +266,7 @@ defineExpose({ count: computed(() => pool.value.length) });
             <Chip v-if="v.kev && v.kevRansomware" kind="hot">Ransomware use</Chip>
             <Chip
               v-if="v.hasEpss"
-              :kind="rules.epssEnabled && v.epss >= rules.epssHigh ? 'warm' : ''"
+              :kind="v.epss >= vocab.epssHigh ? 'warm' : ''"
               :title="`Exploitation probability in the next 30 days; percentile ${(v.epssPercentile * 100).toFixed(1)}`"
               >EPSS {{ pct(v.epss) }}</Chip
             >

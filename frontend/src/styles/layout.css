@@ -8,8 +8,7 @@
 .glance,
 .opts-body,
 #log,
-#prio-list,
-details#rules {
+#prio-list {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;

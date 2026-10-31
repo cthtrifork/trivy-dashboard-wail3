@@ -30,13 +30,6 @@ export class AppConfig {
              */
             this["platform"] = "";
         }
-        if (!("headless" in $$source)) {
-            /**
-             * @member
-             * @type {boolean}
-             */
-            this["headless"] = false;
-        }
         if (!("podman" in $$source)) {
             /**
              * @member
@@ -75,14 +68,14 @@ export class AppConfig {
      * @returns {AppConfig}
      */
     static createFrom($$source = {}) {
-        const $$createField5_0 = $$createType1;
-        const $$createField6_0 = $$createType3;
+        const $$createField4_0 = $$createType1;
+        const $$createField5_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("paths" in $$parsedSource) {
-            $$parsedSource["paths"] = $$createField5_0($$parsedSource["paths"]);
+            $$parsedSource["paths"] = $$createField4_0($$parsedSource["paths"]);
         }
         if ("env" in $$parsedSource) {
-            $$parsedSource["env"] = $$createField6_0($$parsedSource["env"]);
+            $$parsedSource["env"] = $$createField5_0($$parsedSource["env"]);
         }
         return new AppConfig(/** @type {Partial<AppConfig>} */($$parsedSource));
     }
