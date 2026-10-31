@@ -1,5 +1,3 @@
-/* App shell: tab bar, panels, status bar, footprint, mode banner. */
-/* The bordered, rounded panel surface shared by cards, wrappers and boxes. Loads before the files that add to it (border-left stripes). */
 .card,
 .side,
 .verdict,

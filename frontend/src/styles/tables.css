@@ -1,4 +1,3 @@
-/* Severity cards, toolbars, data tables, the severity pill, vulnerability detail and windowed tables. */
 #sev-cards,
 #type-cards {
   display: flex;

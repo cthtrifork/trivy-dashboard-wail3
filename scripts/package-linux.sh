@@ -1,14 +1,5 @@
 #!/usr/bin/env bash
-# Builds the .deb and .rpm for a release with `wails3 tool package` (nfpm), from the config in
-# build/linux/nfpm/nfpm.yaml:
-#
-#   <out>/trivy-scanner_<version>_amd64.deb
-#   <out>/trivy-scanner_<version>_x86_64.rpm
-#
-# Signed when PKG_SIGNING_KEY_FILE names an armored PGP private key (passphrase in NFPM_PASSPHRASE),
-# unsigned otherwise. The names have no "linux_amd64" so the in-app updater never matches them.
-#
-#   scripts/package-linux.sh <binary> <version> <outdir>
+# Names omit "linux_amd64" so the in-app updater never matches them. Signed when PKG_SIGNING_KEY_FILE is set.
 set -euo pipefail
 
 bin="${1:?usage: package-linux.sh <binary> <version> <outdir>}"

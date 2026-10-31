@@ -1,5 +1,4 @@
 #!/bin/sh
-# Refresh the launcher and icon caches so the app shows up without logging out. Best effort.
 set -e
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database -q /usr/share/applications || true

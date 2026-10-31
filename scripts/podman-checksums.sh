@@ -1,7 +1,5 @@
 #!/bin/sh
-# Rewrites the PODMAN_SHA256_<arch> pins in build/docker/headless.Dockerfile for a podman release.
-# Usage: scripts/podman-checksums.sh [version]   (default: PODMAN_VERSION from the Dockerfile)
-# Renovate runs it after bumping PODMAN_VERSION (postUpgradeTasks in .github/renovate.json5).
+# Usage: scripts/podman-checksums.sh [version]   (default: PODMAN_VERSION from the Dockerfile; run by Renovate)
 set -eu
 
 dockerfile=build/docker/headless.Dockerfile

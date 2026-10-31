@@ -1,4 +1,3 @@
-/* Generic dialogs, form grids, JSON editor box and the VEX import dialog. */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

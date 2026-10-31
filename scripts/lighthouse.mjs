@@ -1,8 +1,4 @@
-// Runs Lighthouse against LIGHTHOUSE_URL for mobile and desktop and writes, into the directory given
-// as the first argument: summary.md (the PR comment and job summary), lighthouse-<mode>.html (the full
-// report of the median run) and lighthouse-<mode>.json. Exits 1 when a median score is below THRESHOLDS.
-// Each mode runs LIGHTHOUSE_RUNS times (default 3) and the median is used, because a single run varies
-// by a few points.
+// Writes summary.md and per-mode reports into argv[2]; exits 1 when a median of LIGHTHOUSE_RUNS (default 3) is below THRESHOLDS.
 import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

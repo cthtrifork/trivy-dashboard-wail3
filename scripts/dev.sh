@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Hot-reload dev loop, used by `make dev` and the dev container.
-#
-# `wails3 dev` (config in build/config.yml, tasks in Taskfile.yml) runs Vite with HMR and the Go app in
-# server mode (no GTK), rebuilding and restarting it on every .go change. Open http://localhost:$WAILS_SERVER_PORT.
-# Scans use podman (nested in the dev container); if it is unusable it falls back to the recorded demo data (dev builds only).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

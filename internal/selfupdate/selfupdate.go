@@ -1,11 +1,5 @@
-// Package selfupdate configures Wails' built-in updater for this app: a GitHub
-// Releases provider that only offers installable, checksum-verified releases.
-//
-// The updater swaps the running binary for a downloaded file, so every choice
-// here is about not installing something wrong: development builds never update
-// themselves, only the raw binary asset is considered (the release tarball holds
-// several files, which the updater rejects), and a release without a SHA-256
-// digest is refused rather than installed unchecked.
+// Package selfupdate configures Wails' built-in updater: a GitHub Releases provider that only
+// offers installable, checksum-verified releases and never updates development builds.
 package selfupdate
 
 import (

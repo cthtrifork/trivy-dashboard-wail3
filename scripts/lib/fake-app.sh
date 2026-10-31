@@ -1,14 +1,9 @@
-# Sourced by scripts/screenshots.sh and scripts/lighthouse.sh (not run on its own).
+# Sourced by screenshots.sh and lighthouse.sh: builds the headless server and starts it on recorded
+# fixtures (TRIVY_SCANNER_FAKE_PODMAN=1) with a throwaway VEX store and cache, so nothing touches podman.
 #
-# Builds the app in headless server mode (no GTK) and starts it with TRIVY_SCANNER_FAKE_PODMAN=1, so
-# every scan replays internal/trivy/fixtures and nothing touches podman or the network. A throwaway
-# VEX store and cache keep the run independent of your own data.
-#
-#   source scripts/lib/fake-app.sh   (from the repository root, after `set -euo pipefail`)
+#   source scripts/lib/fake-app.sh   (from the repo root, after `set -euo pipefail`)
 #   start_fake_app <port> [command prefix...]
-#
-# The optional command prefix wraps the app process only (for example `env -u HTTPS_PROXY`), so the
-# builds before it still see the proxy. Sets $tmp (scratch directory) and $pid, and removes both on exit.
+
 tmp="$(mktemp -d)"
 pid=""
 cleanup() {

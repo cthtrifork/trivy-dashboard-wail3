@@ -1,4 +1,3 @@
-# Common tasks. `make help` lists them.
 SHELL := /bin/sh
 
 PODMAN    ?= podman

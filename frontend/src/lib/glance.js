@@ -1,5 +1,4 @@
-// A glanceable reading of a finding's CVSS v3 vector for the VEX drawer: one headline plus a few
-// labelled facts. The long prose stays in v.attack; this is the part a reader takes in at a glance.
+// Headline plus a few labelled facts from a CVSS v3 vector (the long prose stays in v.attack).
 const AV = { N: "Network", A: "Adjacent network", L: "Local access", P: "Physical access" };
 const WHO = {
   N: "Anyone on the network",

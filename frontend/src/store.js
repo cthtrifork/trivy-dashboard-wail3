@@ -1,5 +1,3 @@
-// Shared state and the calls into the Go ScanService. A plain module of refs instead of a store
-// library: the app has one scan result and a handful of settings.
 import { computed, reactive, ref, shallowRef, watch } from "vue";
 import { Events } from "@wailsio/runtime";
 import { ScanService } from "./lib/api.js";
