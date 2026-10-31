@@ -201,3 +201,27 @@ func TestSeverityFollowsScoreSource(t *testing.T) {
 		t.Errorf("no score: got %s, want MEDIUM", v.Severity)
 	}
 }
+
+// ScoreEstimate is the one default for a missing score, carried to the UI: the severity band's
+// floor, and only when no score was published.
+func TestScoreEstimate(t *testing.T) {
+	res := &ScanResult{}
+	data := []byte(`{"Results":[{"Target":"t","Class":"lang-pkgs","Vulnerabilities":[
+	 {"VulnerabilityID":"A","PkgName":"a","Severity":"HIGH"},
+	 {"VulnerabilityID":"B","PkgName":"b","Severity":"HIGH","VendorSeverity":{"nvd":3},"CVSS":{"nvd":{"V3Score":7.5}}},
+	 {"VulnerabilityID":"C","PkgName":"c","Severity":"UNKNOWN"}]}]}`)
+	if err := parseVulns(data, res); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]Vulnerability{}
+	for _, v := range res.Vulnerabilities {
+		got[v.ID] = v
+	}
+	if got["A"].ScoreEstimate != 7 || got["B"].ScoreEstimate != 0 || got["C"].ScoreEstimate != 0 {
+		t.Errorf("estimates A=%v B=%v C=%v, want 7, 0, 0", got["A"].ScoreEstimate, got["B"].ScoreEstimate, got["C"].ScoreEstimate)
+	}
+	// The rules score from the same number the UI shows.
+	if a := got["A"]; effectiveScore(&a) != a.ScoreEstimate {
+		t.Errorf("effectiveScore %v differs from the estimate %v", effectiveScore(&a), a.ScoreEstimate)
+	}
+}

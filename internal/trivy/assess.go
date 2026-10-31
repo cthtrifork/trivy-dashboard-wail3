@@ -237,9 +237,18 @@ func pctText(p float64) string {
 	return strconv.FormatFloat(p*100, 'f', -1, 64) + "%"
 }
 
-// cvssFloor is the lowest CVSS base score of each severity band. The UI shows it, marked "~", when
-// no source published a score (frontend/src/lib/format.js, CVSS_FLOOR); keep the two in step.
+// cvssFloor is the lowest CVSS base score of each severity band. It is the one definition of the
+// default score: Vulnerability.ScoreEstimate carries it to the UI, which shows it marked "~".
 var cvssFloor = map[string]float64{"CRITICAL": 9, "HIGH": 7, "MEDIUM": 4, "LOW": 0.1}
+
+// scoreEstimate is the default score of a finding without one: the floor of its severity band, or 0
+// when a score was published or the severity is unrated.
+func scoreEstimate(score float64, severity string) float64 {
+	if score > 0 {
+		return 0
+	}
+	return cvssFloor[severity]
+}
 
 // effectiveScore is the reported CVSS score, else the floor of the severity band (0 when unrated).
 func effectiveScore(v *Vulnerability) float64 {

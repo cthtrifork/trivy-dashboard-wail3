@@ -245,7 +245,7 @@ defineExpose({ count: computed(() => pool.value.length) });
       <div v-else v-measure="cardKey(v)" class="prow" :class="{ open: expanded.has(cardKey(v)), landed: landed?.key === cardKey(v) }" :style="sevStyle(v)">
         <div class="prow-main">
           <span class="sev sevpill" :class="v.severity">{{ v.severity }}</span>
-          <CvssMeter :score="v.score" :severity="v.severity" />
+          <CvssMeter :score="v.score" :estimate="v.scoreEstimate" />
           <span class="pfind">
             <span class="ptitle"
               ><button type="button" class="pexpand" :aria-expanded="expanded.has(cardKey(v))" @click.stop="toggleRow(v)">{{ v.title || v.id }}</button></span

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from "vue";
-import { cvssFloor, sourceName } from "../lib/format.js";
+import { sourceName } from "../lib/format.js";
 
 const props = defineProps({ v: { type: Object, required: true } });
 const rows = computed(() => props.v.ratings || []);
@@ -13,7 +13,7 @@ const top = computed(() => rows.value.reduce((a, r) => (r.score > (a?.score ?? 0
 // Why the headline score is what it is: preferred source (Red Hat, then NVD) or the highest published.
 const basis = computed(() => {
   const v = props.v;
-  if (!v.score) return cvssFloor(v.severity) ? `No source published a CVSS score. ~${cvssFloor(v.severity).toFixed(1)} is an estimate: the lowest score of ${v.severity} severity.` : "";
+  if (!v.score) return v.scoreEstimate ? `No source published a CVSS score. ~${v.scoreEstimate.toFixed(1)} is an estimate: the lowest score of ${v.severity} severity.` : "";
   const from = sourceName(v.scoreSource);
   const preferred = v.scoreSource === "redhat" || v.scoreSource === "nvd";
   const t = top.value;

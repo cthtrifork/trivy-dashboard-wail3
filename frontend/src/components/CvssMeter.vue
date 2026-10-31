@@ -1,10 +1,10 @@
 <script setup>
 import { computed } from "vue";
-import { COLUMN_HELP, cvssFloor } from "../lib/format.js";
+import { COLUMN_HELP } from "../lib/format.js";
 
-const props = defineProps({ score: { type: Number, default: 0 }, severity: { type: String, default: "" } });
-// No published score: fall back to the severity band floor and say so, so it is never read as reported.
-const floor = computed(() => (props.score ? 0 : cvssFloor(props.severity)));
+const props = defineProps({ score: { type: Number, default: 0 }, estimate: { type: Number, default: 0 } });
+// No published score: show the estimate Go supplies (the severity band floor) and say so, so it is never read as reported.
+const floor = computed(() => (props.score ? 0 : props.estimate));
 const est = computed(() => floor.value > 0);
 </script>
 

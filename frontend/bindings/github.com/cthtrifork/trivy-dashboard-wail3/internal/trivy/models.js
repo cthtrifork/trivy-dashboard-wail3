@@ -1742,6 +1742,16 @@ export class Vulnerability {
              */
             this["score"] = 0;
         }
+        if (!("scoreEstimate" in $$source)) {
+            /**
+             * ScoreEstimate stands in for Score when no source published one: the floor of the severity
+             * band, the only place that default is defined (see cvssFloor). 0 when Score is set or the
+             * finding is unrated. The UI shows it with a "~" and the rules score from it.
+             * @member
+             * @type {number}
+             */
+            this["scoreEstimate"] = 0;
+        }
         if (!("scoreSource" in $$source)) {
             /**
              * ScoreSource is the data source Score came from (see pickScore) and Ratings lists what every
@@ -1883,14 +1893,14 @@ export class Vulnerability {
      * @returns {Vulnerability}
      */
     static createFrom($$source = {}) {
-        const $$createField12_0 = $$createType25;
-        const $$createField26_0 = $$createType11;
+        const $$createField13_0 = $$createType25;
+        const $$createField27_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ratings" in $$parsedSource) {
-            $$parsedSource["ratings"] = $$createField12_0($$parsedSource["ratings"]);
+            $$parsedSource["ratings"] = $$createField13_0($$parsedSource["ratings"]);
         }
         if ("reasons" in $$parsedSource) {
-            $$parsedSource["reasons"] = $$createField26_0($$parsedSource["reasons"]);
+            $$parsedSource["reasons"] = $$createField27_0($$parsedSource["reasons"]);
         }
         return new Vulnerability(/** @type {Partial<Vulnerability>} */($$parsedSource));
     }

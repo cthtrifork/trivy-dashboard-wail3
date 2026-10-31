@@ -64,6 +64,10 @@ type Vulnerability struct {
 	URL         string  `json:"url"`
 	Target      string  `json:"target"`
 	Score       float64 `json:"score"`
+	// ScoreEstimate stands in for Score when no source published one: the floor of the severity
+	// band, the only place that default is defined (see cvssFloor). 0 when Score is set or the
+	// finding is unrated. The UI shows it with a "~" and the rules score from it.
+	ScoreEstimate float64 `json:"scoreEstimate"`
 	// ScoreSource is the data source Score came from (see pickScore) and Ratings lists what every
 	// source said, so the UI can show why a MEDIUM carries a 9.1 from somewhere else.
 	ScoreSource string   `json:"scoreSource"`
@@ -480,11 +484,12 @@ func parseVulns(data []byte, res *ScanResult) error {
 			score, scoreSource := pickScore(v.CVSS)
 			sev = alignSeverity(sev, r.Class, scoreSource, v.VendorSeverity)
 			vector := pickVector(v.CVSS, scoreSource)
+			estimate := scoreEstimate(score, sev)
 			res.SeverityCounts[sev]++
 			res.Vulnerabilities = append(res.Vulnerabilities, Vulnerability{
 				ID: v.VulnerabilityID, Package: v.PkgName, Installed: v.InstalledVersion,
 				Fixed: v.FixedVersion, Severity: sev, Status: v.Status, Title: v.Title,
-				Description: v.Description, URL: v.PrimaryURL, Target: r.Target, Score: score, ScoreSource: scoreSource, Ratings: ratings(v.VendorSeverity, v.CVSS),
+				Description: v.Description, URL: v.PrimaryURL, Target: r.Target, Score: score, ScoreEstimate: estimate, ScoreSource: scoreSource, Ratings: ratings(v.VendorSeverity, v.CVSS),
 				PURL: v.PkgIdentifier.PURL, Vector: vector,
 				Key: VEXKey(v.VulnerabilityID, v.PkgIdentifier.PURL, v.PkgName, v.InstalledVersion),
 			})
