@@ -20,7 +20,7 @@ make format                                        # gofmt plus Biome for the Vu
 make test                                          # what CI runs (go test -race -count=1 ./...); recorded fixtures, no podman needed
 make vet                                           # go vet, with and without -tags production
 make build-server                                  # headless build (CGO_ENABLED=0, -tags server,production), no GTK
-make run-mcp                                       # desktop app with Wails' MCP server on 127.0.0.1:9099 (dev only, docs/mcp.md); run-mcp-server is the headless variant
+make run-mcp                                       # desktop app with Wails' MCP server on 127.0.0.1:9099 (dev only, docs/mcp.md)
 make demo                                          # demo mode on recorded data (dev builds only)
 make screenshots                                   # renders into the gitignored docs/screenshots (needs Node + Playwright); never commit them
 ```

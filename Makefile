@@ -19,8 +19,8 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt format lint lint-go lint-frontend tools format-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots \
-        headless headless-socket headless-image headless-up headless-down headless-update \
+.PHONY: help test check fmt format lint lint-go lint-frontend tools format-frontend vet frontend bindings wails3-install dev build build-server run run-mcp demo screenshots \
+        headless headless-socket headless-image headless-up headless-down \
         headless-logs headless-status headless-tunnel
 
 help: ## List the targets
@@ -78,9 +78,6 @@ bindings: ## Regenerate frontend/bindings from the Go services (needs the wails3
 dev: ## Hot reload via `wails3 dev` in server mode: Vite HMR + rebuild-on-save Go (http://localhost:8080)
 	scripts/dev.sh
 
-dev-frontend: ## Vite dev server with hot reload; then run: FRONTEND_DEVSERVER_URL=http://127.0.0.1:9245 go run .
-	cd frontend && npm run dev
-
 build: frontend ## Desktop release build (needs GTK4 + WebKitGTK 6)
 	go build -tags production -trimpath -buildvcs=false -ldflags "-w -s -X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=$(VERSION)" -o $(OUT) .
 
@@ -92,9 +89,6 @@ run: frontend ## Run the desktop app with real podman
 
 run-mcp: frontend ## Desktop app with Wails' MCP server on 127.0.0.1:9099 (dev only; see docs/mcp.md)
 	go run -tags mcp .
-
-run-mcp-server: frontend ## Headless app with the MCP server; only app_info, windows_list, emit_event work (no webview)
-	CGO_ENABLED=0 go run -tags server,mcp .
 
 demo: frontend ## Run the desktop app on recorded data (dev build only)
 	TRIVY_SCANNER_FAKE_PODMAN=1 go run .
@@ -126,10 +120,6 @@ headless-up: headless-image ## (Re)create and start the container, listening on 
 
 headless-down: ## Stop and remove the container (the data volume stays)
 	$(PODMAN) rm -f $(NAME)
-
-headless-update: ## git pull origin main, then rebuild and restart
-	git pull origin main
-	$(MAKE) headless-up
 
 headless-logs: ## Follow the container logs
 	$(PODMAN) logs -f $(NAME)

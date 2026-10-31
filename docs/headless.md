@@ -75,7 +75,7 @@ The same steps as a Makefile (needs `make`, `git` and podman on the server):
 
 ```sh
 make headless          # enable the podman socket, build the image, (re)start the container, print the ssh command
-make headless-update   # git pull origin main, rebuild, restart
+git pull && make headless-up   # update: pull, rebuild the image, restart
 make headless-status   # container state and whether it answers on localhost
 make headless-logs     # follow the logs
 make headless-down     # remove the container (data volume stays)

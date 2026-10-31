@@ -10,7 +10,7 @@ The server is compiled in only with the `mcp` build tag and starts inside `app.R
 
 ```sh
 make run-mcp            # desktop app: go run -tags mcp . (needs GTK4 + WebKitGTK 6)
-make run-mcp-server     # headless app: CGO_ENABLED=0 go run -tags server,mcp .
+make frontend && CGO_ENABLED=0 go run -tags server,mcp .   # headless app
 WAILS_MCP=1 wails3 dev  # the CLI adds the tag for you
 ```
 
