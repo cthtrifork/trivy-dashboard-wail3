@@ -317,6 +317,10 @@ func (s *ScanService) UpdateDB(trivyImage string) (bool, error) {
 // RulePresets returns the built-in scoring presets.
 func (s *ScanService) RulePresets() []trivy.Preset { return trivy.Presets() }
 
+// RuleHelp returns what each scoring rule adds, in words, for the scoring panel. It is written from
+// the constants the rules use, so the text cannot drift from the points applied.
+func (s *ScanService) RuleHelp() trivy.RuleSummaries { return trivy.RuleHelp() }
+
 // CheckIgnoreFile reports why the text is not a usable .trivyignore.yaml, or "" when it is (or is
 // blank). The UI shows it under the field while the user types.
 func (s *ScanService) CheckIgnoreFile(text string) string {

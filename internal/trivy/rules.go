@@ -1,6 +1,9 @@
 package trivy
 
-import ()
+import (
+	"fmt"
+	"strings"
+)
 
 // Points each rule adds. They are constants on purpose: a rule can be switched off or have its
 // thresholds moved, but never re-weighted, so every score is a sum of numbers the UI prints.
@@ -32,6 +35,46 @@ const (
 
 // SeverityPoints is what the Severity rule adds for each rating.
 var SeverityPoints = map[string]int{"CRITICAL": 30, "HIGH": 25, "MEDIUM": 10, "LOW": 3, "UNKNOWN": 0}
+
+// RuleSummaries is the one-line description of what each rule adds, written from the same constants
+// the rules use, so the scoring panel cannot show points that differ from the ones applied.
+type RuleSummaries struct {
+	KEV      string `json:"kev"`
+	EPSS     string `json:"epss"`
+	Severity string `json:"severity"`
+	Vector   string `json:"vector"`
+	Fix      string `json:"fix"`
+	// Tiers says where each tier starts and that the score is capped.
+	Tiers string `json:"tiers"`
+}
+
+// RuleHelp returns the summaries for the scoring panel.
+func RuleHelp() RuleSummaries {
+	d := DefaultRules()
+	pct := func(f float64) string { return fmt.Sprintf("%g%%", f*100) }
+	sev := func(name string) string { return fmt.Sprintf("%s %+d", strings.ToLower(name), SeverityPoints[name]) }
+	impact := "Confidentiality or integrity impact high %+d, limited %+d each"
+	if PointsAvailabilityHigh == 0 && PointsAvailabilityLimited == 0 {
+		impact += "; availability scores nothing"
+	} else {
+		impact += fmt.Sprintf("; availability high %+d, limited %+d", PointsAvailabilityHigh, PointsAvailabilityLimited)
+	}
+	kev := fmt.Sprintf("Listed in CISA's Known Exploited Vulnerabilities: +%d, +%d more if used in ransomware.", PointsKEV, PointsKEVRansomware)
+	if d.KEVForceNow {
+		kev += " Always Act now."
+	}
+	return RuleSummaries{
+		KEV: kev,
+		EPSS: fmt.Sprintf("Exploitation probability: +%d from %s, +%d from %s, +%d (and Fix soon) from %s.",
+			PointsEPSSLow, pct(d.EPSSCutoff), PointsEPSSHigh, pct(d.EPSSHigh), PointsEPSSVeryHigh, pct(d.EPSSVeryHigh)),
+		Severity: fmt.Sprintf("CVSS severity: %s, %s, %s, %s, unknown %d.", sev("CRITICAL"), sev("HIGH"), sev("MEDIUM"), sev("LOW"), SeverityPoints["UNKNOWN"]),
+		Vector: fmt.Sprintf("Network %+d, adjacent %+d, physical %+d; low complexity %+d; no privileges %+d; no user interaction %+d. ", PointsNetwork, PointsAdjacent, PointsPhysical, PointsLowComplexity, PointsNoPrivileges, PointsNoInteraction) +
+			fmt.Sprintf(impact, PointsImpactHigh, PointsImpactLimited) +
+			fmt.Sprintf(". No vector: the CVSS score × %.1f.", vectorPerCVSSPoint),
+		Fix:   fmt.Sprintf("Fix exists %+d, none yet %+d, vendor will not fix %+d.", PointsFix, PointsNoFix, PointsWontFix),
+		Tiers: fmt.Sprintf("Act now from %d, Fix soon from %d, Plan from %d, otherwise Monitor. Scores are capped at 100.", d.TierNow, d.TierSoon, d.TierPlan),
+	}
+}
 
 // Rules is the tunable part of the priority score: which rules apply and where their thresholds
 // sit. The zero value switches everything off; use DefaultRules for the standard behaviour.

@@ -3,6 +3,7 @@ package trivy
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -490,6 +491,28 @@ func TestAttackTextFollowsEPSSThreshold(t *testing.T) {
 
 // The points the help text and docs quote are the constants the rules use; each must be what a
 // finding actually scores.
+// The Help dialog's scoring text is written from the constants and default rules. Every number in
+// it must be what a finding actually scores, so the two cannot drift.
+func TestRuleHelpMatchesAppliedPoints(t *testing.T) {
+	h, d := RuleHelp(), DefaultRules()
+	for _, c := range []struct{ text, want string }{
+		{h.KEV, fmt.Sprintf("+%d, +%d more", PointsKEV, PointsKEVRansomware)},
+		{h.EPSS, fmt.Sprintf("+%d from %g%%, +%d from %g%%, +%d (and Fix soon) from %g%%", PointsEPSSLow, d.EPSSCutoff*100, PointsEPSSHigh, d.EPSSHigh*100, PointsEPSSVeryHigh, d.EPSSVeryHigh*100)},
+		{h.Fix, fmt.Sprintf("Fix exists +%d, none yet %d, vendor will not fix %d", PointsFix, PointsNoFix, PointsWontFix)},
+		{h.Vector, "availability scores nothing"},
+		{h.Tiers, fmt.Sprintf("Act now from %d, Fix soon from %d, Plan from %d", d.TierNow, d.TierSoon, d.TierPlan)},
+	} {
+		if !strings.Contains(c.text, c.want) {
+			t.Errorf("%q is missing %q", c.text, c.want)
+		}
+	}
+	for sev, want := range SeverityPoints {
+		if want > 0 && !strings.Contains(h.Severity, fmt.Sprintf("%s +%d", strings.ToLower(sev), want)) {
+			t.Errorf("severity text lacks %s +%d: %s", sev, want, h.Severity)
+		}
+	}
+}
+
 func TestRulePointsMatchConstants(t *testing.T) {
 	// What the rules apply, read back from real assessments.
 	for sev, want := range SeverityPoints {

@@ -16,6 +16,7 @@ export {
     Preset,
     Rating,
     Reason,
+    RuleSummaries,
     Rules,
     SBOMSummary,
     ScanRequest,

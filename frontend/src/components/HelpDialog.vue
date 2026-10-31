@@ -8,6 +8,21 @@ const body = ref(null);
 const section = ref("glossary");
 const cfg = ref(null);
 const cfgErr = ref("");
+// What each scoring rule adds, written by Go from the constants the rules use.
+const ruleHelp = ref(null);
+const scoringRows = computed(() => {
+  const h = ruleHelp.value;
+  return h
+    ? [
+        ["Tiers", h.tiers],
+        ["KEV", h.kev],
+        ["EPSS", h.epss],
+        ["Severity", h.severity],
+        ["Vector and impact", h.vector],
+        ["Fix", h.fix],
+      ]
+    : [];
+});
 
 // Grouped by the question each group answers; `format` picks how the group is laid out.
 const glossary = [
@@ -33,6 +48,7 @@ const glossary = [
     title: "What to fix first?",
     caption: "Prioritisation signals",
     format: "cards",
+    scoring: true,
     legend: "tiers",
     items: [
       [
@@ -45,7 +61,7 @@ const glossary = [
       ],
       [
         "Priority tier",
-        "Act now (score 70+), Fix soon (45+), Plan (25+) or Monitor. The score is a sum of readable points, capped at 100, and each finding lists them under Score · why. KEV: +50 (+10 if used in ransomware, and always Act now). EPSS: +10 from 1%, +22 from 10%, +35 from 50%. Severity: critical +30, high +25, medium +10, low +3. Vector and impact: network +6, low complexity +2, no privileges +3, no user interaction +3, high confidentiality or integrity impact +4. Fix: exists +5, none yet -3, vendor will not fix -5.",
+        "Act now, Fix soon, Plan or Monitor. Every score is a sum of readable points, and each finding lists them under Score · why. The points and tier cut-offs below come from the app's own scoring rules.",
         "wide",
       ],
     ],
@@ -181,6 +197,14 @@ async function load() {
   }
 }
 
+async function loadRules() {
+  try {
+    ruleHelp.value = await ScanService.RuleHelp();
+  } catch {
+    ruleHelp.value = null; // the glossary text above still reads fine without the numbers
+  }
+}
+
 // Two tabs, one visible at a time: each panel scrolls on its own and nothing scrolls between them.
 function go(id) {
   section.value = id;
@@ -193,6 +217,7 @@ function open() {
   section.value = "glossary";
   Object.assign(opened, { flags: false, files: false, env: false });
   load();
+  loadRules();
 }
 defineExpose({ open });
 </script>
@@ -232,6 +257,12 @@ defineExpose({ open });
                 <h5>{{ term }}</h5>
                 <p>{{ def }}</p>
               </div>
+              <dl v-if="g.scoring && scoringRows.length" class="htable hscoring" id="help-scoring">
+                <template v-for="[term, def] in scoringRows" :key="term">
+                  <dt>{{ term }}</dt>
+                  <dd>{{ def }}</dd>
+                </template>
+              </dl>
             </div>
             <div v-else-if="g.format === 'cols'" class="hcols">
               <div v-for="[term, def] in g.items" :key="term">
