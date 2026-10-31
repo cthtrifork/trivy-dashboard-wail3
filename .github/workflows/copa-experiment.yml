@@ -1,0 +1,137 @@
+name: Copa experiment
+
+# EXPERIMENT, never required and never fails the PR: can Copacetic (project-copacetic/copacetic)
+# lower the HIGH findings in the headless image? They are in upstream's podman-remote (Go stdlib, grpc,
+# x/net, go-jose), which only Copa's experimental Go binary rebuild (COPA_EXPERIMENTAL=1,
+# --pkg-types library, --toolchain-patch-level) could touch. It rebuilds the binary from source, so
+# the result is judged by the before/after table and a smoke test in the job summary. Manual runs,
+# and runs on a PR that changes this file.
+on:
+  pull_request:
+    paths:
+      - .github/workflows/copa-experiment.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: copa-experiment-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOTOOLCHAIN: local
+  # renovate: datasource=github-releases depName=aquasecurity/trivy
+  TRIVY_VERSION: v0.76.1
+  # renovate: datasource=go depName=github.com/project-copacetic/copacetic
+  COPA_VERSION: v0.15.0
+  # The DB comes from the cache that trivy-cache.yml refreshes daily.
+  TRIVY_SKIP_DB_UPDATE: 'true'
+
+jobs:
+  copa:
+    name: copa patch (experiment)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: .tool-versions
+          cache: false
+
+      - name: Install Copa
+        run: GOTOOLCHAIN=auto go install "github.com/project-copacetic/copacetic@${COPA_VERSION}"
+
+      - name: Build the image
+        run: docker build -t trivy-scanner --build-arg VERSION=copa -f build/docker/headless.Dockerfile .
+
+      # os and library findings, as Copa's docs ask for; HIGH and CRITICAL with a fix.
+      - name: Scan before
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PKG_TYPES: os,library
+        with:
+          scan-type: image
+          image-ref: trivy-scanner
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: before.json
+          exit-code: '0'
+          version: ${{ env.TRIVY_VERSION }}
+
+      - name: Patch with Copa
+        id: copa
+        continue-on-error: true
+        env:
+          COPA_EXPERIMENTAL: '1'
+        shell: bash
+        run: |
+          "$(go env GOPATH)/bin/copacetic" patch -i trivy-scanner -r before.json -t patched \
+            --pkg-types library --toolchain-patch-level --addr docker:// 2>&1 | tee copa.log
+
+      - name: Scan after
+        if: steps.copa.outcome == 'success'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PKG_TYPES: os,library
+        with:
+          scan-type: image
+          image-ref: trivy-scanner:patched
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: after.json
+          exit-code: '0'
+          version: ${{ env.TRIVY_VERSION }}
+
+      # The patched image must still start and serve the UI, and its podman must still run.
+      - name: Smoke test the patched image
+        id: smoke
+        if: steps.copa.outcome == 'success'
+        continue-on-error: true
+        run: |
+          docker run --rm --entrypoint /usr/local/bin/podman trivy-scanner:patched --version
+          docker run -d --name smoke -p 8080:8080 -e WAILS_SERVER_HOST=0.0.0.0 trivy-scanner:patched
+          for i in $(seq 1 30); do
+            curl -fsS -o /dev/null http://127.0.0.1:8080/ && exit 0
+            sleep 1
+          done
+          docker logs smoke
+          exit 1
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: |
+          count() { jq '[.Results[]?.Vulnerabilities[]?] | length' "$1"; }
+          per() { jq -r '.Results[]? | select((.Vulnerabilities // []) | length > 0) | "| `\(.Target)` | \(.Vulnerabilities | length) |"' "$1"; }
+          {
+            echo '## Copa experiment (headless image)'
+            echo
+            echo "Copa \`${COPA_VERSION}\`, patch step: **${{ steps.copa.outcome }}**, smoke test: **${{ steps.smoke.outcome }}**"
+            echo
+            echo "HIGH and CRITICAL findings with a fix: **$(count before.json)** before"$( [ -f after.json ] && echo ", **$(count after.json)** after" )"."
+            echo
+            echo '| Target (before) | Findings |'
+            echo '|---|---|'
+            per before.json
+            if [ -f after.json ]; then
+              echo
+              echo '| Target (after) | Findings |'
+              echo '|---|---|'
+              per after.json
+            fi
+            echo
+            echo '<details><summary>Copa log (last 60 lines)</summary>'
+            echo
+            echo '```'
+            tail -n 60 copa.log 2>/dev/null || echo 'no log'
+            echo '```'
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
