@@ -198,6 +198,7 @@ runs:
         SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
       run: |
         count() { jq '[.Results[]?.Vulnerabilities[]?] | length' "$1"; }
+        rest() { jq -r '.Results[]? | .Vulnerabilities[]? | "| \(.VulnerabilityID) | `\(.PkgName)` | \(.InstalledVersion) | \(.FixedVersion) |"' "$1"; }
         per() { jq -r '.Results[]? | select((.Vulnerabilities // []) | length > 0) | "| `\(.Target)` | \(.Vulnerabilities | length) |"' "$1"; }
         {
           echo '## Trivy scan of the Copa-patched headless image'
@@ -218,6 +219,14 @@ runs:
             echo '| Target (after) | Findings |'
             echo '|---|---|'
             per after.json
+          fi
+          if [ -f after.json ] && [ "$(count after.json)" -gt 0 ]; then
+            echo
+            echo 'Still open after patching:'
+            echo
+            echo '| CVE | Package | Installed | Fixed in |'
+            echo '|---|---|---|---|'
+            rest after.json
           fi
           echo
           echo '<details><summary>Copa log (last 40 lines)</summary>'
