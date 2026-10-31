@@ -48,7 +48,6 @@ const glossary = [
     title: "What to fix first?",
     caption: "Prioritisation signals",
     format: "cards",
-    scoring: true,
     legend: "tiers",
     items: [
       [
@@ -61,7 +60,7 @@ const glossary = [
       ],
       [
         "Priority tier",
-        "Act now, Fix soon, Plan or Monitor. Every score is a sum of readable points, and each finding lists them under Score · why. Open Scoring rules below for the points.",
+        "Act now, Fix soon, Plan or Monitor. Every score is a sum of readable points, and each finding lists them under Score · why. The points are under Scoring rules at the bottom.",
         "wide",
       ],
     ],
@@ -255,19 +254,6 @@ defineExpose({ open });
                 <h5>{{ term }}</h5>
                 <p>{{ def }}</p>
               </div>
-              <div v-if="g.scoring && scoringRows.length" class="hcard wide hscoring" id="help-scoring">
-                <button type="button" class="hsum" :aria-expanded="opened.scoring" @click="toggle('scoring')">
-                  <span v-if="!opened.scoring"><b>Scoring rules</b> · what each signal adds to the score</span>
-                  <span v-else class="kv">What each signal adds to the score</span>
-                  <span class="htoggle">{{ opened.scoring ? "Hide ▾" : "Show ▸" }}</span>
-                </button>
-                <dl v-if="opened.scoring" class="htable">
-                  <template v-for="[term, def] in scoringRows" :key="term">
-                    <dt>{{ term }}</dt>
-                    <dd>{{ def }}</dd>
-                  </template>
-                </dl>
-              </div>
             </div>
             <div v-else-if="g.format === 'cols'" class="hcols">
               <div v-for="[term, def] in g.items" :key="term">
@@ -292,6 +278,24 @@ defineExpose({ open });
                 <b>{{ g.note[0] }}</b> {{ g.note[1] }}
               </p>
             </template>
+          </div>
+        </section>
+        <section v-if="scoringRows.length" id="help-scoring" class="hgroup">
+          <header>
+            <b>Scoring rules</b>
+            <small>Balanced rules</small>
+          </header>
+          <div class="hbody">
+            <button type="button" class="hsum" :aria-expanded="opened.scoring" @click="toggle('scoring')">
+              <span :class="{ kv: opened.scoring }">What each signal adds to the score</span>
+              <span class="htoggle">{{ opened.scoring ? "Hide ▾" : "Show ▸" }}</span>
+            </button>
+            <dl v-if="opened.scoring" class="htable">
+              <template v-for="[term, def] in scoringRows" :key="term">
+                <dt>{{ term }}</dt>
+                <dd>{{ def }}</dd>
+              </template>
+            </dl>
           </div>
         </section>
       </div>
