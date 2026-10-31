@@ -54,7 +54,8 @@ export class BinaryInfo {
 }
 
 /**
- * CompareRequest asks for two tags (or digests) of one image to be compared.
+ * CompareRequest asks for two images to be compared: two tags (or digests) of Repo, or Repo:TagA
+ * against any other image when TagB is a full reference (see targetRef).
  */
 export class CompareRequest {
     /**
@@ -79,7 +80,7 @@ export class CompareRequest {
         }
         if (!("tagB" in $$source)) {
             /**
-             * target
+             * target: a tag or digest of Repo, or a full image reference
              * @member
              * @type {string}
              */
