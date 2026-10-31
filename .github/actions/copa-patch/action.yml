@@ -57,12 +57,17 @@ runs:
         go-version-file: .tool-versions
         cache: false
 
-    - name: Install Copa and create the builder
+    # Copa v0.15.0 does not pass the binary's -tags to `go build`, which podman-remote needs (copa-tags.patch,
+    # a suggested upstream fix, see docs/ci.md). So Copa is built from its tag with the
+    # patch applied instead of installed with `go install`. Drop the patch when upstream has the fix.
+    - name: Build Copa with the -tags patch and create the builder
       shell: bash
       env:
         COPA_VERSION: ${{ inputs.copa-version }}
       run: |
-        GOTOOLCHAIN=auto go install "github.com/project-copacetic/copacetic@${COPA_VERSION}"
+        git clone --quiet --depth 1 --branch "$COPA_VERSION" https://github.com/project-copacetic/copacetic "$RUNNER_TEMP/copa-src"
+        git -C "$RUNNER_TEMP/copa-src" apply "$GITHUB_ACTION_PATH/copa-tags.patch"
+        (cd "$RUNNER_TEMP/copa-src" && GOTOOLCHAIN=auto go build -o "$RUNNER_TEMP/copa-bin/copacetic" .)
         # The runner's default Docker builder has no `docker` exporter, which Copa needs to load the
         # patched image. A docker-container builder has one; host network lets it reach a local registry.
         docker buildx create --name copa --driver docker-container --driver-opt network=host --bootstrap
@@ -132,7 +137,7 @@ runs:
       run: |
         args=(--pkg-types library --toolchain-patch-level --addr docker-container://buildx_buildkit_copa0)
         [ -n "$GO_VCS_URL" ] && args+=(--go-vcs-url "$GO_VCS_URL")
-        "$(go env GOPATH)/bin/copacetic" patch -i localhost:5000/copa-mini:latest -r mini-before.json -t patched "${args[@]}" 2>&1 | tee copa.log
+        "$RUNNER_TEMP/copa-bin/copacetic" patch -i localhost:5000/copa-mini:latest -r mini-before.json -t patched "${args[@]}" 2>&1 | tee copa.log
 
     # Layer the patched binary over the original image, so everything else stays as it was.
     - name: Put the patched binary into the image
