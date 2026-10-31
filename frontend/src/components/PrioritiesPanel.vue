@@ -7,7 +7,6 @@ import CopyId from "./CopyId.vue";
 import CvssBreakdown from "./CvssBreakdown.vue";
 import CvssMeter from "./CvssMeter.vue";
 import Ratings from "./Ratings.vue";
-import RulesEditor from "./RulesEditor.vue";
 import ScanPending from "./ScanPending.vue";
 import VexBox from "./VexBox.vue";
 import WhereItLives from "./WhereItLives.vue";
@@ -188,7 +187,6 @@ defineExpose({ count: computed(() => pool.value.length) });
     </div>
     <button v-if="filtered" type="button" class="ghost" id="prio-clear" @click="clearFilters">Clear filters</button>
   </div>
-  <RulesEditor />
   <div class="toolbar">
     <label class="chk"
       >Show

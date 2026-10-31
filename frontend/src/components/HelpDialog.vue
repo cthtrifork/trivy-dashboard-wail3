@@ -45,7 +45,7 @@ const glossary = [
       ],
       [
         "Priority tier",
-        "Act now, Fix soon, Plan or Monitor. Every score is a sum of readable reasons (KEV, EPSS, Severity, Vector, Fix), so you can see why a finding ranks where it does. Open Scoring rules to switch rules on or off, move thresholds and save presets.",
+        "Act now (score 70+), Fix soon (45+), Plan (25+) or Monitor. The score is a sum of readable points, capped at 100, and each finding lists them under Score · why. KEV: +50 (+10 if used in ransomware, and always Act now). EPSS: +10 from 1%, +22 from 10%, +35 from 50%. Severity: critical +30, high +25, medium +10, low +3. Vector and impact: network +6, low complexity +2, no privileges +3, no user interaction +3, high confidentiality or integrity impact +4. Fix: exists +5, none yet -3, vendor will not fix -5.",
         "wide",
       ],
     ],

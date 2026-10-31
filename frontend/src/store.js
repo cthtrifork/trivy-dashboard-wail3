@@ -88,13 +88,10 @@ export const vex = shallowRef(new Map());
 // The finding open in the VEX assess drawer, or null when it is closed.
 export const assessing = shallowRef(null);
 
-// Scoring rules. `rules` is the live set the Go side applies; presets are named copies of it.
-// Built-in presets come from Go; the user's own live in localStorage next to the Trivy version.
+// Scoring rules. Scans are always ranked under the balanced preset (docs/scoring.md), which Go
+// provides; `rules` holds its values for the few places the UI mirrors them (the EPSS chip).
 export const rules = reactive({});
 export const builtinPresets = ref([]);
-// What each rule adds, in words, written by Go from the constants the rules use.
-export const ruleHelp = ref({});
-export const userPresets = ref([]);
 const lsJSON = (k, fallback) => {
   try {
     return JSON.parse(lsGet(k)) ?? fallback;
@@ -102,75 +99,21 @@ const lsJSON = (k, fallback) => {
     return fallback;
   }
 };
-const rulesJSON = (r) =>
-  JSON.stringify(
-    Object.keys(r)
-      .sort()
-      .map((k) => [k, r[k]]),
-  );
-export const allPresets = computed(() => [...builtinPresets.value, ...userPresets.value]);
-// The preset the live rules equal exactly, or null once the user has changed anything.
-export const activePreset = computed(() => allPresets.value.find((p) => rulesJSON(p.rules) === rulesJSON(rules))?.name ?? null);
-
-let rankToken = 0;
-// rerank asks Go to rank the latest scan under the live rules. Calls that are superseded (the user
-// kept dragging a threshold, or rescanned) are dropped.
-async function rerank() {
-  const r = result.value,
-    token = ++rankToken;
-  if (!r) return void (vulns.value = []);
-  if (!builtinPresets.value.length || rulesJSON(rules) === rulesJSON(builtinPresets.value[0].rules)) {
-    vulns.value = r.vulnerabilities; // the scan already used the default rules
-    return;
-  }
-  try {
-    const out = await ScanService.Rescore({ ...rules });
-    if (token !== rankToken || out.length !== r.vulnerabilities.length) return;
-    vulns.value = out.map((o) => ({
-      ...r.vulnerabilities[o.index],
-      priority: o.priority,
-      tier: o.tier,
-      tierWhy: o.tierWhy,
-      reasons: o.reasons,
-      attack: o.attack,
-    }));
-  } catch (err) {
-    setStatus("Could not apply the scoring rules: " + errText(err), { err: true });
-  }
-}
-
-let rerankTimer;
-export function setRules(next) {
-  Object.assign(rules, next);
-  lsSet(KEYS.rules, JSON.stringify(rules));
-  clearTimeout(rerankTimer);
-  rerankTimer = setTimeout(rerank, 120); // typing a threshold fires once per pause, not per keystroke
-}
-
-export function savePreset(name, description = "") {
-  name = name.trim();
-  if (!name || builtinPresets.value.some((p) => p.name === name)) return false;
-  const entry = { name, description, rules: { ...rules } };
-  userPresets.value = [...userPresets.value.filter((p) => p.name !== name), entry];
-  lsSet(KEYS.presets, JSON.stringify(userPresets.value));
-  return true;
-}
-export function deletePreset(name) {
-  userPresets.value = userPresets.value.filter((p) => p.name !== name);
-  lsSet(KEYS.presets, JSON.stringify(userPresets.value));
+// rerank shows the latest scan's findings; the scan already ranked them under the balanced rules.
+function rerank() {
+  vulns.value = result.value?.vulnerabilities ?? [];
 }
 
 async function initRules() {
   try {
     builtinPresets.value = (await ScanService.RulePresets()) || [];
-    ruleHelp.value = (await ScanService.RuleHelp()) || {};
   } catch (err) {
     return setStatus("Could not load scoring presets: " + errText(err), { err: true });
   }
-  userPresets.value = lsJSON(KEYS.presets, []).filter((p) => p?.name && p.rules);
-  // Merge over the defaults so a rule added in a later version still has a value.
-  Object.assign(rules, builtinPresets.value[0].rules, lsJSON(KEYS.rules, {}));
-  rerank();
+  Object.assign(rules, builtinPresets.value[0].rules);
+  // Earlier versions let people edit the rules and keep presets; those saved values no longer apply.
+  lsRemove(KEYS.rules);
+  lsRemove(KEYS.presets);
 }
 
 export const status = reactive({ msg: "", err: false, busy: false });

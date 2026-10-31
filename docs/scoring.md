@@ -4,7 +4,7 @@ The Priorities tab ranks findings with a small rule engine (`internal/trivy/asse
 
 ## What you can tune
 
-Open **Scoring rules** above the Priorities list. Changes re-rank immediately (the Go side rescores the latest scan; nothing is scanned again).
+The Help dialog (Glossary, Priority tier) summarises the balanced rules. The in-app rules editor was removed; the engine (`Rules`, `Presets`, `Rescore`) is unchanged.
 
 | Rule | Points (fixed) | Tunable |
 |---|---|---|
@@ -39,4 +39,4 @@ The rules apply to the Priorities and Vulnerabilities tabs. Compare and the scan
 
 - `Rules`, `DefaultRules`, `Presets`, `Rescore`: `internal/trivy/rules.go`
 - rule bodies and tier logic: `internal/trivy/assess.go` (`AssessWith`, `applyRules`)
-- binding: `ScanService.Rescore`, `ScanService.RulePresets`; UI: `frontend/src/components/RulesEditor.vue`, `rerank()` in `frontend/src/store.js`
+- binding: `ScanService.Rescore`, `ScanService.RulePresets`; `rerank()` in `frontend/src/store.js`
