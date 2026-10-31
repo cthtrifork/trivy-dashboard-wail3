@@ -1,5 +1,9 @@
 # Trivy Scanner (Wails v3)
 
+[![CI](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/ci.yml)
+[![Security](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/security.yml)
+[![Release](https://img.shields.io/github/v/release/cthtrifork/trivy-dashboard-wail3)](https://github.com/cthtrifork/trivy-dashboard-wail3/releases)
+
 Desktop app: enter a container image reference, and Trivy runs inside a local
 Podman container (`docker.io/aquasec/trivy`, version pinned in [`internal/trivy/engine.go`](internal/trivy/engine.go); choose another version under **Options → Trivy version**).
 
