@@ -1,11 +1,6 @@
-# Release Drafter: the release notes, the next version, and the PR labels.
-#   - .github/workflows/release-drafter.yml keeps a draft release up to date on every push to main.
-#   - tag-release.yml asks it for the next version (when no tag is given); release.yml has it write the notes for
-#     the exact tag, attaches the build to that draft and publishes it. See docs/releasing.md.
-#   - The autolabeler at the bottom labels PRs from their title (.github/workflows/pr-title.yml).
-# Titles are Conventional Commits (`type(scope)!: summary`). Categories match the title or, as a manual
-# override, a label, so a PR is classified even if its label is missing. Keep the types in step with the
-# `types` list in pr-title.yml and the table in docs/releasing.md.
+# Release Drafter: release notes, next version and PR labels (see docs/releasing.md).
+# Titles are Conventional Commits; categories match the title or a label. Keep the types in step with
+# pr-title.yml and docs/releasing.md. The autolabeler at the bottom labels PRs from their title.
 
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'

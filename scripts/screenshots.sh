@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
-# Regenerates docs/screenshots/*.png from the recorded Trivy fixtures.
-#
-# It builds the app in headless server mode (no GTK needed), starts it with
-# TRIVY_SCANNER_FAKE_PODMAN=1 so every scan replays internal/trivy/fixtures and
-# nothing touches podman or the network (scripts/lib/fake-app.sh), then drives the real UI with Playwright.
-#
-# Requirements: Go, Node 20+, and Playwright with Chromium
-#   npm install --no-save playwright && npx playwright install chromium
-# (a global Playwright install also works). With Google Chrome installed, `npm install --no-save
-# playwright-core` and SCREENSHOT_BROWSER_CHANNEL=chrome skip the Chromium download. frontend/ has
-# playwright-core as a dev dependency (Renovate keeps it current), so CI only sets the channel.
+# Regenerates docs/screenshots/*.png from the recorded fixtures (headless server, no podman).
+# Needs Go, Node 20+ and Playwright with Chromium (or playwright-core + SCREENSHOT_BROWSER_CHANNEL=chrome).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

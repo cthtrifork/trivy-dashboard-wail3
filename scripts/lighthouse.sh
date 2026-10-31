@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
-# Audits the UI with Lighthouse (mobile and desktop) and fails when a score drops below the
-# thresholds in scripts/lighthouse.mjs.
-#
-# Like scripts/screenshots.sh it builds and starts the app with scripts/lib/fake-app.sh (headless server
-# mode, no GTK, fixtures, nothing touches podman or the network). The page is served by the
-# same asset middleware the headless release build uses (gzip, cache headers).
-#
-# Requirements: Go, Node 20+ and a Chrome or Chromium (CHROME_PATH, default: google-chrome).
-# Lighthouse itself runs through `npx lighthouse@$LIGHTHOUSE_VERSION` (pinned in .github/workflows/lighthouse.yml; set it to run the script by hand).
+# Audits the UI with Lighthouse (mobile and desktop); fails below the thresholds in lighthouse.mjs.
+# Serves fixtures via scripts/lib/fake-app.sh. Needs Go, Node 20+ and Chrome (CHROME_PATH); set
+# LIGHTHOUSE_VERSION (pinned in .github/workflows/lighthouse.yml) to run it by hand.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
