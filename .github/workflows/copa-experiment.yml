@@ -108,13 +108,16 @@ jobs:
 
       - name: Summary
         if: ${{ !cancelled() }}
+        env:
+          COPA_OUTCOME: ${{ steps.copa.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
         run: |
           count() { jq '[.Results[]?.Vulnerabilities[]?] | length' "$1"; }
           per() { jq -r '.Results[]? | select((.Vulnerabilities // []) | length > 0) | "| `\(.Target)` | \(.Vulnerabilities | length) |"' "$1"; }
           {
             echo '## Copa experiment (headless image)'
             echo
-            echo "Copa \`${COPA_VERSION}\`, patch step: **${{ steps.copa.outcome }}**, smoke test: **${{ steps.smoke.outcome }}**"
+            echo "Copa \`${COPA_VERSION}\`, patch step: **${COPA_OUTCOME}**, smoke test: **${SMOKE_OUTCOME:-skipped}**"
             echo
             echo "HIGH and CRITICAL findings with a fix: **$(count before.json)** before"$( [ -f after.json ] && echo ", **$(count after.json)** after" )"."
             echo
