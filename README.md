@@ -14,8 +14,6 @@ Scan a container image with [Trivy](https://trivy.dev), then see each vulnerabil
 
 ![Priorities view with an expanded row showing the reasons for its rank](https://raw.githubusercontent.com/cthtrifork/trivy-dashboard-wail3/bot/update-screenshots/docs/screenshots/01b-priorities-expanded-row.png)
 
-Screenshots are not committed. The draft [Screenshots preview](../../pulls?q=is%3Apr+is%3Aopen+head%3Abot%2Fupdate-screenshots) PR shows the current ones (Files changed), and `make screenshots` renders them locally.
-
 ## Install
 
 Linux amd64 packages (`.deb`, `.rpm`), a tarball and signed checksums are on the [releases page](https://github.com/cthtrifork/trivy-dashboard-wail3/releases). Needs GTK4, WebKitGTK 6 and `podman`. Steps and signature check: [`docs/install.md`](docs/install.md). Release builds can [self-update](docs/self-update.md).
