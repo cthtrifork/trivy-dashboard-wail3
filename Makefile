@@ -45,7 +45,7 @@ GOIMPORTS_VERSION := v0.52.0
 lint: lint-go lint-frontend ## golangci-lint plus the frontend's Biome lint and format check (as CI runs them)
 
 lint-go: ## golangci-lint on the server-tag build (CGO off, no GTK needed)
-	CGO_ENABLED=0 go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --build-tags server ./...
+	CGO_ENABLED=0 go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --config .github/linters/golangci.yml --build-tags server ./...
 
 tools: ## Install goimports and golangci-lint into GOBIN (for editors)
 	go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)

@@ -398,7 +398,7 @@ jobs:
             org.opencontainers.image.title=Trivy Scanner (headless)
             org.opencontainers.image.version=${{ needs.meta.outputs.version }}
 
-      # The project's own OpenVEX statements (vex/openvex.json). One stamped copy is baked into the
+      # The project's own OpenVEX statements (build/vex/openvex.json). One stamped copy is baked into the
       # image (/usr/share/doc/trivy-scanner/trivy-scanner.vex.json), attested to it so scanners can read it from
       # the registry (`trivy image --vex oci ghcr.io/...`), and attached to the release as a plain file
       # for `--vex <file>`. The id and timestamp are stamped per release; add statements to the file
@@ -409,8 +409,8 @@ jobs:
         run: |
           jq --arg id "https://github.com/${GITHUB_REPOSITORY}/vex/${VERSION}" \
              --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-             '."@id" = $id | .timestamp = $ts' vex/openvex.json > "$RUNNER_TEMP/openvex.json"
-          cp "$RUNNER_TEMP/openvex.json" vex/openvex.json
+             '."@id" = $id | .timestamp = $ts' build/vex/openvex.json > "$RUNNER_TEMP/openvex.json"
+          cp "$RUNNER_TEMP/openvex.json" build/vex/openvex.json
           mkdir -p "$RUNNER_TEMP/vex"
           cp "$RUNNER_TEMP/openvex.json" "$RUNNER_TEMP/vex/${APP}_${VERSION}.vex.json"
 

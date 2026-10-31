@@ -29,4 +29,4 @@ Build and run from source, and the settings that apply to any build. To install 
 - UI conventions: [`ux-design-sheet.md`](ux-design-sheet.md)
 - CI, screenshots and releases: [`ci.md`](ci.md), [`releasing.md`](releasing.md)
 - Recorded fixtures for tests and demo mode: [`internal/trivy/fixtures`](../internal/trivy/fixtures/README.md)
-- Contributing: [`CONTRIBUTING.md`](../CONTRIBUTING.md); AI agents: [`AGENTS.md`](../AGENTS.md)
+- Contributing: [`CONTRIBUTING.md`](../.github/CONTRIBUTING.md); AI agents: [`AGENTS.md`](../AGENTS.md)

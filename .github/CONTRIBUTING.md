@@ -6,6 +6,6 @@
 4. Update docs and the README for user-visible changes.
 5. Open a PR using the template.
 
-Standing rules and the architecture overview: [`AGENTS.md`](AGENTS.md), [`docs/principles.md`](docs/principles.md), [`docs/architecture.md`](docs/architecture.md).
+Standing rules and the architecture overview: [`AGENTS.md`](../AGENTS.md), [`docs/principles.md`](../docs/principles.md), [`docs/architecture.md`](../docs/architecture.md).
 
 Report security issues privately to the maintainers rather than in a public issue.

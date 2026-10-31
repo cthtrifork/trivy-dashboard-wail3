@@ -8,7 +8,7 @@
 !go.sum
 !main.go
 !internal/
-!vex/openvex.json
+!build/vex/openvex.json
 
 # Frontend build stage (dist is rebuilt in the image; node_modules comes from `npm ci`)
 !frontend/

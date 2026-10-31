@@ -93,8 +93,6 @@ auth.json
 # Editors and OS
 # ---------------------------------------------------------------------------
 .idea/
-.vscode/*
-!.vscode/settings.json
 *.iml
 *.swp
 *.swo

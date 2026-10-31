@@ -48,7 +48,7 @@ COPY --from=podman /podman /usr/local/bin/podman
 COPY --from=podman --chown=65532:65532 --chmod=0777 /data-skel /data
 # The project's OpenVEX statements. Scanners do not discover this on their own: pass it with
 # `--vex <file>`, or use the attestation on the registry (`--vex oci`). See docs/headless.md.
-COPY vex/openvex.json /usr/share/doc/trivy-scanner/trivy-scanner.vex.json
+COPY build/vex/openvex.json /usr/share/doc/trivy-scanner/trivy-scanner.vex.json
 COPY --from=build /out/trivy-scanner /usr/local/bin/trivy-scanner
 ENV WAILS_SERVER_HOST=127.0.0.1 \
     WAILS_SERVER_PORT=8080 \

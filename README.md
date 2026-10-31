@@ -25,4 +25,4 @@ Linux amd64 packages (`.deb`, `.rpm`), a tarball and signed checksums are on the
 
 ## Contributing and licence
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Released under the [MIT licence](LICENSE).
+See [`CONTRIBUTING.md`](.github/CONTRIBUTING.md). Released under the [MIT licence](LICENSE).
