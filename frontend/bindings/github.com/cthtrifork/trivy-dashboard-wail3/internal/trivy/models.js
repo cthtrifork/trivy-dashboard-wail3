@@ -977,138 +977,6 @@ export class Reason {
 }
 
 /**
- * Rescored is one finding's outcome under a set of rules. Index points into the slice that was
- * rescored; the result is ordered best-ranked first.
- */
-export class Rescored {
-    /**
-     * Creates a new Rescored instance.
-     * @param {Partial<Rescored>} [$$source = {}] - The source object to create the Rescored.
-     */
-    constructor($$source = {}) {
-        if (!("index" in $$source)) {
-            /**
-             * @member
-             * @type {number}
-             */
-            this["index"] = 0;
-        }
-        if (!("priority" in $$source)) {
-            /**
-             * @member
-             * @type {number}
-             */
-            this["priority"] = 0;
-        }
-        if (!("tier" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["tier"] = "";
-        }
-        if (!("tierWhy" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["tierWhy"] = "";
-        }
-        if (!("reasons" in $$source)) {
-            /**
-             * @member
-             * @type {Reason[]}
-             */
-            this["reasons"] = [];
-        }
-        if (!("attack" in $$source)) {
-            /**
-             * the attack text follows the EPSS threshold, so it is rescored too
-             * @member
-             * @type {string}
-             */
-            this["attack"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new Rescored instance from a string or object.
-     * @param {any} [$$source = {}]
-     * @returns {Rescored}
-     */
-    static createFrom($$source = {}) {
-        const $$createField4_0 = $$createType11;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("reasons" in $$parsedSource) {
-            $$parsedSource["reasons"] = $$createField4_0($$parsedSource["reasons"]);
-        }
-        return new Rescored(/** @type {Partial<Rescored>} */($$parsedSource));
-    }
-}
-
-/**
- * RuleSummaries is the one-line description of what each rule adds, written from the same constants
- * the rules use, so the scoring panel cannot show points that differ from the ones applied.
- */
-export class RuleSummaries {
-    /**
-     * Creates a new RuleSummaries instance.
-     * @param {Partial<RuleSummaries>} [$$source = {}] - The source object to create the RuleSummaries.
-     */
-    constructor($$source = {}) {
-        if (!("kev" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["kev"] = "";
-        }
-        if (!("epss" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["epss"] = "";
-        }
-        if (!("severity" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["severity"] = "";
-        }
-        if (!("vector" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["vector"] = "";
-        }
-        if (!("fix" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["fix"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new RuleSummaries instance from a string or object.
-     * @param {any} [$$source = {}]
-     * @returns {RuleSummaries}
-     */
-    static createFrom($$source = {}) {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new RuleSummaries(/** @type {Partial<RuleSummaries>} */($$parsedSource));
-    }
-}
-
-/**
  * Rules is the tunable part of the priority score: which rules apply and where their thresholds
  * sit. The zero value switches everything off; use DefaultRules for the standard behaviour.
  */
@@ -1283,7 +1151,7 @@ export class SBOMSummary {
      * @returns {SBOMSummary}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType13;
+        const $$createField2_0 = $$createType11;
         const $$createField3_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("binaries" in $$parsedSource) {
@@ -1502,14 +1370,14 @@ export class ScanResult {
      * @returns {ScanResult}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType15;
+        const $$createField2_0 = $$createType13;
         const $$createField3_0 = $$createType6;
-        const $$createField4_0 = $$createType17;
+        const $$createField4_0 = $$createType15;
         const $$createField5_0 = $$createType6;
-        const $$createField7_0 = $$createType19;
-        const $$createField8_0 = $$createType22;
+        const $$createField7_0 = $$createType17;
+        const $$createField8_0 = $$createType20;
         const $$createField9_0 = $$createType0;
-        const $$createField11_0 = $$createType23;
+        const $$createField11_0 = $$createType21;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("vulnerabilities" in $$parsedSource) {
             $$parsedSource["vulnerabilities"] = $$createField2_0($$parsedSource["vulnerabilities"]);
@@ -1715,7 +1583,7 @@ export class VulnChange {
      * @returns {VulnChange}
      */
     static createFrom($$source = {}) {
-        const $$createField1_0 = $$createType14;
+        const $$createField1_0 = $$createType12;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("vuln" in $$parsedSource) {
             $$parsedSource["vuln"] = $$createField1_0($$parsedSource["vuln"]);
@@ -1961,8 +1829,8 @@ export class Vulnerability {
      * @returns {Vulnerability}
      */
     static createFrom($$source = {}) {
-        const $$createField13_0 = $$createType25;
-        const $$createField27_0 = $$createType11;
+        const $$createField13_0 = $$createType23;
+        const $$createField27_0 = $$createType25;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ratings" in $$parsedSource) {
             $$parsedSource["ratings"] = $$createField13_0($$parsedSource["ratings"]);
@@ -1985,19 +1853,19 @@ const $$createType6 = $Create.Map($Create.Any, $Create.Any);
 const $$createType7 = $Create.Array($Create.Any);
 const $$createType8 = DocMeta.createFrom;
 const $$createType9 = Rules.createFrom;
-const $$createType10 = Reason.createFrom;
+const $$createType10 = BinaryInfo.createFrom;
 const $$createType11 = $Create.Array($$createType10);
-const $$createType12 = BinaryInfo.createFrom;
+const $$createType12 = Vulnerability.createFrom;
 const $$createType13 = $Create.Array($$createType12);
-const $$createType14 = Vulnerability.createFrom;
+const $$createType14 = Component.createFrom;
 const $$createType15 = $Create.Array($$createType14);
-const $$createType16 = Component.createFrom;
-const $$createType17 = $Create.Array($$createType16);
-const $$createType18 = SBOMSummary.createFrom;
+const $$createType16 = SBOMSummary.createFrom;
+const $$createType17 = $Create.Nullable($$createType16);
+const $$createType18 = DepNode.createFrom;
 const $$createType19 = $Create.Nullable($$createType18);
-const $$createType20 = DepNode.createFrom;
-const $$createType21 = $Create.Nullable($$createType20);
-const $$createType22 = $Create.Map($Create.Any, $$createType21);
-const $$createType23 = EnrichInfo.createFrom;
-const $$createType24 = Rating.createFrom;
+const $$createType20 = $Create.Map($Create.Any, $$createType19);
+const $$createType21 = EnrichInfo.createFrom;
+const $$createType22 = Rating.createFrom;
+const $$createType23 = $Create.Array($$createType22);
+const $$createType24 = Reason.createFrom;
 const $$createType25 = $Create.Array($$createType24);

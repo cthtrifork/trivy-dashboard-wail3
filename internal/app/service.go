@@ -36,7 +36,6 @@ type ScanService struct {
 	found   map[string][]trivy.Vulnerability // image repo -> findings from the latest scan, for VEX import
 	last    *trivy.ScanResult                // the most recent scan and the options it ran with, so Compare can reuse it as the base
 	lastReq trivy.ScanRequest
-	latest  []trivy.Vulnerability // findings of the most recent scan, in the order the UI holds them, for Rescore
 }
 
 // Mode tells the UI whether scans are real. Fixtures is true in development
@@ -279,7 +278,6 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 	s.forgetLastScan()
 	s.mu.Lock()
 	s.found = map[string][]trivy.Vulnerability{}
-	s.latest = nil
 	s.last = nil
 	s.mu.Unlock()
 	res, err := s.scanner.Scan(s.appCtx(), req)
@@ -288,7 +286,6 @@ func (s *ScanService) Scan(req trivy.ScanRequest) (*trivy.ScanResult, error) {
 		s.mu.Lock()
 		s.product[trivy.ImageRepo(res.Image)] = res.ProductPURL
 		s.found[trivy.ImageRepo(res.Image)] = res.Vulnerabilities
-		s.latest = res.Vulnerabilities
 		s.last, s.lastReq = res, req
 		s.mu.Unlock()
 	}
@@ -308,7 +305,6 @@ func (s *ScanService) RestoreScan(res *trivy.ScanResult) {
 	defer s.mu.Unlock()
 	s.product[repo] = res.ProductPURL
 	s.found = map[string][]trivy.Vulnerability{repo: res.Vulnerabilities}
-	s.latest = res.Vulnerabilities
 }
 
 // UpdateDB checks for a newer vulnerability database with the given Trivy version (empty means the
@@ -320,19 +316,6 @@ func (s *ScanService) UpdateDB(trivyImage string) (bool, error) {
 
 // RulePresets returns the built-in scoring presets.
 func (s *ScanService) RulePresets() []trivy.Preset { return trivy.Presets() }
-
-// RuleHelp returns what each scoring rule adds, in words, for the scoring panel. It is written from
-// the constants the rules use, so the text cannot drift from the points applied.
-func (s *ScanService) RuleHelp() trivy.RuleSummaries { return trivy.RuleHelp() }
-
-// Rescore re-ranks the findings of the latest scan under the given rules, best first. Each
-// entry's Index points into the scan result's vulnerabilities. It returns nothing before a scan.
-func (s *ScanService) Rescore(rules trivy.Rules) []trivy.Rescored {
-	s.mu.Lock()
-	vulns := s.latest
-	s.mu.Unlock()
-	return trivy.Rescore(vulns, rules)
-}
 
 // CheckIgnoreFile reports why the text is not a usable .trivyignore.yaml, or "" when it is (or is
 // blank). The UI shows it under the field while the user types.

@@ -4,7 +4,7 @@ The Priorities tab ranks findings with a small rule engine (`internal/trivy/asse
 
 ## What you can tune
 
-The Help dialog (Glossary, Priority tier) summarises the balanced rules. The in-app rules editor was removed; the engine (`Rules`, `Presets`, `Rescore`) is unchanged.
+The Help dialog (Glossary, Priority tier) summarises the balanced rules. The in-app rules editor was removed; the engine (`Rules`, `Presets`) stays; the `Rescore` and `RuleHelp` entry points were removed with it.
 
 | Rule | Points (fixed) | Tunable |
 |---|---|---|
@@ -37,6 +37,6 @@ The rules apply to the Priorities and Vulnerabilities tabs. Compare and the scan
 
 ## Code map
 
-- `Rules`, `DefaultRules`, `Presets`, `Rescore`: `internal/trivy/rules.go`
+- `Rules`, `DefaultRules`, `Presets`: `internal/trivy/rules.go`
 - rule bodies and tier logic: `internal/trivy/assess.go` (`AssessWith`, `applyRules`)
-- binding: `ScanService.Rescore`, `ScanService.RulePresets`; `rerank()` in `frontend/src/store.js`
+- binding: `ScanService.RulePresets`; `rerank()` in `frontend/src/store.js`
