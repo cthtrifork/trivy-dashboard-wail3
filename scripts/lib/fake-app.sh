@@ -3,66 +3,43 @@
 #
 #   source scripts/lib/fake-app.sh   (from the repo root, after `set -euo pipefail`)
 #   start_fake_app <port> [command prefix...]
-#
-# FAKE_APP_TIMEOUT (seconds, default 20) bounds how long to wait for the server to answer.
 
-_fake_app_tmp="$(mktemp -d)"
-_fake_app_pid=""
-
-_fake_app_cleanup() {
-  local status=$?
-  trap - EXIT
-  if [ -n "$_fake_app_pid" ]; then
-    kill "$_fake_app_pid" 2>/dev/null || true
-    wait "$_fake_app_pid" 2>/dev/null || true
+tmp="$(mktemp -d)"
+pid=""
+cleanup() {
+  if [ -n "$pid" ]; then
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
   fi
-  rm -rf "${_fake_app_tmp:?}"
-  exit "$status"
+  rm -rf "${tmp:?}"
 }
-trap _fake_app_cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-
-_fake_app_fail() {
-  echo "$1" >&2
-  if [ -s "$_fake_app_tmp/app.log" ]; then
-    echo "--- app log ---" >&2
-    cat "$_fake_app_tmp/app.log" >&2
-  fi
-  exit 1
-}
+trap cleanup EXIT
 
 start_fake_app() {
-  local port="${1:?usage: start_fake_app <port> [command prefix...]}"
+  local port="$1"
   shift
-
-  if curl -fsS -o /dev/null --max-time 1 "http://127.0.0.1:${port}/" 2>/dev/null; then
-    echo "port $port is already in use; refusing to test against another server" >&2
-    exit 1
-  fi
 
   echo "building the frontend…"
   make frontend
 
   echo "building (server mode)…"
-  CGO_ENABLED=0 go build -tags server -o "$_fake_app_tmp/app" .
+  CGO_ENABLED=0 go build -tags server -o "$tmp/app" .
 
   "$@" env \
     TRIVY_SCANNER_FAKE_PODMAN=1 \
-    TRIVY_SCANNER_VEX_FILE="$_fake_app_tmp/vex.json" \
-    XDG_CACHE_HOME="$_fake_app_tmp/cache" \
+    TRIVY_SCANNER_VEX_FILE="$tmp/vex.json" \
+    XDG_CACHE_HOME="$tmp/cache" \
     WAILS_SERVER_HOST=127.0.0.1 \
     WAILS_SERVER_PORT="$port" \
-    "$_fake_app_tmp/app" >"$_fake_app_tmp/app.log" 2>&1 &
-  _fake_app_pid=$!
+    "$tmp/app" >"$tmp/app.log" 2>&1 &
+  pid=$!
 
-  local tries=$(( ${FAKE_APP_TIMEOUT:-20} * 5 )) i
-  for ((i = 0; i < tries; i++)); do
-    if curl -fsS -o /dev/null --max-time 1 "http://127.0.0.1:${port}/" 2>/dev/null; then
-      return 0
-    fi
-    kill -0 "$_fake_app_pid" 2>/dev/null || _fake_app_fail "app exited early"
+  for _ in $(seq 1 50); do
+    curl -fsS -o /dev/null --max-time 1 "http://127.0.0.1:${port}/" 2>/dev/null && return 0
+    kill -0 "$pid" 2>/dev/null || { cat "$tmp/app.log" >&2; echo "app exited early" >&2; exit 1; }
     sleep 0.2
   done
-  _fake_app_fail "app did not answer on port $port within ${FAKE_APP_TIMEOUT:-20}s"
+  echo "app did not answer on port $port" >&2
+  cat "$tmp/app.log" >&2
+  exit 1
 }
