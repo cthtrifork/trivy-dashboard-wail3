@@ -48,31 +48,30 @@ type RuleSummaries struct {
 	Tiers string `json:"tiers"`
 }
 
-// RuleHelp returns the summaries for the scoring panel.
+// RuleHelp returns the summaries for the scoring panel, kept short: the points per signal, not the
+// full rule text (each finding lists the exact rules that fired).
 func RuleHelp() RuleSummaries {
 	d := DefaultRules()
 	pct := func(f float64) string { return fmt.Sprintf("%g%%", f*100) }
-	sev := func(name string) string { return fmt.Sprintf("%s %+d", strings.ToLower(name), SeverityPoints[name]) }
-	impact := "Confidentiality or integrity impact high %+d, limited %+d each"
-	if PointsAvailabilityHigh == 0 && PointsAvailabilityLimited == 0 {
-		impact += "; availability scores nothing"
-	} else {
-		impact += fmt.Sprintf("; availability high %+d, limited %+d", PointsAvailabilityHigh, PointsAvailabilityLimited)
+	sev := func(name string) string {
+		return fmt.Sprintf("%s %+d", strings.ToLower(name), SeverityPoints[name])
 	}
-	kev := fmt.Sprintf("Listed in CISA's Known Exploited Vulnerabilities: +%d, +%d more if used in ransomware.", PointsKEV, PointsKEVRansomware)
+	kev := fmt.Sprintf("%+d, %+d more with ransomware use", PointsKEV, PointsKEVRansomware)
 	if d.KEVForceNow {
-		kev += " Always Act now."
+		kev += ". Always Act now"
+	}
+	vector := fmt.Sprintf("Network %+d (physical %+d); an easy attack adds up to %+d; high confidentiality or integrity impact %+d",
+		PointsNetwork, PointsPhysical, PointsLowComplexity+PointsNoPrivileges+PointsNoInteraction, PointsImpactHigh)
+	if PointsAvailabilityHigh == 0 && PointsAvailabilityLimited == 0 {
+		vector += "; availability adds nothing"
 	}
 	return RuleSummaries{
-		KEV: kev,
-		EPSS: fmt.Sprintf("Exploitation probability: +%d from %s, +%d from %s, +%d (and Fix soon) from %s.",
-			PointsEPSSLow, pct(d.EPSSCutoff), PointsEPSSHigh, pct(d.EPSSHigh), PointsEPSSVeryHigh, pct(d.EPSSVeryHigh)),
-		Severity: fmt.Sprintf("CVSS severity: %s, %s, %s, %s, unknown %d.", sev("CRITICAL"), sev("HIGH"), sev("MEDIUM"), sev("LOW"), SeverityPoints["UNKNOWN"]),
-		Vector: fmt.Sprintf("Network %+d, adjacent %+d, physical %+d; low complexity %+d; no privileges %+d; no user interaction %+d. ", PointsNetwork, PointsAdjacent, PointsPhysical, PointsLowComplexity, PointsNoPrivileges, PointsNoInteraction) +
-			fmt.Sprintf(impact, PointsImpactHigh, PointsImpactLimited) +
-			fmt.Sprintf(". No vector: the CVSS score × %.1f.", vectorPerCVSSPoint),
-		Fix:   fmt.Sprintf("Fix exists %+d, none yet %+d, vendor will not fix %+d.", PointsFix, PointsNoFix, PointsWontFix),
-		Tiers: fmt.Sprintf("Act now from %d, Fix soon from %d, Plan from %d, otherwise Monitor. Scores are capped at 100.", d.TierNow, d.TierSoon, d.TierPlan),
+		KEV:      kev,
+		EPSS:     fmt.Sprintf("%s %+d, %s %+d, %s %+d and Fix soon", pct(d.EPSSCutoff), PointsEPSSLow, pct(d.EPSSHigh), PointsEPSSHigh, pct(d.EPSSVeryHigh), PointsEPSSVeryHigh),
+		Severity: fmt.Sprintf("%s, %s, %s, %s", sev("CRITICAL"), sev("HIGH"), sev("MEDIUM"), sev("LOW")),
+		Vector:   vector,
+		Fix:      fmt.Sprintf("Fix exists %+d, none yet %+d, vendor will not fix %+d", PointsFix, PointsNoFix, PointsWontFix),
+		Tiers:    fmt.Sprintf("Act now %d+, Fix soon %d+, Plan %d+, otherwise Monitor. Score is capped at 100", d.TierNow, d.TierSoon, d.TierPlan),
 	}
 }
 

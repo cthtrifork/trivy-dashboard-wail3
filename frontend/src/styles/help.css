@@ -151,13 +151,6 @@
 .hcard.wide {
   grid-column: 1 / -1;
 }
-.hscoring {
-  grid-column: 1 / -1;
-  padding: 4px 10px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
 .hcard.good {
   border-color: color-mix(in srgb, var(--ok) 55%, var(--line));
   background: color-mix(in srgb, var(--ok) 10%, var(--panel));

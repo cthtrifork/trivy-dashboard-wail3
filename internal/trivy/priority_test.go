@@ -515,10 +515,12 @@ func TestRuleHelpMatchesAppliedPoints(t *testing.T) {
 	h, d := RuleHelp(), DefaultRules()
 	for _, c := range []struct{ text, want string }{
 		{h.KEV, fmt.Sprintf("+%d, +%d more", PointsKEV, PointsKEVRansomware)},
-		{h.EPSS, fmt.Sprintf("+%d from %g%%, +%d from %g%%, +%d (and Fix soon) from %g%%", PointsEPSSLow, d.EPSSCutoff*100, PointsEPSSHigh, d.EPSSHigh*100, PointsEPSSVeryHigh, d.EPSSVeryHigh*100)},
+		{h.EPSS, fmt.Sprintf("%g%% +%d, %g%% +%d, %g%% +%d", d.EPSSCutoff*100, PointsEPSSLow, d.EPSSHigh*100, PointsEPSSHigh, d.EPSSVeryHigh*100, PointsEPSSVeryHigh)},
 		{h.Fix, fmt.Sprintf("Fix exists +%d, none yet %d, vendor will not fix %d", PointsFix, PointsNoFix, PointsWontFix)},
-		{h.Vector, "availability scores nothing"},
-		{h.Tiers, fmt.Sprintf("Act now from %d, Fix soon from %d, Plan from %d", d.TierNow, d.TierSoon, d.TierPlan)},
+		{h.Vector, fmt.Sprintf("Network +%d", PointsNetwork)},
+		{h.Vector, fmt.Sprintf("adds up to +%d", PointsLowComplexity+PointsNoPrivileges+PointsNoInteraction)},
+		{h.Vector, "availability adds nothing"},
+		{h.Tiers, fmt.Sprintf("Act now %d+, Fix soon %d+, Plan %d+", d.TierNow, d.TierSoon, d.TierPlan)},
 	} {
 		if !strings.Contains(c.text, c.want) {
 			t.Errorf("%q is missing %q", c.text, c.want)

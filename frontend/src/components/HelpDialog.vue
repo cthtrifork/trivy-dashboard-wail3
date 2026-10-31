@@ -61,7 +61,7 @@ const glossary = [
       ],
       [
         "Priority tier",
-        "Act now, Fix soon, Plan or Monitor. Every score is a sum of readable points, and each finding lists them under Score · why. The points and tier cut-offs below come from the app's own scoring rules.",
+        "Act now, Fix soon, Plan or Monitor. Every score is a sum of readable points, and each finding lists them under Score · why. Open Scoring rules below for the points.",
         "wide",
       ],
     ],
@@ -180,7 +180,7 @@ const envGroups = computed(() => {
 });
 
 // Config sections start collapsed; each one opens to its full content.
-const opened = reactive({ flags: false, files: false, env: false });
+const opened = reactive({ flags: false, files: false, env: false, scoring: false });
 const toggle = (key) => {
   opened[key] = !opened[key];
 };
@@ -213,7 +213,7 @@ function open() {
   dlg.value.showModal();
   body.value.scrollTop = 0;
   section.value = "glossary";
-  Object.assign(opened, { flags: false, files: false, env: false });
+  Object.assign(opened, { flags: false, files: false, env: false, scoring: false });
   load();
   loadRules();
 }
@@ -255,12 +255,19 @@ defineExpose({ open });
                 <h5>{{ term }}</h5>
                 <p>{{ def }}</p>
               </div>
-              <dl v-if="g.scoring && scoringRows.length" class="htable hscoring" id="help-scoring">
-                <template v-for="[term, def] in scoringRows" :key="term">
-                  <dt>{{ term }}</dt>
-                  <dd>{{ def }}</dd>
-                </template>
-              </dl>
+              <div v-if="g.scoring && scoringRows.length" class="hcard wide hscoring" id="help-scoring">
+                <button type="button" class="hsum" :aria-expanded="opened.scoring" @click="toggle('scoring')">
+                  <span v-if="!opened.scoring"><b>Scoring rules</b> · what each signal adds to the score</span>
+                  <span v-else class="kv">What each signal adds to the score</span>
+                  <span class="htoggle">{{ opened.scoring ? "Hide ▾" : "Show ▸" }}</span>
+                </button>
+                <dl v-if="opened.scoring" class="htable">
+                  <template v-for="[term, def] in scoringRows" :key="term">
+                    <dt>{{ term }}</dt>
+                    <dd>{{ def }}</dd>
+                  </template>
+                </dl>
+              </div>
             </div>
             <div v-else-if="g.format === 'cols'" class="hcols">
               <div v-for="[term, def] in g.items" :key="term">
