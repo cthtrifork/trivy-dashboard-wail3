@@ -1,10 +1,4 @@
-# Sourced by screenshots.sh and lighthouse.sh: helpers to build the headless server and run it on recorded
-# fixtures (TRIVY_SCANNER_FAKE_PODMAN=1) with a throwaway VEX store and cache, so nothing touches podman.
-# The caller owns the work directory <dir> (mktemp -d) and removes it.
-#
-#   fake_app_build <dir>          build the frontend and the server binary into <dir>
-#   fake_app_start <dir> <port>   start it and wait until it answers; the app inherits the caller's environment
-#   fake_app_stop <dir>           stop it
+# Sourced by screenshots.sh and lighthouse.sh: run the headless server on recorded fixtures, no podman.
 
 fake_app_build() {
   make frontend
