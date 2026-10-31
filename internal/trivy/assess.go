@@ -2,6 +2,7 @@ package trivy
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -130,6 +131,8 @@ var rules = []rule{
 		txt := fmt.Sprintf("%s severity", strings.ToLower(c.v.Severity))
 		if c.v.Score > 0 {
 			txt += fmt.Sprintf(" (CVSS %.1f)", c.v.Score)
+		} else if f := cvssFloor[c.v.Severity]; f > 0 {
+			txt += fmt.Sprintf(" (no CVSS score: ~%.1f est.)", f)
 		}
 		return &Reason{"Severity", txt + ": how bad it is if exploited", pts, fmt.Sprintf("severity %s → +%d", c.v.Severity, pts)}
 	}},
@@ -139,15 +142,20 @@ var rules = []rule{
 		}
 		av := c.vec.M["AV"]
 		if av == "" {
-			// No usable CVSS vector (typically no source published one): the severity rule already
-			// scores the rating, so give the vector a typical value for that rating instead of 0.
-			// Otherwise a finding without CVSS ranks below identical ones that have it.
-			pts, ok := vectorEstimate[c.v.Severity]
-			if !ok {
+			// No usable CVSS vector: score the vector from the CVSS score instead of 0, otherwise a
+			// finding without one ranks below identical ones that have it. A missing score falls back
+			// to the floor of the severity band, as the UI shows it (see effectiveScore).
+			score := effectiveScore(c.v)
+			if score == 0 {
 				return nil
 			}
-			return &Reason{"Vector", "no CVSS vector is published: assumes a typical attack vector for " + strings.ToLower(c.v.Severity) + " severity", pts,
-				fmt.Sprintf("no vector, severity %s → %+d (estimate)", c.v.Severity, pts)}
+			pts := int(math.Round(score * vectorPerCVSSPoint))
+			src := fmt.Sprintf("CVSS %.1f", score)
+			if c.v.Score == 0 {
+				src = fmt.Sprintf("~%.1f, the lowest score of %s severity", score, strings.ToLower(c.v.Severity))
+			}
+			return &Reason{"Vector", "no CVSS vector is published: the vector is estimated from the score (" + src + ")", pts,
+				fmt.Sprintf("no vector, score %.1f × %.1f → %+d (estimate)", score, vectorPerCVSSPoint, pts)}
 		}
 		pts, ease := 0, 0
 		var parts []string
@@ -227,9 +235,21 @@ func pctText(p float64) string {
 	return strconv.FormatFloat(p*100, 'f', -1, 64) + "%"
 }
 
-// vectorEstimate is the Vector rule's stand-in when a finding has no CVSS vector: roughly the
-// median vector-and-impact points of findings with that severity.
-var vectorEstimate = map[string]int{"CRITICAL": 17, "HIGH": 13, "MEDIUM": 8, "LOW": 3}
+// cvssFloor is the lowest CVSS base score of each severity band. The UI shows it, marked "~", when
+// no source published a score (frontend/src/lib/format.js, CVSS_FLOOR); keep the two in step.
+var cvssFloor = map[string]float64{"CRITICAL": 9, "HIGH": 7, "MEDIUM": 4, "LOW": 0.1}
+
+// effectiveScore is the reported CVSS score, else the floor of the severity band (0 when unrated).
+func effectiveScore(v *Vulnerability) float64 {
+	if v.Score > 0 {
+		return v.Score
+	}
+	return cvssFloor[v.Severity]
+}
+
+// vectorPerCVSSPoint turns a CVSS score into vector-and-impact points when there is no vector.
+// Real vectors of 7.5 and 9.8 earn 16 to 24 points here, which is about 2.4 per score point.
+const vectorPerCVSSPoint = 2.4
 
 // easeText words the exploitability part of the vector score (at most 14).
 func easeText(pts int) string {

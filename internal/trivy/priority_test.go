@@ -448,11 +448,16 @@ func TestMissingVectorIsEstimated(t *testing.T) {
 	Assess(&with)
 	Assess(&without)
 	p, ok := reasonPoints(without, "Vector")
-	if !ok || p != vectorEstimate["HIGH"] {
+	if !ok || p != 17 { // no score: the HIGH floor 7.0 × 2.4
 		t.Fatalf("estimate = %d, %v", p, ok)
 	}
-	if without.Priority >= with.Priority || with.Priority-without.Priority > 5 {
-		t.Errorf("without=%d with=%d: estimate should be close to, and not above, a real network vector", without.Priority, with.Priority)
+	scored := Vulnerability{ID: "S", Severity: "HIGH", Score: 7.5, Fixed: "2"}
+	Assess(&scored)
+	if p, _ := reasonPoints(scored, "Vector"); p != 18 { // a reported score is used as is
+		t.Errorf("scored estimate = %d, want 18", p)
+	}
+	if d := without.Priority - with.Priority; d < -3 || d > 3 {
+		t.Errorf("without=%d with=%d: the estimate should land near a real network vector", without.Priority, with.Priority)
 	}
 	if u := (Vulnerability{ID: "U", Severity: "UNKNOWN"}); true {
 		Assess(&u)

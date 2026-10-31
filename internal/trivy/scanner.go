@@ -514,7 +514,7 @@ func ranksBefore(a, b *Vulnerability) bool {
 	if severityRank[a.Severity] != severityRank[b.Severity] {
 		return severityRank[a.Severity] < severityRank[b.Severity]
 	}
-	return a.Score > b.Score
+	return effectiveScore(a) > effectiveScore(b)
 }
 
 // pickScore prefers Red Hat's CVSS score (v3, else v2), then NVD's, then the highest score any source
