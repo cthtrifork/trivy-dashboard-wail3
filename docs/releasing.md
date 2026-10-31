@@ -6,25 +6,19 @@
 
 ```sh
 gh workflow run tag-release.yml                    # next version, from the merged PR titles
-gh workflow run tag-release.yml -f bump=minor      # next minor version
 gh workflow run tag-release.yml -f tag=v1.0.0      # an exact tag
 ```
 
-Give **either** an exact tag **or** a bump:
-
 | Input | Effect |
 |---|---|
-| `tag` (text) | Use exactly this tag: `v1.4.0` or `v1.4.0-rc.1`. When filled in, it wins over `bump`. |
-| `bump` (`auto` / `patch` / `minor` / `major`, default `auto`) | `auto` uses the version Release Drafter works out from the PRs merged since the last release: a breaking change (`!`) is a major, a `feat` a minor, anything else a patch ([Release notes](#release-notes)). The others increase that part of the highest **stable** `vX.Y.Z` tag, resetting the lower parts. |
+| `tag` (text, optional) | Use exactly this tag: `v1.4.0` or `v1.4.0-rc.1`. Left empty, the workflow uses the version Release Drafter works out from the PRs merged since the last release: a breaking change (`!`) is a major, a `feat` a minor, anything else a patch ([Release notes](#release-notes)). |
 
-With no tags yet the base is `v0.0.0`: `minor` gives `v0.1.0`, `major` gives `v1.0.0`, `patch` gives `v0.0.1`.
-Pre-releases and tags that are not `vX.Y.Z` are ignored when working out the base, so `v2.0.0-rc.1` does not make
-the next `minor` become `v2.1.0`.
+To force a different version than Release Drafter proposes, pass it as `tag`. The tag must be a semantic version with a leading `v`.
 
 The workflow then:
 
 1. refuses to run anywhere but `main`;
-2. works out the tag (Release Drafter for `auto`, otherwise `scripts/next-version.sh`) and stops if a published **release** for it already exists (the draft Release Drafter keeps does not count);
+2. works out the tag (the `tag` input, otherwise Release Drafter's version) and stops if a published **release** for it already exists (the draft Release Drafter keeps does not count);
 3. creates an annotated tag on the head of `main` and pushes it, unless the tag already exists (see *Retrying*);
 4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck` (in a `checks` job beside the binary build, not before it), builds the binary, and publishes the
    release (the draft Release Drafter wrote for that tag, with the assets attached) (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
@@ -59,7 +53,7 @@ A PR is listed once, in the first section it matches (title type, or the label a
 **How it fits the release flow**
 
 1. *Release Drafter* (`release-drafter.yml`) runs on every push to `main` and keeps a **draft release** current: a preview of the next notes and version. Nothing is published from it. Open the repository's Releases page to read it before cutting a release.
-2. *Tag and release* with `bump` = `auto` (the default) tags the version Release Drafter resolved. An explicit `tag`, or `patch` / `minor` / `major`, still wins; then Release Drafter is only asked for the notes.
+2. *Tag and release* with no `tag` tags the version Release Drafter resolved. An explicit `tag` wins; then Release Drafter is only asked for the notes.
 3. `release.yml` asks Release Drafter for the notes of exactly that tag (`tag`, and `commitish` = the tag, so the list ends at the tagged commit), then `gh release upload` puts the build on that draft and `gh release edit --draft=false --verify-tag` publishes it with the notes set again from the same run. `gh` finds the draft by its pending tag name, so if a push to `main` makes `release-drafter.yml` retarget the draft to another version meanwhile, the run fails and publishes nothing; run it again. A retry replaces the assets a failed attempt left on the draft (`--clobber`; their names carry the version).
 
 **Enforcement.** The *PR title* workflow (`pr-title.yml`) fails a PR whose title does not match (`amannn/action-semantic-pull-request`) and sets the label from the type (Release Drafter's autolabeler, `autolabeler` in the same config; with `sync-labels` it also removes a stale label when the title is edited and creates a label that does not exist yet). The labels are for filtering and as a manual override: the notes and the version read the title, so a missing label does not misfile a PR. Fork PRs are checked but not labelled (the token is read-only). The `bot/*` screenshots preview PR is skipped. Renovate PRs are titled `deps: update ...`, or `security: ...` for vulnerability fixes (`semanticCommits` in `renovate.json5`), so they get the same sections and labels. To make the check block merging, add **check title** as a required status check in the branch rules (repository settings; not something a workflow can do).
