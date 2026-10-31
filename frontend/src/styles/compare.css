@@ -13,9 +13,7 @@
   cursor: default;
 }
 #cmp-form .tag-wrap {
-  width: 180px;
-  flex: 1 1 260px;
-  max-width: 440px;
+  width: min(380px, 60vw); /* room for a full image reference */
 }
 #cmp-form .tag-input,
 #cmp-form #cmp-repo,
