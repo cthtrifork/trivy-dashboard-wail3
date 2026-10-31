@@ -4,12 +4,13 @@
 [![Security](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/security.yml)
 [![Release](https://img.shields.io/github/v/release/cthtrifork/trivy-dashboard-wail3)](https://github.com/cthtrifork/trivy-dashboard-wail3/releases)
 
-Scan a container image with [Trivy](https://trivy.dev), then decide what each finding means for you. Decisions are recorded as [OpenVEX](https://openvex.dev).
+Scan a container image with [Trivy](https://trivy.dev), then see each vulnerability in the context of the image's SBOM: which component carries it, how it got into the image, and what depends on it. Decisions are recorded as [OpenVEX](https://openvex.dev).
 
-1. **Scan** an image with Trivy in Podman.
+1. **Scan** an image with Trivy in Podman. One scan produces both the vulnerability report and the SBOM.
 2. **Triage** a ranked shortlist, with the reasons for each rank.
-3. **Assess** each finding with built-in guidance and record the decision.
-4. **Share** the result as OpenVEX, and compare tags to see what changed.
+3. **Trace** a finding to its component, its route from the image and what it affects.
+4. **Assess** with built-in guidance and record the decision.
+5. **Share** the result as OpenVEX, and compare tags to see what changed.
 
 All features: [`docs/features.md`](docs/features.md).
 
