@@ -59,7 +59,7 @@ Release notes and the next version come from [`release-drafter`](https://github.
 
 - `pr-title.yml` checks that a PR title follows `type(scope)!: summary` with [`amannn/action-semantic-pull-request`](https://github.com/amannn/action-semantic-pull-request), and labels the PR with Release Drafter's autolabeler (the `autolabeler` rules of that config; the notes and version read the title, so the label is a convenience and an override). It runs on every push to the PR, because a required check belongs to the head commit and `update-branches.yml` pushes merge commits. It runs for fork PRs as a read-only title check (labelling needs write access) and skips `bot/*` branches.
 - `release-drafter.yml` keeps a draft release current on every push to `main` (a preview; it publishes nothing).
-- `release.yml` has Release Drafter write the notes for the exact tag, uploads the build to that draft and publishes it. `tag-release.yml` uses it to pick the version for bump `auto`.
+- `release.yml` has Release Drafter write the notes for the exact tag, uploads the build to that draft and publishes it. `tag-release.yml` uses it to pick the version when no tag is given.
 
 All actions are SHA-pinned like the rest and use the workflow's own token. Details and the type table: [releasing](releasing.md#release-notes).
 

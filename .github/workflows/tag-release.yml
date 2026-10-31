@@ -1,25 +1,19 @@
 name: Tag and release
 
-# Creates a git tag on main and releases it. Run it from the Actions tab ("Run workflow") or with
+# Releases the head of main under a new version. Run it from the Actions tab ("Run workflow") or with
 #   gh workflow run tag-release.yml                    (next version from the merged PR titles)
-#   gh workflow run tag-release.yml -f bump=minor
-#   gh workflow run tag-release.yml -f tag=v1.0.0
-# Give either an explicit tag or choose a bump. A tag, when given, wins over the bump.
+#   gh workflow run tag-release.yml -f tag=v1.0.0      (an exact tag)
 #
-# The release is not left to a tag-push trigger: a tag pushed with the workflow's own GITHUB_TOKEN
-# does not trigger other workflows, so this calls release.yml directly once the tag exists.
-run-name: Tag and release ${{ inputs.tag != '' && inputs.tag || format('(next {0})', inputs.bump) }}
+# No tag is pushed from here. release.yml builds the commit and publishes the release with the
+# release's target set to that commit, and GitHub creates the tag at that moment. So a failed build
+# leaves no tag behind, and nothing is left to retry or clean up.
+run-name: Tag and release ${{ inputs.tag != '' && inputs.tag || '(next version)' }}
 
 on:
   workflow_dispatch:
     inputs:
-      bump:
-        description: "auto takes the next version from the merged PR titles (Release Drafter); the others increase that part of the latest vX.Y.Z tag. Ignored when a tag name is given below."
-        type: choice
-        options: [auto, patch, minor, major]
-        default: auto
       tag:
-        description: Or the exact new tag, such as v1.4.0 or v1.4.0-rc.1. Leave empty to use the bump.
+        description: The exact new tag, such as v1.4.0 or v1.4.0-rc.1. Leave empty to use the version Release Drafter works out from the merged PR titles.
         type: string
         required: false
 
@@ -33,14 +27,14 @@ concurrency:
 
 jobs:
   tag:
-    name: create the tag
+    name: work out the version
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      contents: write # push the tag; Release Drafter updates the draft release
+      contents: write # Release Drafter updates the draft release
       pull-requests: read # Release Drafter reads the merged PRs
     outputs:
-      tag: ${{ steps.tag.outputs.tag }}
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       # Releases come from main. Say so, rather than skipping the job and leaving a green run.
       - name: Releases must be started from main
@@ -49,35 +43,38 @@ jobs:
           echo "::error::Run this workflow on main, not on ${GITHUB_REF_NAME}."
           exit 1
 
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0 # every tag, to find the latest version
-          persist-credentials: true # this job pushes the tag; the token is limited to contents: write
-
-      - name: Git identity for the tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      # `auto`: the version is what Release Drafter works out from the PRs merged since the last release
+      # No tag given: the version is what Release Drafter works out from the PRs merged since the last release
       # (breaking change = major, feat = minor, anything else = patch; .github/release-drafter.yml).
       - name: Work out the next version
         id: draft
-        if: inputs.tag == '' && inputs.bump == 'auto'
+        if: inputs.tag == ''
         uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
         with:
-          # The commit this run checked out and will tag, not whatever main has become since.
+          # The commit this run will release, not whatever main has become since.
           commitish: ${{ github.sha }}
 
-      - name: Create the tag
-        id: tag
+      # An explicit tag wins, then the version Release Drafter resolved. release.yml checks that it is a
+      # semantic version. This is a new version only: a tag that exists, whether or not its release was
+      # published, is retried through release.yml (see docs/releasing.md). A failed lookup must not be
+      # mistaken for "no such tag", so only a 404 counts as free.
+      - name: Check the version is unused
+        id: version
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          BUMP: ${{ inputs.bump }}
-          # An explicit tag wins, then the version Release Drafter resolved (empty unless bump is auto).
-          TAG_INPUT: ${{ inputs.tag || steps.draft.outputs.tag_name }}
-        run: scripts/create-release-tag.sh
+          TAG: ${{ inputs.tag || steps.draft.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          [ -n "$TAG" ] || { echo "::error::No version to release: Release Drafter found none."; exit 1; }
+          if out=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" 2>&1); then
+            echo "::error::Tag $TAG already exists. Pick a new version, or retry that release through release.yml (see docs/releasing.md)."
+            exit 1
+          elif ! grep -q 'Not Found' <<<"$out"; then
+            echo "::error::Could not check whether tag $TAG exists: $out"
+            exit 1
+          fi
+          echo "Releasing $TAG at $GITHUB_SHA"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
   release:
     name: release ${{ needs.tag.outputs.tag }}
@@ -92,6 +89,7 @@ jobs:
     uses: $/.github/workflows/release.yml
     with:
       tag: ${{ needs.tag.outputs.tag }}
+      sha: ${{ github.sha }}
     # The PGP key that signs the .deb and .rpm (RELEASE_GPG_*).
     secrets:
       RELEASE_GPG_PRIVATE_KEY: ${{ secrets.RELEASE_GPG_PRIVATE_KEY }}

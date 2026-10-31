@@ -14,7 +14,7 @@ Short records of decisions. Add new entries at the bottom; supersede rather than
 | 8 | Linux amd64 only | Maintainer: "only need to build a Linux binary" |
 | 9 | **Fedora/GTK3 variant dropped** | Maintainer cancelled it |
 | 10 | Self-update via GitHub releases, SHA-256 verified, user-initiated, off in dev/headless | Wails self-update tutorial; see `self-update.md` |
-| 11 | Releases cut by the *Tag and release* workflow (tag or patch/minor/major) | Tags cannot be pushed from the agent sandbox; one-click for the maintainer |
+| 11 | Releases cut by the *Tag and release* workflow (an explicit tag, or Release Drafter's version) | Tags cannot be pushed from the agent sandbox; one-click for the maintainer |
 | 12 | Headless use is an SSH tunnel to a loopback listener; no auth layer | Wails server mode has none; exposing it is out of scope (principle 10) |
 | 13 | Podman-only servers run the app in a container with `podman-remote` and the host socket, `--network host` | Server has no Go; host network keeps the loopback Host guard |
 | 14 | Frontend is **Vue 3 + Vite** with generated Wails bindings, replacing plain JS. Supersedes the "no build step" part of decision 1 and the old principle 15 | Maintainer request, following the Wails v3 notes tutorial and its Vue template. Costs: Node 20.19+/22.12+ is needed to build; `go build` needs `frontend/dist` (placeholder `.gitkeep` keeps `go vet`/`go test` working without it); CI, release and build/docker/headless.Dockerfile build the frontend first. Runtime dependencies are only `vue` and `@wailsio/runtime`; the graph stays canvas. The UI calls `ScanService` through generated bindings (`frontend/bindings`, committed so builds need no wails3 CLI) |

@@ -88,7 +88,7 @@ Wails rejects requests with a non-loopback `Host` header when bound to loopback 
 
 ## Release and CI
 
-`ci.yml` (PRs and main), `security.yml` (govulncheck + Trivy fs), `tag-release.yml` (pick tag or patch/minor/major, tags `main`), `release.yml` (build, checksums, attestation, GitHub release). See [ci.md](ci.md), [releasing.md](releasing.md), [self-update.md](self-update.md).
+`ci.yml` (PRs and main), `security.yml` (govulncheck + Trivy fs), `tag-release.yml` (picks the version, releases the head of `main`; the tag is created when the release is published), `release.yml` (build, checksums, attestation, GitHub release). See [ci.md](ci.md), [releasing.md](releasing.md), [self-update.md](self-update.md).
 
 ## Deployment without Go
 
