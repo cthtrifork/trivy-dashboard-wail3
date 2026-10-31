@@ -10,6 +10,7 @@ import {
   cmpBase,
   repoTags,
   recent,
+  result,
   recentSummary,
   image,
   ensureTags,
@@ -46,6 +47,9 @@ const chgStyle = (c) => ({ "--c": CHG_COLOR[c] });
 const recentImages = computed(() =>
   recent.value.filter((e) => e.image !== image.value.trim()).map((e) => ({ value: e.image, meta: recentSummary(e, true) })),
 );
+
+// Compare needs a base: the image scanned at the top. Until one has been scanned, the target cannot be chosen either.
+const hasBase = computed(() => !!(result.value && cmpBase.value.repo && cmpBase.value.tag));
 
 const view = ref("vulns");
 const show = reactive(new Set(["added", "removed"]));
@@ -123,13 +127,14 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
     <span class="kv">→</span>
     <span class="chk"
       >Target
-      <TagInput id="cmp-b" v-model="cmpForm.b" :tags="repoTags" label="Target tag or image" placeholder="tag, digest or another image" :images="recentImages" hint="Type or paste a full reference to compare a different image." :disabled="comparing" @open="ensureTags(cmpBase.repo)"
+      <TagInput id="cmp-b" v-model="cmpForm.b" :tags="repoTags" label="Target tag or image" placeholder="tag, digest or another image" :images="recentImages" hint="Type or paste a full reference to compare a different image." :disabled="comparing || !hasBase" @open="ensureTags(cmpBase.repo)"
     /></span>
-    <button id="cmp-go" type="submit" :disabled="comparing || !cmpBase.repo || !cmpBase.tag">Compare</button>
+    <button id="cmp-go" type="submit" :disabled="comparing || !hasBase">Compare</button>
     <button id="cmp-cancel" type="button" v-show="comparing" @click="cancel">Cancel</button>
   </form>
   <div id="cmp-out" class="scroll">
     <ScanPending v-if="!data && comparing" kind="table" :cols="5" />
+    <div v-else-if="!data && !hasBase" class="empty">Scan an image above first. It becomes the base that the target is compared against.</div>
     <div v-else-if="!data" class="empty">
       Pick a target tag, or type another image (for example cgr.dev/chainguard/static:latest), to compare the scanned image against and see what changed: vulnerabilities added and removed, and package changes.
     </div>
