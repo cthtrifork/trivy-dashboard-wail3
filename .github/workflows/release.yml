@@ -483,10 +483,13 @@ jobs:
           password: ${{ github.token }}
 
       # podman-remote is built by upstream, so its source is the podman repository at the version the
-      # Dockerfile pins. Copa cannot find that on its own (see the go-vcs-url input).
-      - name: Podman source for Copa
+      # Dockerfile pins (the go-vcs-url input), and the small image Copa patches is built on the
+      # final stage's base image.
+      - name: Podman source and base image for Copa
         id: podman
-        run: echo "url=https://github.com/containers/podman@$(sed -n 's/^ARG PODMAN_VERSION=//p' build/docker/headless.Dockerfile)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "url=https://github.com/containers/podman@$(sed -n 's/^ARG PODMAN_VERSION=//p' build/docker/headless.Dockerfile)" >> "$GITHUB_OUTPUT"
+          echo "base=$(grep -E '^FROM cgr\.dev/' build/docker/headless.Dockerfile | tail -1 | awk '{print $2}')" >> "$GITHUB_OUTPUT"
 
       - id: copa
         uses: $/.github/actions/copa-patch
@@ -496,7 +499,8 @@ jobs:
           copa-version: ${{ env.COPA_VERSION }}
           trivy-version: ${{ env.TRIVY_VERSION }}
           go-vcs-url: ${{ steps.podman.outputs.url }}
-          only-target: usr/local/bin/podman
+          binary: /usr/local/bin/podman
+          base-image: ${{ steps.podman.outputs.base }}
 
       - name: Push the patched image
         if: steps.copa.outputs.copa-outcome == 'success' && steps.copa.outputs.smoke-outcome == 'success'

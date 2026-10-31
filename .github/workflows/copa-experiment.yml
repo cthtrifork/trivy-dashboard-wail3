@@ -46,29 +46,24 @@ jobs:
       - name: Build the image
         run: docker build -t trivy-scanner --build-arg VERSION=copa -f build/docker/headless.Dockerfile .
 
-      # A docker-container builder cannot see the daemon's local images, so Copa reads the image
-      # from a local registry.
-      - name: Push to a local registry
-        run: |
-          docker run -d --name registry --network host mirror.gcr.io/library/registry:3
-          docker tag trivy-scanner localhost:5000/trivy-scanner:latest
-          for i in $(seq 1 20); do curl -fsS -o /dev/null http://localhost:5000/v2/ && break; sleep 1; done
-          docker push localhost:5000/trivy-scanner:latest
-
       # podman-remote is built by upstream, so its source is the podman repository at the version the
-      # Dockerfile pins. Copa cannot find that on its own (see the go-vcs-url input).
-      - name: Podman source for Copa
+      # Dockerfile pins (the go-vcs-url input), and the small image Copa patches is built on the
+      # final stage's base image.
+      - name: Podman source and base image for Copa
         id: podman
-        run: echo "url=https://github.com/containers/podman@$(sed -n 's/^ARG PODMAN_VERSION=//p' build/docker/headless.Dockerfile)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "url=https://github.com/containers/podman@$(sed -n 's/^ARG PODMAN_VERSION=//p' build/docker/headless.Dockerfile)" >> "$GITHUB_OUTPUT"
+          echo "base=$(grep -E '^FROM cgr\.dev/' build/docker/headless.Dockerfile | tail -1 | awk '{print $2}')" >> "$GITHUB_OUTPUT"
 
       - uses: $/.github/actions/copa-patch
         with:
-          image: localhost:5000/trivy-scanner:latest
+          image: trivy-scanner:latest
           patched-tag: patched
           copa-version: ${{ env.COPA_VERSION }}
           trivy-version: ${{ env.TRIVY_VERSION }}
           go-vcs-url: ${{ steps.podman.outputs.url }}
-          only-target: usr/local/bin/podman
+          binary: /usr/local/bin/podman
+          base-image: ${{ steps.podman.outputs.base }}
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}

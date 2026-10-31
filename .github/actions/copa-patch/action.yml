@@ -1,11 +1,13 @@
 name: Copa patch
 description: >-
-  Scans a container image with Trivy, patches it with Copacetic (OS packages, and Go binaries through
-  Copa's experimental rebuild), rescans and smoke-tests the patched image, and writes a Markdown
-  before/after report to copa-report.md. The image must be in a registry the runner can reach (a
-  local registry on localhost:5000 works). The patched image is loaded into the local Docker daemon
-  as <image without tag>:<patched-tag>; pushing it is up to the caller. Never fails the calling job:
-  look at the `copa-outcome` and `smoke-outcome` outputs. Experimental, see docs/ci.md.
+  Scans a container image with Trivy, patches one Go binary of it with Copacetic's experimental
+  rebuild, rescans and smoke-tests the result, and writes a Markdown before/after report to
+  copa-report.md. Copa rebuilds every Go binary in an image from the one --go-vcs-url source, so it
+  only sees a small image holding the binary to patch; the patched binary is then layered over the
+  original image. The image must be pullable by the Docker daemon (local or registry). The result is
+  loaded into the local Docker daemon as <image without tag>:<patched-tag>; pushing it is up to the
+  caller. Never fails the calling job: look at the `copa-outcome` and `smoke-outcome` outputs.
+  Experimental, see docs/ci.md.
 
 inputs:
   image:
@@ -22,18 +24,19 @@ inputs:
     required: true
   go-vcs-url:
     description: >-
-      Source of the Go binaries to rebuild, as repo@ref (e.g. https://github.com/containers/podman@v6.1.4).
-      Needed when the image's own source label points elsewhere, as it does for an image built on a
-      base image's labels: Copa would clone the base image's repository instead.
+      Source of the binary to rebuild, as repo@ref (e.g. https://github.com/containers/podman@v6.1.4).
+      Needed when the binary has no VCS information and the image's own source label points elsewhere,
+      as it does for an image built on a base image's labels.
     required: false
     default: ''
-  only-target:
+  binary:
+    description: Path in the image of the Go binary to patch (e.g. /usr/local/bin/podman).
+    required: true
+  base-image:
     description: >-
-      Hand Copa only the findings of this Trivy target (e.g. usr/local/bin/podman). --go-vcs-url
-      applies to every Go binary Copa rebuilds, so without this it also tries to rebuild the others
-      (our own binary) from the wrong source.
-    required: false
-    default: ''
+      Image the small image holding only that binary is built on (e.g. the base image of the final stage,
+      with its digest). Copa needs an image with an operating system.
+    required: true
 
 outputs:
   patched-image:
@@ -41,7 +44,7 @@ outputs:
     value: ${{ steps.names.outputs.patched }}
   copa-outcome:
     description: Outcome of the patch step (success, failure).
-    value: ${{ steps.copa.outcome }}
+    value: ${{ steps.layer.outcome == 'success' && 'success' || 'failure' }}
   smoke-outcome:
     description: Outcome of the smoke test of the patched image (success, failure, skipped).
     value: ${{ steps.smoke.outcome }}
@@ -87,28 +90,65 @@ runs:
         exit-code: '0'
         version: ${{ inputs.trivy-version }}
 
+    # A docker-container builder cannot see the daemon's images, so the small image Copa patches goes
+    # through a registry of its own (port 5001, so it cannot clash with another one on 5000).
+    - name: Build the small image with only the binary
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+        BINARY: ${{ inputs.binary }}
+        BASE: ${{ inputs.base-image }}
+      run: |
+        docker run -d --name copa-registry --network host -e REGISTRY_HTTP_ADDR=:5001 mirror.gcr.io/library/registry:3
+        for i in $(seq 1 20); do curl -fsS -o /dev/null http://localhost:5001/v2/ && break; sleep 1; done
+        mkdir -p "$RUNNER_TEMP/copa-mini"
+        printf 'FROM %s AS src\nFROM %s\nCOPY --from=src %s %s\n' "$IMAGE" "$BASE" "$BINARY" "$BINARY" > "$RUNNER_TEMP/copa-mini/Dockerfile"
+        docker build -t localhost:5001/copa-mini:latest "$RUNNER_TEMP/copa-mini"
+        docker push localhost:5001/copa-mini:latest
+
+    - name: Scan the small image
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      env:
+        TRIVY_PKG_TYPES: os,library
+      with:
+        scan-type: image
+        image-ref: localhost:5001/copa-mini:latest
+        scanners: vuln
+        severity: HIGH,CRITICAL
+        ignore-unfixed: true
+        format: json
+        output: mini-before.json
+        exit-code: '0'
+        version: ${{ inputs.trivy-version }}
+
     - name: Patch with Copa
       id: copa
       continue-on-error: true
       shell: bash
       env:
         COPA_EXPERIMENTAL: '1'
-        IMAGE: ${{ inputs.image }}
-        PATCHED_TAG: ${{ inputs.patched-tag }}
         GO_VCS_URL: ${{ inputs.go-vcs-url }}
-        ONLY_TARGET: ${{ inputs.only-target }}
       run: |
-        report=before.json
-        if [ -n "$ONLY_TARGET" ]; then
-          jq --arg t "$ONLY_TARGET" '.Results |= map(select(.Target == $t))' before.json > copa-input.json
-          report=copa-input.json
-        fi
         args=(--pkg-types library --toolchain-patch-level --addr docker-container://buildx_buildkit_copa0)
         [ -n "$GO_VCS_URL" ] && args+=(--go-vcs-url "$GO_VCS_URL")
-        "$(go env GOPATH)/bin/copacetic" patch -i "$IMAGE" -r "$report" -t "$PATCHED_TAG" "${args[@]}" 2>&1 | tee copa.log
+        "$(go env GOPATH)/bin/copacetic" patch -i localhost:5001/copa-mini:latest -r mini-before.json -t patched "${args[@]}" 2>&1 | tee copa.log
+
+    # Layer the patched binary over the original image, so everything else stays as it was.
+    - name: Put the patched binary into the image
+      id: layer
+      if: steps.copa.outcome == 'success'
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.image }}
+        BINARY: ${{ inputs.binary }}
+        PATCHED: ${{ steps.names.outputs.patched }}
+      run: |
+        mkdir -p "$RUNNER_TEMP/copa-final"
+        printf 'FROM %s\nCOPY --from=localhost:5001/copa-mini:patched %s %s\n' "$IMAGE" "$BINARY" "$BINARY" > "$RUNNER_TEMP/copa-final/Dockerfile"
+        docker build -t "$PATCHED" "$RUNNER_TEMP/copa-final"
 
     - name: Scan after
-      if: steps.copa.outcome == 'success'
+      if: steps.layer.outcome == 'success'
       uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
       env:
         TRIVY_PKG_TYPES: os,library
@@ -126,7 +166,7 @@ runs:
     # The patched image must still start and serve the UI, and its podman must still run.
     - name: Smoke test the patched image
       id: smoke
-      if: steps.copa.outcome == 'success'
+      if: steps.layer.outcome == 'success'
       continue-on-error: true
       shell: bash
       env:
@@ -148,7 +188,7 @@ runs:
         COPA_VERSION: ${{ inputs.copa-version }}
         IMAGE: ${{ inputs.image }}
         PATCHED: ${{ steps.names.outputs.patched }}
-        COPA_OUTCOME: ${{ steps.copa.outcome }}
+        COPA_OUTCOME: ${{ steps.layer.outcome == 'success' && 'success' || steps.copa.outcome == 'success' && 'patched but not layered' || 'failure' }}
         SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
       run: |
         count() { jq '[.Results[]?.Vulnerabilities[]?] | length' "$1"; }
