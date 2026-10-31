@@ -1,7 +1,4 @@
-# Config for the .deb and .rpm that scripts/package-linux.sh builds with `wails3 tool package`.
-# ${...} values (version, signing key) come from the environment, which the script sets. nfpm does not
-# expand them in contents paths, so the script stages the binary at bin/trivy-scanner.
-# Docs: https://nfpm.goreleaser.com/configuration/
+# nfpm does not expand ${...} in contents paths, so package-linux.sh stages the binary at bin/trivy-scanner.
 
 name: trivy-scanner
 arch: amd64

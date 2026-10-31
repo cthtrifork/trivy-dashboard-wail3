@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-# Builds the .deb and .rpm with `wails3 tool package` (config: build/linux/nfpm/nfpm.yaml).
-# Signed when PKG_SIGNING_KEY_FILE is set (passphrase in NFPM_PASSPHRASE). Names omit "linux_amd64"
-# so the in-app updater never matches them.
-#
-#   scripts/package-linux.sh <binary> <version> <outdir>
-#   scripts/package-linux.sh <binary> <version> <outdir>
+# Names omit "linux_amd64" so the in-app updater never matches them. Signed when PKG_SIGNING_KEY_FILE is set.
 set -euo pipefail
 
 bin="${1:?usage: package-linux.sh <binary> <version> <outdir>}"

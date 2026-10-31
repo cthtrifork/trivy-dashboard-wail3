@@ -1,4 +1,3 @@
-/* Shared controls: segmented switch, checkbox row, ghost button, file picker, code boxes, chips. */
 .seg {
   display: flex;
   border: 1px solid var(--line);

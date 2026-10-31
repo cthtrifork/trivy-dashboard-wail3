@@ -1,5 +1,3 @@
-// Drives the running app (started by screenshots.sh in fake-podman mode) and
-// saves one screenshot per panel view. Usage: node screenshots.mjs <url> <outDir>
 import { createRequire } from "node:module";
 import { execSync } from "node:child_process";
 import { mkdirSync, readdirSync, statSync } from "node:fs";

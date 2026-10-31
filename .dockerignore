@@ -1,5 +1,3 @@
-# Build context for build/docker/headless.Dockerfile. Docker reads only .dockerignore; podman reads
-# it too when there is no .containerignore, so this one file serves both.
 # Allow list: whatever is not named here is not sent to the daemon and cannot bust a layer cache.
 *
 

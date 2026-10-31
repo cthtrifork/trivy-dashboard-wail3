@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
-# Packages a built binary into release assets in <outdir>: the raw binary (what the in-app updater
-# installs), a tarball with README and LICENSE, and SHA256SUMS (fixed name; the updater looks it up).
-#
-#   scripts/package-release.sh <binary> <version> <outdir>
-#   scripts/package-release.sh <binary> <version> <outdir>
+# The updater installs a single file, so it gets the raw binary; SHA256SUMS has a fixed name it looks up.
 set -euo pipefail
 
 bin="${1:?usage: package-release.sh <binary> <version> <outdir>}"

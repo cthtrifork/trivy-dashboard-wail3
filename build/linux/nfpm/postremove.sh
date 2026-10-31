@@ -1,5 +1,4 @@
 #!/bin/sh
-# Refresh the launcher and icon caches after the files are removed. Best effort.
 set -e
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database -q /usr/share/applications || true

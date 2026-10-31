@@ -1,6 +1,3 @@
-# Go and Node for CI: actions/setup-go and actions/setup-node read this file, and Renovate's asdf manager
-# keeps it current. These are not decisions to hold back: they should follow the latest stable release,
-# so merge Renovate's PR as soon as CI is green. go.mod's `go` line and the Dockerfiles' golang and node images
-# repeat these versions; Renovate updates each family in one PR (renovate.json5).
+# Read by setup-go/setup-node and Renovate; go.mod and the Dockerfiles repeat these versions. Merge Renovate's PR once CI is green.
 golang 1.27
 nodejs 26
