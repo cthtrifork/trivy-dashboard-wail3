@@ -314,8 +314,9 @@ func (s *ScanService) UpdateDB(trivyImage string) (bool, error) {
 	return s.scanner.UpdateDB(s.appCtx(), trivyImage)
 }
 
-// RulePresets returns the built-in scoring presets.
-func (s *ScanService) RulePresets() []trivy.Preset { return trivy.Presets() }
+// Vocabulary returns the fixed lists and thresholds the UI shows (severities, tiers, vendor
+// statuses, the EPSS "high" cutoff), so it keeps no copy of its own.
+func (s *ScanService) Vocabulary() trivy.Vocabulary { return trivy.Vocab() }
 
 // RuleHelp returns what each scoring rule adds, in words, for the scoring panel. It is written from
 // the constants the rules use, so the text cannot drift from the points applied.

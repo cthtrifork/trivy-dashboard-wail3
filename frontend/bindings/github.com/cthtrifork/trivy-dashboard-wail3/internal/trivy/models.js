@@ -828,55 +828,6 @@ export class PkgChange {
 }
 
 /**
- * Preset is a named, built-in set of rules.
- */
-export class Preset {
-    /**
-     * Creates a new Preset instance.
-     * @param {Partial<Preset>} [$$source = {}] - The source object to create the Preset.
-     */
-    constructor($$source = {}) {
-        if (!("name" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["name"] = "";
-        }
-        if (!("description" in $$source)) {
-            /**
-             * @member
-             * @type {string}
-             */
-            this["description"] = "";
-        }
-        if (!("rules" in $$source)) {
-            /**
-             * @member
-             * @type {Rules}
-             */
-            this["rules"] = (new Rules());
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new Preset instance from a string or object.
-     * @param {any} [$$source = {}]
-     * @returns {Preset}
-     */
-    static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType9;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("rules" in $$parsedSource) {
-            $$parsedSource["rules"] = $$createField2_0($$parsedSource["rules"]);
-        }
-        return new Preset(/** @type {Partial<Preset>} */($$parsedSource));
-    }
-}
-
-/**
  * Rating is one data source's verdict on a finding. Severity is empty and Score 0 when the source
  * published only the other.
  */
@@ -1045,133 +996,6 @@ export class RuleSummaries {
 }
 
 /**
- * Rules is the tunable part of the priority score: which rules apply and where their thresholds
- * sit. The zero value switches everything off; use DefaultRules for the standard behaviour.
- */
-export class Rules {
-    /**
-     * Creates a new Rules instance.
-     * @param {Partial<Rules>} [$$source = {}] - The source object to create the Rules.
-     */
-    constructor($$source = {}) {
-        if (!("kevEnabled" in $$source)) {
-            /**
-             * KEVEnabled adds PointsKEV (+PointsKEVRansomware) to findings in CISA's KEV catalog.
-             * @member
-             * @type {boolean}
-             */
-            this["kevEnabled"] = false;
-        }
-        if (!("kevForceNow" in $$source)) {
-            /**
-             * KEVForceNow puts every KEV finding in the Act now tier whatever its score.
-             * @member
-             * @type {boolean}
-             */
-            this["kevForceNow"] = false;
-        }
-        if (!("epssEnabled" in $$source)) {
-            /**
-             * EPSSEnabled scores the exploitation probability in three bands: at least EPSSCutoff
-             * (+PointsEPSSLow), at least EPSSHigh (+PointsEPSSHigh) and at least EPSSVeryHigh
-             * (+PointsEPSSVeryHigh, and the Fix soon tier). Below the cutoff it adds nothing.
-             * @member
-             * @type {boolean}
-             */
-            this["epssEnabled"] = false;
-        }
-        if (!("epssCutoff" in $$source)) {
-            /**
-             * @member
-             * @type {number}
-             */
-            this["epssCutoff"] = 0;
-        }
-        if (!("epssHigh" in $$source)) {
-            /**
-             * @member
-             * @type {number}
-             */
-            this["epssHigh"] = 0;
-        }
-        if (!("epssVeryHigh" in $$source)) {
-            /**
-             * @member
-             * @type {number}
-             */
-            this["epssVeryHigh"] = 0;
-        }
-        if (!("severityEnabled" in $$source)) {
-            /**
-             * +3 (low) to +30 (critical)
-             * @member
-             * @type {boolean}
-             */
-            this["severityEnabled"] = false;
-        }
-        if (!("vectorEnabled" in $$source)) {
-            /**
-             * network/low complexity/no auth/no interaction add points
-             * @member
-             * @type {boolean}
-             */
-            this["vectorEnabled"] = false;
-        }
-        if (!("fixEnabled" in $$source)) {
-            /**
-             * +5 with a fix, -3 without, -5 when the vendor will not fix
-             * @member
-             * @type {boolean}
-             */
-            this["fixEnabled"] = false;
-        }
-        if (!("fixedOnly" in $$source)) {
-            /**
-             * FixedOnly drops findings without a fix to score 0 and the Monitor tier.
-             * @member
-             * @type {boolean}
-             */
-            this["fixedOnly"] = false;
-        }
-        if (!("tierNow" in $$source)) {
-            /**
-             * A finding is in the first tier whose minimum score it reaches (KEVForceNow and the EPSS
-             * band above aside).
-             * @member
-             * @type {number}
-             */
-            this["tierNow"] = 0;
-        }
-        if (!("tierSoon" in $$source)) {
-            /**
-             * @member
-             * @type {number}
-             */
-            this["tierSoon"] = 0;
-        }
-        if (!("tierPlan" in $$source)) {
-            /**
-             * @member
-             * @type {number}
-             */
-            this["tierPlan"] = 0;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new Rules instance from a string or object.
-     * @param {any} [$$source = {}]
-     * @returns {Rules}
-     */
-    static createFrom($$source = {}) {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new Rules(/** @type {Partial<Rules>} */($$parsedSource));
-    }
-}
-
-/**
  * SBOMSummary is a plain-language overview of what an image contains.
  */
 export class SBOMSummary {
@@ -1219,7 +1043,7 @@ export class SBOMSummary {
      * @returns {SBOMSummary}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType11;
+        const $$createField2_0 = $$createType10;
         const $$createField3_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("binaries" in $$parsedSource) {
@@ -1438,14 +1262,14 @@ export class ScanResult {
      * @returns {ScanResult}
      */
     static createFrom($$source = {}) {
-        const $$createField2_0 = $$createType13;
+        const $$createField2_0 = $$createType12;
         const $$createField3_0 = $$createType6;
-        const $$createField4_0 = $$createType15;
+        const $$createField4_0 = $$createType14;
         const $$createField5_0 = $$createType6;
-        const $$createField7_0 = $$createType17;
-        const $$createField8_0 = $$createType20;
+        const $$createField7_0 = $$createType16;
+        const $$createField8_0 = $$createType19;
         const $$createField9_0 = $$createType0;
-        const $$createField11_0 = $$createType21;
+        const $$createField11_0 = $$createType20;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("vulnerabilities" in $$parsedSource) {
             $$parsedSource["vulnerabilities"] = $$createField2_0($$parsedSource["vulnerabilities"]);
@@ -1597,6 +1421,74 @@ export class VEXEntry {
 }
 
 /**
+ * Vocabulary is what the UI needs to know about the engine's fixed lists and thresholds, so it
+ * keeps no copy that could drift.
+ */
+export class Vocabulary {
+    /**
+     * Creates a new Vocabulary instance.
+     * @param {Partial<Vocabulary>} [$$source = {}] - The source object to create the Vocabulary.
+     */
+    constructor($$source = {}) {
+        if (!("severities" in $$source)) {
+            /**
+             * Severities are Trivy's ratings, most severe first.
+             * @member
+             * @type {string[]}
+             */
+            this["severities"] = [];
+        }
+        if (!("tiers" in $$source)) {
+            /**
+             * Tiers are the priority tiers, most urgent first.
+             * @member
+             * @type {string[]}
+             */
+            this["tiers"] = [];
+        }
+        if (!("vendorStatuses" in $$source)) {
+            /**
+             * @member
+             * @type {string[]}
+             */
+            this["vendorStatuses"] = [];
+        }
+        if (!("epssHigh" in $$source)) {
+            /**
+             * EPSSHigh is the exploitation probability from which the UI flags a finding, as a fraction.
+             * @member
+             * @type {number}
+             */
+            this["epssHigh"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Vocabulary instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {Vocabulary}
+     */
+    static createFrom($$source = {}) {
+        const $$createField0_0 = $$createType0;
+        const $$createField1_0 = $$createType0;
+        const $$createField2_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("severities" in $$parsedSource) {
+            $$parsedSource["severities"] = $$createField0_0($$parsedSource["severities"]);
+        }
+        if ("tiers" in $$parsedSource) {
+            $$parsedSource["tiers"] = $$createField1_0($$parsedSource["tiers"]);
+        }
+        if ("vendorStatuses" in $$parsedSource) {
+            $$parsedSource["vendorStatuses"] = $$createField2_0($$parsedSource["vendorStatuses"]);
+        }
+        return new Vocabulary(/** @type {Partial<Vocabulary>} */($$parsedSource));
+    }
+}
+
+/**
  * VulnChange is one finding's fate between A and B.
  */
 export class VulnChange {
@@ -1651,7 +1543,7 @@ export class VulnChange {
      * @returns {VulnChange}
      */
     static createFrom($$source = {}) {
-        const $$createField1_0 = $$createType12;
+        const $$createField1_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("vuln" in $$parsedSource) {
             $$parsedSource["vuln"] = $$createField1_0($$parsedSource["vuln"]);
@@ -1897,8 +1789,8 @@ export class Vulnerability {
      * @returns {Vulnerability}
      */
     static createFrom($$source = {}) {
-        const $$createField13_0 = $$createType23;
-        const $$createField27_0 = $$createType25;
+        const $$createField13_0 = $$createType22;
+        const $$createField27_0 = $$createType24;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("ratings" in $$parsedSource) {
             $$parsedSource["ratings"] = $$createField13_0($$parsedSource["ratings"]);
@@ -1920,20 +1812,19 @@ const $$createType5 = $Create.Array($$createType4);
 const $$createType6 = $Create.Map($Create.Any, $Create.Any);
 const $$createType7 = $Create.Array($Create.Any);
 const $$createType8 = DocMeta.createFrom;
-const $$createType9 = Rules.createFrom;
-const $$createType10 = BinaryInfo.createFrom;
-const $$createType11 = $Create.Array($$createType10);
-const $$createType12 = Vulnerability.createFrom;
-const $$createType13 = $Create.Array($$createType12);
-const $$createType14 = Component.createFrom;
-const $$createType15 = $Create.Array($$createType14);
-const $$createType16 = SBOMSummary.createFrom;
-const $$createType17 = $Create.Nullable($$createType16);
-const $$createType18 = DepNode.createFrom;
-const $$createType19 = $Create.Nullable($$createType18);
-const $$createType20 = $Create.Map($Create.Any, $$createType19);
-const $$createType21 = EnrichInfo.createFrom;
-const $$createType22 = Rating.createFrom;
-const $$createType23 = $Create.Array($$createType22);
-const $$createType24 = Reason.createFrom;
-const $$createType25 = $Create.Array($$createType24);
+const $$createType9 = BinaryInfo.createFrom;
+const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = Vulnerability.createFrom;
+const $$createType12 = $Create.Array($$createType11);
+const $$createType13 = Component.createFrom;
+const $$createType14 = $Create.Array($$createType13);
+const $$createType15 = SBOMSummary.createFrom;
+const $$createType16 = $Create.Nullable($$createType15);
+const $$createType17 = DepNode.createFrom;
+const $$createType18 = $Create.Nullable($$createType17);
+const $$createType19 = $Create.Map($Create.Any, $$createType18);
+const $$createType20 = EnrichInfo.createFrom;
+const $$createType21 = Rating.createFrom;
+const $$createType22 = $Create.Array($$createType21);
+const $$createType23 = Reason.createFrom;
+const $$createType24 = $Create.Array($$createType23);

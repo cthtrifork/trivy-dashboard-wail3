@@ -183,16 +183,6 @@ export function RuleHelp() {
 }
 
 /**
- * RulePresets returns the built-in scoring presets.
- * @returns {$CancellablePromise<trivy$0.Preset[]>}
- */
-export function RulePresets() {
-    return $Call.ByID(2795329317).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType9($result);
-    }));
-}
-
-/**
  * Scan scans the image with trivy running in podman. It first discards the saved VEX file and
  * the findings cached from the previous scan, so a new scan starts from a clean slate.
  * @param {trivy$0.ScanRequest} req
@@ -200,7 +190,7 @@ export function RulePresets() {
  */
 export function Scan(req) {
     return $Call.ByID(833560712, req).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType11($result);
+        return $$createType9($result);
     }));
 }
 
@@ -211,7 +201,7 @@ export function Scan(req) {
  */
 export function SplitImage(ref) {
     return $Call.ByID(1978002968, ref).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType12($result);
+        return $$createType10($result);
     }));
 }
 
@@ -232,7 +222,7 @@ export function UpdateDB(trivyImage) {
  */
 export function UpdateInfo() {
     return $Call.ByID(2877341576).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType13($result);
+        return $$createType11($result);
     }));
 }
 
@@ -275,7 +265,7 @@ export function VEXExport(image, author, role, onlyCurrent) {
  */
 export function VEXImport(image, doc, markRest, minSeverity) {
     return $Call.ByID(1138230009, image, doc, markRest, minSeverity).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType14($result);
+        return $$createType12($result);
     }));
 }
 
@@ -286,7 +276,7 @@ export function VEXImport(image, doc, markRest, minSeverity) {
  */
 export function VEXList(image) {
     return $Call.ByID(1476021980, image).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType16($result);
+        return $$createType14($result);
     }));
 }
 
@@ -325,7 +315,7 @@ export function VEXSave(image, author, role, onlyCurrent) {
  */
 export function VEXSet(image, e) {
     return $Call.ByID(537230204, image, e).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType15($result);
+        return $$createType13($result);
     }));
 }
 
@@ -340,6 +330,17 @@ export function ValidateImage(ref) {
     return $Call.ByID(1541138352, ref);
 }
 
+/**
+ * Vocabulary returns the fixed lists and thresholds the UI shows (severities, tiers, vendor
+ * statuses, the EPSS "high" cutoff), so it keeps no copy of its own.
+ * @returns {$CancellablePromise<trivy$0.Vocabulary>}
+ */
+export function Vocabulary() {
+    return $Call.ByID(606957865).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType15($result);
+    }));
+}
+
 // Private type creation functions
 const $$createType0 = $models.UpdateStatus.createFrom;
 const $$createType1 = trivy$0.CompareResult.createFrom;
@@ -349,12 +350,11 @@ const $$createType4 = $models.Footprint.createFrom;
 const $$createType5 = $Create.Array($Create.Any);
 const $$createType6 = $models.Mode.createFrom;
 const $$createType7 = trivy$0.RuleSummaries.createFrom;
-const $$createType8 = trivy$0.Preset.createFrom;
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = trivy$0.ScanResult.createFrom;
-const $$createType11 = $Create.Nullable($$createType10);
-const $$createType12 = $models.ImageParts.createFrom;
-const $$createType13 = $models.UpdateInfo.createFrom;
-const $$createType14 = trivy$0.ImportReport.createFrom;
-const $$createType15 = trivy$0.VEXEntry.createFrom;
-const $$createType16 = $Create.Array($$createType15);
+const $$createType8 = trivy$0.ScanResult.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
+const $$createType10 = $models.ImageParts.createFrom;
+const $$createType11 = $models.UpdateInfo.createFrom;
+const $$createType12 = trivy$0.ImportReport.createFrom;
+const $$createType13 = trivy$0.VEXEntry.createFrom;
+const $$createType14 = $Create.Array($$createType13);
+const $$createType15 = trivy$0.Vocabulary.createFrom;

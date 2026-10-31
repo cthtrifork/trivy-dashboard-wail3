@@ -19,6 +19,7 @@ import {
   refreshFootprint,
   setStatus,
   errText,
+  VENDOR_STATUSES,
 } from "../store.js";
 import IgnoreRulesDialog from "./IgnoreRulesDialog.vue";
 import TagInput from "./TagInput.vue";
@@ -37,16 +38,17 @@ const OPT_TABS = [
   { id: "updates", label: "App updates" },
 ];
 const optsTab = ref("findings");
-const VENDOR_STATUSES = [
-  { id: "will_not_fix", hint: "The vendor will not fix it" },
-  { id: "not_affected", hint: "The vendor says the package is not affected" },
-  { id: "affected", hint: "Affected, no fix yet" },
-  { id: "fixed", hint: "Already fixed in this version" },
-  { id: "under_investigation", hint: "The vendor is still looking into it" },
-  { id: "fix_deferred", hint: "A fix is planned for later" },
-  { id: "end_of_life", hint: "The vendor no longer supports this package" },
-  { id: "unknown", hint: "No status reported" },
-];
+const VENDOR_HINT = {
+  will_not_fix: "The vendor will not fix it",
+  not_affected: "The vendor says the package is not affected",
+  affected: "Affected, no fix yet",
+  fixed: "Already fixed in this version",
+  under_investigation: "The vendor is still looking into it",
+  fix_deferred: "A fix is planned for later",
+  end_of_life: "The vendor no longer supports this package",
+  unknown: "No status reported",
+};
+const vendorStatuses = VENDOR_STATUSES.map((id) => ({ id, hint: VENDOR_HINT[id] ?? id }));
 const toggleStatus = (id) => {
   const i = opts.ignoreStatus.indexOf(id);
   if (i < 0) opts.ignoreStatus.push(id);
@@ -204,7 +206,7 @@ const onToggle = (ev) => {
 
           <div class="chips">
             <button
-              v-for="st in VENDOR_STATUSES"
+              v-for="st in vendorStatuses"
               :key="st.id"
               type="button"
               class="chip"

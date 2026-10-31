@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
 import { ScanService } from "../lib/api.js";
-import { mode, errText } from "../store.js";
+import { mode, errText, SEVERITIES, TIERS } from "../store.js";
 
 const dlg = ref(null);
 const body = ref(null);
@@ -121,8 +121,6 @@ const glossary = [
 ];
 
 // Quick-reference legends above two groups; the full text stays in the group below them.
-const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
-const TIERS = ["Act now", "Fix soon", "Plan", "Monitor"];
 
 // What every scan passes to `trivy image` (see internal/trivy). The Options menu toggles the last three.
 const trivyFlags = [

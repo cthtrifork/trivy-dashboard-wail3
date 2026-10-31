@@ -4,7 +4,19 @@ import { computed, reactive, ref, shallowRef, watch } from "vue";
 import { Events } from "@wailsio/runtime";
 import { ScanService } from "./lib/api.js";
 
-export const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
+// The fixed lists come from the Go engine (ScanService.Vocabulary) and are filled in before the app
+// mounts (main.js), so no component needs to wait for them.
+export const SEVERITIES = [];
+export const TIERS = [];
+export const VENDOR_STATUSES = [];
+export const vocab = { epssHigh: Number.POSITIVE_INFINITY };
+export async function loadVocabulary() {
+  const v = await ScanService.Vocabulary();
+  SEVERITIES.splice(0, SEVERITIES.length, ...v.severities);
+  TIERS.splice(0, TIERS.length, ...v.tiers);
+  VENDOR_STATUSES.splice(0, VENDOR_STATUSES.length, ...v.vendorStatuses);
+  vocab.epssHigh = v.epssHigh;
+}
 // Whether sev is at least as severe as min; an empty min allows everything, an unlisted sev nothing.
 export const sevAtLeast = (sev, min) => !min || (SEVERITIES.includes(sev) && SEVERITIES.indexOf(sev) <= SEVERITIES.indexOf(min));
 export const SEV_COLOR = { CRITICAL: "--CRITICAL", HIGH: "--HIGH", MEDIUM: "--MEDIUM", LOW: "--LOW", UNKNOWN: "--UNKNOWN" };
@@ -13,8 +25,6 @@ export const errText = (e) => String(e?.message || e);
 
 // Every localStorage key in one place, so a typo cannot fork a setting in two.
 export const KEYS = {
-  rules: "score-rules",
-  presets: "score-presets",
   trivyImage: "trivy-image",
   trivyLastUsed: "trivy-last-used",
   ignorePolicy: "ignore-policy",
@@ -78,20 +88,14 @@ export const findingsById = computed(() => {
   return m;
 });
 
-// The findings in the order the current scoring rules rank them: the scan result's own list when
-// the rules are the defaults, otherwise the same findings with the priority, tier and reasons
-// the Go side computed under the rules (see rerank).
-export const vulns = shallowRef([]);
+// The findings of the latest scan, already ranked by the Go engine under the balanced rules (docs/scoring.md).
+export const vulns = computed(() => result.value?.vulnerabilities ?? []);
 // Saved VEX assessments for the scanned image repo, finding key -> entry. Replaced, never mutated.
 export const vex = shallowRef(new Map());
 
 // The finding open in the VEX assess drawer, or null when it is closed.
 export const assessing = shallowRef(null);
 
-// Scoring rules. Scans are always ranked under the balanced preset (docs/scoring.md), which Go
-// provides; `rules` holds its values for the few places the UI mirrors them (the EPSS chip).
-export const rules = reactive({});
-export const builtinPresets = ref([]);
 const lsJSON = (k, fallback) => {
   try {
     return JSON.parse(lsGet(k)) ?? fallback;
@@ -99,22 +103,6 @@ const lsJSON = (k, fallback) => {
     return fallback;
   }
 };
-// rerank shows the latest scan's findings; the scan already ranked them under the balanced rules.
-function rerank() {
-  vulns.value = result.value?.vulnerabilities ?? [];
-}
-
-async function initRules() {
-  try {
-    builtinPresets.value = (await ScanService.RulePresets()) || [];
-  } catch (err) {
-    return setStatus("Could not load scoring presets: " + errText(err), { err: true });
-  }
-  Object.assign(rules, builtinPresets.value[0].rules);
-  // Earlier versions let people edit the rules and keep presets; those saved values no longer apply.
-  lsRemove(KEYS.rules);
-  lsRemove(KEYS.presets);
-}
 
 export const status = reactive({ msg: "", err: false, busy: false });
 export function setStatus(msg, { err = false, busy = false } = {}) {
@@ -378,7 +366,6 @@ export function clearAll() {
   vex.value = new Map();
   lsRemove(KEYS.lastResult);
   setHashImage("");
-  rerank();
   setStatus("Cleared.");
 }
 
@@ -419,7 +406,6 @@ export async function runScan() {
   logText.value = "";
   vex.value = new Map(); // the backend drops the saved VEX file when a scan starts
   result.value = null; // don't show the previous image's findings while the new scan runs
-  rerank();
   setStatus("Starting scan…", { busy: true });
   const trivyVersion = trivyImageSetting.value;
   const settings = scanSettings();
@@ -440,7 +426,6 @@ export async function runScan() {
     rememberTrivyVersion(trivyVersion);
     persistScan(r);
     addRecent(image.value.trim(), r);
-    rerank();
     await loadVEX();
     setStatus(`Scan complete: ${r.vulnerabilities.length} vulnerabilities, ${r.components.length} components.`);
   } catch (err) {
@@ -481,7 +466,6 @@ async function restoreScan() {
     } catch {
       /* the result is still shown; the backend asks for a rescan when it needs the findings */
     }
-    rerank();
     await loadVEX();
     setStatus(`Restored the last scan of ${want}.`);
   } else if (hashImage()) {
@@ -525,7 +509,6 @@ export function init() {
     },
   );
   refreshFootprint();
-  initRules();
   restoreScan();
   ScanService.PodmanVersion().then(
     (v) => !result.value && !scanning.value && setStatus(v),

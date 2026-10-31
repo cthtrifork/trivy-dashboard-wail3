@@ -13,15 +13,14 @@ export {
     EnrichInfo,
     ImportReport,
     PkgChange,
-    Preset,
     Rating,
     Reason,
     RuleSummaries,
-    Rules,
     SBOMSummary,
     ScanRequest,
     ScanResult,
     VEXEntry,
+    Vocabulary,
     VulnChange,
     Vulnerability
 } from "./models.js";

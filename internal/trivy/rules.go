@@ -126,28 +126,3 @@ func (r Rules) Normalize() Rules {
 	r.TierNow = min(max(r.TierNow, r.TierSoon), 100)
 	return r
 }
-
-// Preset is a named, built-in set of rules.
-type Preset struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Rules       Rules  `json:"rules"`
-}
-
-// Presets returns the built-in presets, "balanced" (the default) first.
-func Presets() []Preset {
-	strict := DefaultRules()
-	strict.EPSSCutoff, strict.EPSSHigh = 0.05, 0.2
-	strict.FixedOnly = true
-	strict.TierNow, strict.TierSoon, strict.TierPlan = 80, 55, 35
-
-	exploited := DefaultRules()
-	exploited.SeverityEnabled, exploited.VectorEnabled, exploited.FixEnabled = false, false, false
-	exploited.TierNow, exploited.TierSoon, exploited.TierPlan = 50, 20, 10
-
-	return []Preset{
-		{"balanced", "Exploitation evidence first, then severity, reachability and fix availability. The default.", DefaultRules()},
-		{"strict", "A short list: EPSS counts from 5%, findings without a fix are dropped, and the tiers start higher.", strict},
-		{"exploited only", "Ranks by KEV and EPSS alone; severity, vector and fix availability add nothing.", exploited},
-	}
-}

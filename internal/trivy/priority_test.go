@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -298,9 +299,26 @@ func TestRulesTuning(t *testing.T) {
 	}
 }
 
-func TestBalancedIsTheFirstPreset(t *testing.T) {
-	if len(Presets()) < 2 || Presets()[0].Name != "balanced" || Presets()[0].Rules != DefaultRules() {
-		t.Error("balanced must be the first preset and equal the default rules")
+func TestVocabularyMatchesTheEngine(t *testing.T) {
+	v := Vocab()
+	if len(v.Severities) != len(severityRank) {
+		t.Fatalf("severities %v vs rank table %v", v.Severities, severityRank)
+	}
+	for i, s := range v.Severities {
+		if severityRank[s] != i {
+			t.Errorf("%s is listed at %d but ranks %d", s, i, severityRank[s])
+		}
+	}
+	if len(v.Tiers) != 4 || v.Tiers[0] != TierNow || v.Tiers[3] != TierMonitor {
+		t.Errorf("tiers %v", v.Tiers)
+	}
+	if v.EPSSHigh != DefaultRules().EPSSHigh {
+		t.Errorf("EPSS high %v, rules say %v", v.EPSSHigh, DefaultRules().EPSSHigh)
+	}
+	for _, st := range DefaultIgnoreStatus {
+		if !slices.Contains(v.VendorStatuses, st) {
+			t.Errorf("default ignored status %q is not in the vendor list %v", st, v.VendorStatuses)
+		}
 	}
 }
 
