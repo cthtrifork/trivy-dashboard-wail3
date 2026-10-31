@@ -252,6 +252,14 @@ main.dim {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+.tag-list .recent-head.hint {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  padding-top: 10px;
+}
 .scan-row .clear-btn {
   padding: 0 18px;
   font-size: 14px;

@@ -9,6 +9,8 @@ import {
   cmpForm,
   cmpBase,
   repoTags,
+  recent,
+  image,
   ensureTags,
   trivyImageSetting,
   rememberTrivyVersion,
@@ -38,6 +40,9 @@ const CHG_COLOR = {
 };
 const CHG_SIGN = { added: "+", removed: "−", unchanged: "=", upgraded: "↑", downgraded: "↓" };
 const chgStyle = (c) => ({ "--c": CHG_COLOR[c] });
+
+// Images scanned before, offered as targets (never the one already scanned at the top).
+const recentImages = computed(() => recent.value.map((e) => e.image).filter((i) => i !== image.value.trim()));
 
 const view = ref("vulns");
 const show = reactive(new Set(["added", "removed"]));
@@ -115,7 +120,7 @@ const toggle = (k) => (show.has(k) ? show.delete(k) : show.add(k));
     <span class="kv">→</span>
     <span class="chk"
       >Target
-      <TagInput id="cmp-b" v-model="cmpForm.b" :tags="repoTags" label="Target tag or image" placeholder="tag, digest or another image" :disabled="comparing" @open="ensureTags(cmpBase.repo)"
+      <TagInput id="cmp-b" v-model="cmpForm.b" :tags="repoTags" label="Target tag or image" placeholder="tag, digest or another image" :images="recentImages" hint="Type or paste a full reference to compare a different image." :disabled="comparing" @open="ensureTags(cmpBase.repo)"
     /></span>
     <button id="cmp-go" type="submit" :disabled="comparing || !cmpBase.repo || !cmpBase.tag">Compare</button>
     <button id="cmp-cancel" type="button" v-show="comparing" @click="cancel">Cancel</button>
