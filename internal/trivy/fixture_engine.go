@@ -24,12 +24,9 @@ import (
 //go:embed fixtures/*.json
 var fixtureFiles embed.FS
 
-var (
-	// <name>_<version>.json is a `trivy image --format json` report;
-	// <name>_<version>.sbom.json is `trivy image --format cyclonedx`.
-	vulnFixtureRE = regexp.MustCompile(`^[A-Za-z0-9-]+_(\d+\.\d+\.\d+)\.json$`)
-	sbomFixtureRE = regexp.MustCompile(`^[A-Za-z0-9-]+_(\d+\.\d+\.\d+)\.sbom\.json$`)
-)
+// <name>_<version>.json is a `trivy image --format json` report;
+// <name>_<version>.sbom.json is `trivy image --format cyclonedx`.
+var fixtureRE = regexp.MustCompile(`^[A-Za-z0-9-]+_(\d+\.\d+\.\d+)(\.sbom)?\.json$`)
 
 // FixtureEngine implements Engine by replaying the files in fixtures/. It
 // ignores the repository part of an image reference and picks the recording by
@@ -62,9 +59,12 @@ func (f *FixtureEngine) index() (fixtureSet, error) {
 		return set, err
 	}
 	for _, e := range entries {
-		if m := sbomFixtureRE.FindStringSubmatch(e.Name()); m != nil {
+		m := fixtureRE.FindStringSubmatch(e.Name())
+		switch {
+		case m == nil:
+		case m[2] != "":
 			set.sbom[m[1]] = e.Name()
-		} else if m := vulnFixtureRE.FindStringSubmatch(e.Name()); m != nil {
+		default:
 			set.vuln[m[1]] = e.Name()
 		}
 	}
