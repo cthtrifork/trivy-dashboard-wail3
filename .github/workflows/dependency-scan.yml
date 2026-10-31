@@ -5,7 +5,11 @@ name: Dependency scan
 # changes. The comment is informational; the blocking check is the Trivy job in security.yml. It uses
 # a paths filter, so do not mark it as a required check.
 #
-# Hardening: the scan job runs Trivy over PR-controlled files with a read-only token and no
+# It scans the repository files and the headless image (build/docker/headless.Dockerfile, built from the
+# PR and from its base), and the report lists both, grouped by the file or image layer Trivy found
+# each finding in. The blocking image scan is the one in containers.yml.
+#
+# Hardening: the scan job runs Trivy over PR-controlled files (and builds the PR's Dockerfile) with a read-only token and no
 # write permissions; only the separate comment job holds pull-requests: write and it never checks
 # out or runs PR code. Trivy is pinned (action by SHA, binary by version). The vulnerability DB comes
 # from the daily cache in trivy-cache.yml; a pull request's own caches are scoped to that PR, so
@@ -81,10 +85,46 @@ jobs:
           exit-code: '0'
           version: ${{ env.TRIVY_VERSION }}
 
+      # The headless image, built from each side and scanned with the same template. The tag is the same
+      # for both so the target names match and only real differences show up in the diff.
+      - name: Build head image
+        run: docker build -t headless-image --build-arg VERSION=scan -f head/build/docker/headless.Dockerfile head
+
+      - name: Scan head image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: headless-image
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          format: template
+          template: '@head/.github/trivy/dependency-scan.tpl'
+          output: head-image.tsv
+          exit-code: '0'
+          version: ${{ env.TRIVY_VERSION }}
+
+      - name: Build base image
+        run: docker build -t headless-image --build-arg VERSION=scan -f base/build/docker/headless.Dockerfile base
+
+      - name: Scan base image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: headless-image
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          format: template
+          template: '@head/.github/trivy/dependency-scan.tpl'
+          output: base-image.tsv
+          exit-code: '0'
+          version: ${{ env.TRIVY_VERSION }}
+
       # Short overview: the findings that appear or disappear with this PR, grouped by file.
       - name: Build report
         run: |
           export LC_ALL=C
+          cat base-image.tsv >> base.tsv
+          cat head-image.tsv >> head.tsv
           sort -u base.tsv > base.sorted
           sort -u head.tsv > head.sorted
           comm -13 base.sorted head.sorted > added.tsv
