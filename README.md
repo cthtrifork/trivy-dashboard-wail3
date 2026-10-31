@@ -10,7 +10,7 @@ Scan a container image with [Trivy](https://trivy.dev), then see each vulnerabil
 2. **Triage** a ranked shortlist, with the reasons for each rank ([scoring](docs/scoring.md)).
 3. **Trace** a finding to its SBOM component and what depends on it.
 4. **Assess** with plain-language guidance, and keep the decision for new tags.
-5. **Share** your decisions as clean, valid OpenVEX, and bring in other people's. Compare tags to see what changed.
+5. **Share** your decisions as clean, valid OpenVEX, and bring in other people's.
 
 Screenshots are not committed. The draft [Screenshots preview](../../pulls?q=is%3Apr+is%3Aopen+head%3Abot%2Fupdate-screenshots) PR shows the current ones (Files changed), and `make screenshots` renders them locally.
 
