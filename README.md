@@ -4,15 +4,14 @@
 [![Security](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/cthtrifork/trivy-dashboard-wail3/actions/workflows/security.yml)
 [![Release](https://img.shields.io/github/v/release/cthtrifork/trivy-dashboard-wail3)](https://github.com/cthtrifork/trivy-dashboard-wail3/releases)
 
-Scan a container image with [Trivy](https://trivy.dev) (run in a local Podman container), then decide what each finding means for you. Findings are ranked and explained, and your decisions are recorded as [OpenVEX](https://openvex.dev).
+Scan a container image with [Trivy](https://trivy.dev), then decide what each finding means for you. Decisions are recorded as [OpenVEX](https://openvex.dev).
 
-- **Priorities** – a ranked shortlist by tier (Act now / Fix soon / Plan / Monitor). Each score is a sum of readable reasons (CISA **KEV**, **EPSS**, CVSS severity, attack vector, fix availability) with tunable rules and presets: [`docs/scoring.md`](docs/scoring.md).
-- **Assessment help** – the VEX editor shows the CVSS vector in plain words, where the package lives, and the other components with the same CVE. It offers example wording per status and justification, and an optional review date after which the finding returns to the list.
-- **VEX** – assessments are stored per image repository and carry over to new tags. Export or import OpenVEX (v0.2.0).
-- **Compare** – diff two tags or digests: severity deltas, added / removed vulnerabilities, package changes.
-- **Vulnerabilities** – severity cards, search, sortable table, details; ignore rules and vendor statuses hide settled findings.
-- **Dependencies and SBOM** – dependency graph with each component's route from the image and blast radius; CycloneDX component list.
-- **Help** – a built-in dialog explains KEV, EPSS, VEX statuses, justifications and SBOM.
+1. **Scan** an image with Trivy in Podman.
+2. **Triage** a ranked shortlist, with the reasons for each rank.
+3. **Assess** each finding with built-in guidance and record the decision.
+4. **Share** the result as OpenVEX, and compare tags to see what changed.
+
+All features: [`docs/features.md`](docs/features.md).
 
 Screenshots are not committed. The draft [Screenshots preview](../../pulls?q=is%3Apr+is%3Aopen+head%3Abot%2Fupdate-screenshots) PR shows the current ones (Files changed), and `make screenshots` renders them locally.
 
