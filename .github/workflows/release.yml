@@ -201,8 +201,11 @@ jobs:
             echo "::error::demo-mode code is present in the release binary"; exit 1
           fi
           # Raw binary (what the in-app updater installs), tarball (for people) and SHA256SUMS.
-          # The layout matters: see scripts/package-release.sh and internal/selfupdate.
-          scripts/package-release.sh "$built" "${VERSION}" dist
+          # The layout matters: see docs/self-update.md and internal/selfupdate. SHA256SUMS is
+          # written after the SBOM is added (below).
+          mkdir -p dist
+          cp "$built" "dist/${APP}_linux_amd64"
+          tar -czf "dist/${APP}_${VERSION}_linux_amd64.tar.gz" -C "$(dirname "$built")" "$APP" -C "$PWD" README.md LICENSE
 
       # The .deb and .rpm come from the same binary, via `wails3 tool package` (nfpm) and
       # build/linux/nfpm/nfpm.yaml, which also installs the .desktop file and icons. A release is
