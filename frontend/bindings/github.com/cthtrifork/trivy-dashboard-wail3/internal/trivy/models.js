@@ -1049,6 +1049,66 @@ export class Rescored {
 }
 
 /**
+ * RuleSummaries is the one-line description of what each rule adds, written from the same constants
+ * the rules use, so the scoring panel cannot show points that differ from the ones applied.
+ */
+export class RuleSummaries {
+    /**
+     * Creates a new RuleSummaries instance.
+     * @param {Partial<RuleSummaries>} [$$source = {}] - The source object to create the RuleSummaries.
+     */
+    constructor($$source = {}) {
+        if (!("kev" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["kev"] = "";
+        }
+        if (!("epss" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["epss"] = "";
+        }
+        if (!("severity" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["severity"] = "";
+        }
+        if (!("vector" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["vector"] = "";
+        }
+        if (!("fix" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["fix"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new RuleSummaries instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {RuleSummaries}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new RuleSummaries(/** @type {Partial<RuleSummaries>} */($$parsedSource));
+    }
+}
+
+/**
  * Rules is the tunable part of the priority score: which rules apply and where their thresholds
  * sit. The zero value switches everything off; use DefaultRules for the standard behaviour.
  */

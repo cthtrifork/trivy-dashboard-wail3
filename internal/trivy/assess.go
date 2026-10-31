@@ -127,7 +127,7 @@ var rules = []rule{
 		if !c.r.SeverityEnabled {
 			return nil
 		}
-		pts := map[string]int{"CRITICAL": 30, "HIGH": 25, "MEDIUM": 10, "LOW": 3, "UNKNOWN": 0}[c.v.Severity]
+		pts := SeverityPoints[c.v.Severity]
 		txt := fmt.Sprintf("%s severity", strings.ToLower(c.v.Severity))
 		if c.v.Score > 0 {
 			txt += fmt.Sprintf(" (CVSS %.1f)", c.v.Score)
@@ -168,22 +168,22 @@ var rules = []rule{
 		}
 		switch av {
 		case "N":
-			add("network", 6, true)
+			add("network", PointsNetwork, true)
 		case "A":
-			add("adjacent network", 2, true)
+			add("adjacent network", PointsAdjacent, true)
 		case "P":
-			add("physical access", -2, true)
+			add("physical access", PointsPhysical, true)
 		}
 		if c.vec.M["AC"] == "L" {
-			add("low complexity", 2, true)
+			add("low complexity", PointsLowComplexity, true)
 		}
 		if c.vec.M["PR"] == "N" {
-			add("no privileges needed", 3, true)
+			add("no privileges needed", PointsNoPrivileges, true)
 		} else if c.vec.M["Au"] == "N" {
-			add("no authentication", 3, true)
+			add("no authentication", PointsNoPrivileges, true)
 		}
 		if c.vec.M["UI"] == "N" {
-			add("no user interaction", 3, true)
+			add("no user interaction", PointsNoInteraction, true)
 		}
 		// Impact: what an attacker gets. Confidentiality and integrity weigh more than availability
 		// because a DoS ends when the attack does, a leak or a tampered response does not. Availability
@@ -194,9 +194,9 @@ var rules = []rule{
 			keys          []string
 			high, limited int
 		}{
-			{"confidentiality", []string{"C", "VC"}, 4, 2},
-			{"integrity", []string{"I", "VI"}, 4, 2},
-			{"availability", []string{"A", "VA"}, 0, 0},
+			{"confidentiality", []string{"C", "VC"}, PointsImpactHigh, PointsImpactLimited},
+			{"integrity", []string{"I", "VI"}, PointsImpactHigh, PointsImpactLimited},
+			{"availability", []string{"A", "VA"}, PointsAvailabilityHigh, PointsAvailabilityLimited},
 		} {
 			lvl := ""
 			for _, k := range im.keys {
@@ -223,11 +223,11 @@ var rules = []rule{
 		}
 		switch {
 		case c.v.Fixed != "":
-			return &Reason{"Fix", "a fixed version exists (" + c.v.Fixed + "): remediation is an upgrade away", 5, "fix available → +5"}
+			return &Reason{"Fix", "a fixed version exists (" + c.v.Fixed + "): remediation is an upgrade away", PointsFix, fmt.Sprintf("fix available → +%d", PointsFix)}
 		case strings.Contains(strings.ToLower(c.v.Status), "end_of_life"), strings.Contains(strings.ToLower(c.v.Status), "will_not_fix"):
-			return &Reason{"Fix", "the vendor will not fix this: plan mitigation or replacement", -5, "vendor will not fix → -5"}
+			return &Reason{"Fix", "the vendor will not fix this: plan mitigation or replacement", PointsWontFix, fmt.Sprintf("vendor will not fix → %d", PointsWontFix)}
 		default:
-			return &Reason{"Fix", "no fix is available yet: mitigate or accept the risk", -3, "no fix available → -3"}
+			return &Reason{"Fix", "no fix is available yet: mitigate or accept the risk", PointsNoFix, fmt.Sprintf("no fix available → %d", PointsNoFix)}
 		}
 	}},
 }

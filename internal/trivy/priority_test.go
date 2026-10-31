@@ -3,6 +3,7 @@ package trivy
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -513,5 +514,53 @@ func TestAttackTextFollowsEPSSThreshold(t *testing.T) {
 	}
 	if got := Rescore([]Vulnerability{v}, DefaultRules()); !strings.Contains(got[0].Attack, likely) {
 		t.Errorf("default rules: %s", got[0].Attack)
+	}
+}
+
+// The scoring panel's text is written from the constants the rules use. Every number in it must be
+// what a finding actually scores, so the two cannot drift again.
+func TestRuleHelpMatchesAppliedPoints(t *testing.T) {
+	h := RuleHelp()
+	for _, c := range []struct{ text, want string }{
+		{h.KEV, fmt.Sprintf("+%d, +%d more", PointsKEV, PointsKEVRansomware)},
+		{h.EPSS, fmt.Sprintf("+%d from the cutoff, +%d from \"high\", +%d", PointsEPSSLow, PointsEPSSHigh, PointsEPSSVeryHigh)},
+		{h.Fix, fmt.Sprintf("Fix exists +%d, none yet %d, vendor will not fix %d", PointsFix, PointsNoFix, PointsWontFix)},
+		{h.Vector, "availability scores nothing"},
+	} {
+		if !strings.Contains(c.text, c.want) {
+			t.Errorf("%q is missing %q", c.text, c.want)
+		}
+	}
+	// What the rules apply, read back from real assessments.
+	for sev, want := range SeverityPoints {
+		v := Vulnerability{ID: "S", Severity: sev, Fixed: "2"}
+		Assess(&v)
+		if got, _ := reasonPoints(v, "Severity"); got != want {
+			t.Errorf("%s: rule gives %d, SeverityPoints %d", sev, got, want)
+		}
+		if want > 0 && !strings.Contains(h.Severity, fmt.Sprintf("%s +%d", strings.ToLower(sev), want)) {
+			t.Errorf("severity text lacks %s +%d: %s", sev, want, h.Severity)
+		}
+	}
+	for _, c := range []struct {
+		vec  string
+		want int
+		desc string
+	}{
+		{"CVSS:3.1/AV:N/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N", PointsNetwork, "network only"},
+		{"CVSS:3.1/AV:A/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N", PointsAdjacent, "adjacent only"},
+		{"CVSS:3.1/AV:P/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:N", PointsPhysical, "physical only"},
+		{"CVSS:3.1/AV:L/AC:L/PR:H/UI:R/S:U/C:N/I:N/A:N", PointsLowComplexity, "low complexity only"},
+		{"CVSS:3.1/AV:L/AC:H/PR:N/UI:R/S:U/C:N/I:N/A:N", PointsNoPrivileges, "no privileges only"},
+		{"CVSS:3.1/AV:L/AC:H/PR:H/UI:N/S:U/C:N/I:N/A:N", PointsNoInteraction, "no interaction only"},
+		{"CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:U/C:H/I:N/A:N", PointsImpactHigh, "confidentiality high"},
+		{"CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:U/C:N/I:L/A:N", PointsImpactLimited, "integrity limited"},
+		{"CVSS:3.1/AV:L/AC:H/PR:H/UI:R/S:U/C:N/I:N/A:H", PointsAvailabilityHigh, "availability high"},
+	} {
+		v := Vulnerability{ID: "V", Severity: "LOW", Vector: c.vec}
+		Assess(&v)
+		if got, _ := reasonPoints(v, "Vector"); got != c.want {
+			t.Errorf("%s: vector rule gives %d, constant %d", c.desc, got, c.want)
+		}
 	}
 }
