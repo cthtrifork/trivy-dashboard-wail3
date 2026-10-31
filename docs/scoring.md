@@ -17,6 +17,8 @@ Open **Scoring rules** above the Priorities list. Changes re-rank immediately (t
 
 The vector rule is kept small on purpose: severity already comes from the same CVSS data, so a large vector weight would count one number twice. Impact is weighed unevenly because a denial of service ends with the attack, while a leak or tampered response does not. Without KEV or EPSS the highest possible score is 30 + 14 + 10 + 5 = 59, so nothing reaches Act now (70) on CVSS alone.
 
+Severity comes from the same source as the CVSS score (Red Hat, else NVD, else the highest) when that source published one, so the band and the score cannot come from different places; otherwise Trivy's own severity is used. OS packages always keep Trivy's severity, which is the distribution's own rating. For language packages Trivy picks GitHub's advisory rating, which can disagree with every other source: one CVE was CRITICAL there and HIGH everywhere else, with a 7.5 score everywhere.
+
 Points are deliberately not editable: you choose which rules apply and where their thresholds sit, so a score can always be recomputed by hand from what the card shows. The score is capped to 0–100. Out-of-order thresholds are repaired on the Go side (cutoff ≤ high ≤ very high, plan ≤ soon ≤ now).
 
 ## Presets

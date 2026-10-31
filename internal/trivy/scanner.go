@@ -441,6 +441,7 @@ func parseVulns(data []byte, res *ScanResult) error {
 		}
 		Results []struct {
 			Target          string
+			Class           string
 			Vulnerabilities []struct {
 				VulnerabilityID  string
 				PkgName          string
@@ -477,6 +478,7 @@ func parseVulns(data []byte, res *ScanResult) error {
 				sev = "UNKNOWN"
 			}
 			score, scoreSource := pickScore(v.CVSS)
+			sev = alignSeverity(sev, r.Class, scoreSource, v.VendorSeverity)
 			vector := pickVector(v.CVSS, scoreSource)
 			res.SeverityCounts[sev]++
 			res.Vulnerabilities = append(res.Vulnerabilities, Vulnerability{
@@ -515,6 +517,22 @@ func ranksBefore(a, b *Vulnerability) bool {
 		return severityRank[a.Severity] < severityRank[b.Severity]
 	}
 	return effectiveScore(a) > effectiveScore(b)
+}
+
+// alignSeverity makes the severity band come from the same source as the CVSS score. Trivy picks its
+// own severity source (GitHub's advisory database for language packages), the score comes from
+// pickScore, and one outlier can disagree with every other source: GHSA rated a CVE CRITICAL where
+// Red Hat, NVD and the distros said HIGH and all three CVSS scores were 7.5. OS packages keep Trivy's
+// severity, which is the distribution's own judgement and may rightly differ from CVSS (a 9.8 that
+// the distro rates low because of how it ships). Without a severity from the score's source, Trivy's stays.
+func alignSeverity(sev, class, scoreSource string, vendor map[string]int) string {
+	if class == "os-pkgs" || scoreSource == "" {
+		return sev
+	}
+	if s, ok := vendorSeverity[vendor[scoreSource]]; ok {
+		return s
+	}
+	return sev
 }
 
 // pickScore prefers Red Hat's CVSS score (v3, else v2), then NVD's, then the highest score any source

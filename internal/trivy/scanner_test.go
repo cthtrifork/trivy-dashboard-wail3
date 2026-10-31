@@ -153,3 +153,51 @@ func TestRunArgsDisableTelemetryAndGoOffline(t *testing.T) {
 		}
 	}
 }
+
+// Real data from actions/actions-runner:2.338.2 (CVE-2026-59873): Trivy took CRITICAL from GHSA while
+// Red Hat, NVD and the distros said HIGH and every CVSS score was 7.5. Severity must follow the score's
+// source (Red Hat) for language packages, so the finding is HIGH and is not boosted by the outlier.
+func TestSeverityFollowsScoreSource(t *testing.T) {
+	const vec = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+	report := func(class string, sev string, vendor string, cvss string) []byte {
+		return []byte(`{"Results":[{"Target":"t","Class":"` + class + `","Vulnerabilities":[{"VulnerabilityID":"CVE-2026-59873","PkgName":"tar","InstalledVersion":"6.2.1","FixedVersion":"7.5.19","Severity":"` + sev + `",` +
+			`"VendorSeverity":` + vendor + `,"CVSS":` + cvss + `}]}]}`)
+	}
+	scores := `{"ghsa":{"V3Vector":"` + vec + `","V3Score":7.5},"nvd":{"V3Vector":"` + vec + `","V3Score":7.5},"redhat":{"V3Vector":"` + vec + `","V3Score":7.5}}`
+	vendors := `{"ghsa":4,"nvd":3,"redhat":3,"alma":3}`
+	scan := func(data []byte) Vulnerability {
+		res := &ScanResult{}
+		if err := parseVulns(data, res); err != nil || len(res.Vulnerabilities) != 1 {
+			t.Fatalf("parse: %v %+v", err, res)
+		}
+		return res.Vulnerabilities[0]
+	}
+
+	lang := scan(report("lang-pkgs", "CRITICAL", vendors, scores))
+	if lang.Severity != "HIGH" || lang.ScoreSource != "redhat" {
+		t.Errorf("language package: severity %s from score source %s, want HIGH from redhat", lang.Severity, lang.ScoreSource)
+	}
+	// It must now rank like every other HIGH 7.5, not 5 points above them.
+	high := scan(report("lang-pkgs", "HIGH", vendors, scores))
+	if lang.Priority != high.Priority {
+		t.Errorf("priority %d, want %d (same as a plain HIGH)", lang.Priority, high.Priority)
+	}
+	counts := &ScanResult{}
+	_ = parseVulns(report("lang-pkgs", "CRITICAL", vendors, scores), counts)
+	if counts.SeverityCounts["HIGH"] != 1 || counts.SeverityCounts["CRITICAL"] != 0 {
+		t.Errorf("severity counts follow the aligned severity: %v", counts.SeverityCounts)
+	}
+
+	// OS packages keep the distribution's own severity, even when it differs from the CVSS band.
+	if os := scan(report("os-pkgs", "LOW", `{"ubuntu":1,"nvd":4,"redhat":3}`, scores)); os.Severity != "LOW" {
+		t.Errorf("os package: severity %s, want the distro's LOW", os.Severity)
+	}
+	// The score's source has no severity: Trivy's stays.
+	if v := scan(report("lang-pkgs", "CRITICAL", `{"ghsa":4}`, scores)); v.Severity != "CRITICAL" {
+		t.Errorf("no severity from the score source: got %s, want Trivy's CRITICAL", v.Severity)
+	}
+	// No score at all: Trivy's severity stays.
+	if v := scan(report("lang-pkgs", "MEDIUM", `{"ghsa":2}`, `{}`)); v.Severity != "MEDIUM" {
+		t.Errorf("no score: got %s, want MEDIUM", v.Severity)
+	}
+}
