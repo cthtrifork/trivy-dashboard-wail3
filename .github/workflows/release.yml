@@ -496,6 +496,7 @@ jobs:
           copa-version: ${{ env.COPA_VERSION }}
           trivy-version: ${{ env.TRIVY_VERSION }}
           go-vcs-url: ${{ steps.podman.outputs.url }}
+          only-target: usr/local/bin/podman
 
       - name: Push the patched image
         if: steps.copa.outputs.copa-outcome == 'success' && steps.copa.outputs.smoke-outcome == 'success'

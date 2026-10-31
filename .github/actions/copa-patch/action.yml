@@ -27,6 +27,13 @@ inputs:
       base image's labels: Copa would clone the base image's repository instead.
     required: false
     default: ''
+  only-target:
+    description: >-
+      Hand Copa only the findings of this Trivy target (e.g. usr/local/bin/podman). --go-vcs-url
+      applies to every Go binary Copa rebuilds, so without this it also tries to rebuild the others
+      (our own binary) from the wrong source.
+    required: false
+    default: ''
 
 outputs:
   patched-image:
@@ -89,10 +96,16 @@ runs:
         IMAGE: ${{ inputs.image }}
         PATCHED_TAG: ${{ inputs.patched-tag }}
         GO_VCS_URL: ${{ inputs.go-vcs-url }}
+        ONLY_TARGET: ${{ inputs.only-target }}
       run: |
+        report=before.json
+        if [ -n "$ONLY_TARGET" ]; then
+          jq --arg t "$ONLY_TARGET" '.Results |= map(select(.Target == $t))' before.json > copa-input.json
+          report=copa-input.json
+        fi
         args=(--pkg-types library --toolchain-patch-level --addr docker-container://buildx_buildkit_copa0)
         [ -n "$GO_VCS_URL" ] && args+=(--go-vcs-url "$GO_VCS_URL")
-        "$(go env GOPATH)/bin/copacetic" patch -i "$IMAGE" -r before.json -t "$PATCHED_TAG" "${args[@]}" 2>&1 | tee copa.log
+        "$(go env GOPATH)/bin/copacetic" patch -i "$IMAGE" -r "$report" -t "$PATCHED_TAG" "${args[@]}" 2>&1 | tee copa.log
 
     - name: Scan after
       if: steps.copa.outcome == 'success'
