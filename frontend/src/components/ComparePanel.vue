@@ -10,6 +10,7 @@ import {
   cmpBase,
   repoTags,
   recent,
+  recentSummary,
   image,
   ensureTags,
   trivyImageSetting,
@@ -42,7 +43,9 @@ const CHG_SIGN = { added: "+", removed: "−", unchanged: "=", upgraded: "↑", 
 const chgStyle = (c) => ({ "--c": CHG_COLOR[c] });
 
 // Images scanned before, offered as targets (never the one already scanned at the top).
-const recentImages = computed(() => recent.value.map((e) => e.image).filter((i) => i !== image.value.trim()));
+const recentImages = computed(() =>
+  recent.value.filter((e) => e.image !== image.value.trim()).map((e) => ({ value: e.image, meta: recentSummary(e, true) })),
+);
 
 const view = ref("vulns");
 const show = reactive(new Set(["added", "removed"]));

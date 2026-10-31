@@ -9,7 +9,7 @@ const props = defineProps({
   id: { type: String, default: "tag" },
   label: { type: String, default: "Tag" },
   placeholder: { type: String, default: "tag or digest" },
-  images: { type: Array, default: () => [] }, // whole image references offered under the tags (Compare's "Recently scanned")
+  images: { type: Array, default: () => [] }, // whole image references offered under the tags (Compare's "Recently scanned"): { value, meta }
   hint: { type: String, default: "" }, // a closing line in the list that is not an option
 });
 const emit = defineEmits(["update:modelValue", "open"]);
@@ -24,7 +24,10 @@ const query = computed(() => (typed.value ? props.modelValue.trim().toLowerCase(
 const tagOptions = computed(() =>
   query.value ? props.tags.filter((t) => t.toLowerCase().includes(query.value)).slice(0, TAG_MAX) : props.tags.slice(0, TAG_LATEST),
 );
-const imageOptions = computed(() => (query.value ? props.images.filter((t) => t.toLowerCase().includes(query.value)) : props.images).slice(0, IMAGE_MAX));
+const imageEntries = computed(() => (query.value ? props.images.filter((e) => e.value.toLowerCase().includes(query.value)) : props.images).slice(0, IMAGE_MAX));
+const imageOptions = computed(() => imageEntries.value.map((e) => e.value));
+// The note shown beside an option: only the image entries have one.
+const metaOf = (i) => imageEntries.value[i - tagOptions.value.length]?.meta;
 // One flat list so the arrow keys walk both groups; the template shows a heading before each.
 const options = computed(() => [...tagOptions.value, ...imageOptions.value]);
 const shown = computed(() => open.value && options.value.length > 0);
@@ -107,6 +110,7 @@ function onKey(ev) {
           @mousedown.prevent="pick(t)"
         >
           <span class="recent-name">{{ t }}</span>
+          <span v-if="metaOf(i)" class="recent-when">{{ metaOf(i) }}</span>
         </div>
       </template>
       <div v-if="hint" class="recent-head hint" aria-hidden="true">{{ hint }}</div>
