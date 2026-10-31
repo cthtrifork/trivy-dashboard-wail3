@@ -2,24 +2,17 @@ name: Tag and release
 
 # Creates a git tag on main and releases it. Run it from the Actions tab ("Run workflow") or with
 #   gh workflow run tag-release.yml                    (next version from the merged PR titles)
-#   gh workflow run tag-release.yml -f bump=minor
-#   gh workflow run tag-release.yml -f tag=v1.0.0
-# Give either an explicit tag or choose a bump. A tag, when given, wins over the bump.
+#   gh workflow run tag-release.yml -f tag=v1.0.0      (an exact tag)
 #
 # The release is not left to a tag-push trigger: a tag pushed with the workflow's own GITHUB_TOKEN
 # does not trigger other workflows, so this calls release.yml directly once the tag exists.
-run-name: Tag and release ${{ inputs.tag != '' && inputs.tag || format('(next {0})', inputs.bump) }}
+run-name: Tag and release ${{ inputs.tag != '' && inputs.tag || '(next version)' }}
 
 on:
   workflow_dispatch:
     inputs:
-      bump:
-        description: "auto takes the next version from the merged PR titles (Release Drafter); the others increase that part of the latest vX.Y.Z tag. Ignored when a tag name is given below."
-        type: choice
-        options: [auto, patch, minor, major]
-        default: auto
       tag:
-        description: Or the exact new tag, such as v1.4.0 or v1.4.0-rc.1. Leave empty to use the bump.
+        description: The exact new tag, such as v1.4.0 or v1.4.0-rc.1. Leave empty to use the version Release Drafter works out from the merged PR titles.
         type: string
         required: false
 
@@ -51,7 +44,6 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # every tag, to find the latest version
           persist-credentials: true # this job pushes the tag; the token is limited to contents: write
 
       - name: Git identity for the tag
@@ -59,11 +51,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # `auto`: the version is what Release Drafter works out from the PRs merged since the last release
+      # No tag given: the version is what Release Drafter works out from the PRs merged since the last release
       # (breaking change = major, feat = minor, anything else = patch; .github/release-drafter.yml).
       - name: Work out the next version
         id: draft
-        if: inputs.tag == '' && inputs.bump == 'auto'
+        if: inputs.tag == ''
         uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
         with:
           # The commit this run checked out and will tag, not whatever main has become since.
@@ -74,8 +66,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          BUMP: ${{ inputs.bump }}
-          # An explicit tag wins, then the version Release Drafter resolved (empty unless bump is auto).
+          # An explicit tag wins, then the version Release Drafter resolved.
           TAG_INPUT: ${{ inputs.tag || steps.draft.outputs.tag_name }}
         run: scripts/create-release-tag.sh
 
