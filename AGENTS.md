@@ -61,4 +61,4 @@ The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. U
 | `internal/app/mcp_guard.go`, `.mcp.json` | Compile error for `mcp`+`production`; project MCP client entry for `make run-mcp` |
 | `build/docker/headless.Dockerfile` | Podman-only server deployment, see `docs/headless.md` |
 | `.github/workflows` | `ci`, `security`, `release`, `tag-release` |
-| `scripts/` | release/version helpers and the screenshot driver |
+| `scripts/` | dev loop, release packaging, and the screenshot and Lighthouse drivers |

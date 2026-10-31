@@ -4,9 +4,9 @@ name: Release
 # with the public key published alongside), SHA256SUMS, a CycloneDX SBOM and signed attestations
 # (build provenance for the binary, tarball, packages and SBOM; the SBOM bound to the binary). The
 # in-app updater installs the raw binary and verifies it against SHA256SUMS, so those names are an interface. Three ways to run it:
-#   - the "Tag and release" workflow creates a tag and calls this one (workflow_call). This is the
-#     normal route. It has to call rather than rely on the tag push below, because a tag pushed with
-#     the workflow's own GITHUB_TOKEN does not trigger other workflows.
+#   - the "Tag and release" workflow calls this one (workflow_call) with a new version and the commit
+#     to release. This is the normal route. The tag does not exist yet: the release is published with
+#     that commit as its target, and GitHub creates the tag then.
 #   - pushing a tag like v1.2.3 (or v1.2.3-rc.1 for a pre-release) from a machine, which triggers it
 #   - running it by hand (workflow_dispatch) on a branch for a dry run that builds but does not
 #     publish. Dispatched on a tag ref it publishes, which also retries a release that failed.
@@ -17,8 +17,12 @@ on:
   workflow_call:
     inputs:
       tag:
-        description: The existing tag to release (v1.2.3 or v1.2.3-rc.1)
+        description: The version to release (v1.2.3 or v1.2.3-rc.1); created at sha when the release is published
         required: true
+        type: string
+      sha:
+        description: The commit to build and tag. Empty means the tag must already exist and is built as it is.
+        required: false
         type: string
     secrets:
       RELEASE_GPG_PRIVATE_KEY:
@@ -51,13 +55,14 @@ jobs:
     timeout-minutes: 5
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      sha: ${{ steps.meta.outputs.sha }}
       prerelease: ${{ steps.meta.outputs.prerelease }}
       publish: ${{ steps.meta.outputs.publish }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # When called with a tag, build exactly that tag; otherwise the ref that triggered the run.
-          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+          # When called with a commit, build exactly that; with only a tag, that tag; otherwise the ref that triggered the run.
+          ref: ${{ inputs.sha || (inputs.tag && format('refs/tags/{0}', inputs.tag)) || '' }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -81,6 +86,7 @@ jobs:
           fi
           case "$version" in *-*) pre=true ;; *) pre=false ;; esac
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "prerelease=$pre" >> "$GITHUB_OUTPUT"
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
 
@@ -88,9 +94,9 @@ jobs:
         if: steps.meta.outputs.publish == 'true'
         run: |
           git fetch --no-tags origin main
-          # HEAD is the tagged commit (checked out above), whichever way this run started.
+          # HEAD is the commit being released (checked out above), whichever way this run started.
           if ! git merge-base --is-ancestor HEAD origin/main; then
-            echo "::error::Tagged commit is not on main"; exit 1
+            echo "::error::Released commit is not on main"; exit 1
           fi
 
   # Never ship something CI would have rejected. Runs beside the build; the image and the release
@@ -103,8 +109,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # When called with a tag, build exactly that tag; otherwise the ref that triggered the run.
-          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+          # When called with a commit, build exactly that; with only a tag, that tag; otherwise the ref that triggered the run.
+          ref: ${{ inputs.sha || (inputs.tag && format('refs/tags/{0}', inputs.tag)) || '' }}
           persist-credentials: false
 
       - uses: $/.github/actions/linux-build-deps
@@ -138,8 +144,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # When called with a tag, build exactly that tag; otherwise the ref that triggered the run.
-          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+          # When called with a commit, build exactly that; with only a tag, that tag; otherwise the ref that triggered the run.
+          ref: ${{ inputs.sha || (inputs.tag && format('refs/tags/{0}', inputs.tag)) || '' }}
           persist-credentials: false
 
       # The README promises a binary built on Ubuntu 24.04 (that fixes the glibc and WebKitGTK
@@ -318,16 +324,16 @@ jobs:
           gh attestation verify dist/*_linux_amd64 --repo "$REPO" \
             --predicate-type https://cyclonedx.org/bom
 
-      # The notes come from Release Drafter (.github/release-drafter.yml). Aimed at the tag, it writes the
-      # draft for exactly this tag, from the PRs merged since the last published release up to the tagged
-      # commit, so a retried release gets the notes of the commit that was tagged.
+      # The notes come from Release Drafter (.github/release-drafter.yml). Aimed at the built commit, it
+      # writes the draft for exactly this tag, from the PRs merged since the last published release up to
+      # that commit, so a retried release gets the notes of the commit that was built.
       - name: Draft the release notes
         id: notes
         uses: release-drafter/release-drafter@978bb0b30c5ee8cdd332ced253758157150d43f0 # v7.10.0
         with:
           tag: ${{ needs.meta.outputs.version }}
           name: ${{ needs.meta.outputs.version }}
-          commitish: refs/tags/${{ needs.meta.outputs.version }}
+          commitish: ${{ needs.meta.outputs.sha }}
           prerelease: ${{ needs.meta.outputs.prerelease }}
 
       # Assets go onto the draft and the draft is then published, so the release appears complete (and, with
@@ -339,6 +345,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.meta.outputs.version }}
+          TARGET: ${{ needs.meta.outputs.sha }}
           PRERELEASE: ${{ needs.meta.outputs.prerelease }}
           NOTES: ${{ steps.notes.outputs.body }}
         run: |
@@ -349,9 +356,11 @@ jobs:
 
           latest=true
           [ "$PRERELEASE" = true ] && latest=false
-          # --verify-tag: publishing would create a missing tag from the draft's target, so stop instead.
-          # The notes are set again from this run's own output.
-          printf '%s' "$NOTES" | gh release edit "$TAG" --verify-tag --draft=false \
+          # Publishing creates the tag when it does not exist yet, at the draft's target. --target sets that
+          # to the built commit in the same call, because release-drafter.yml may have moved the draft to
+          # the head of main since the notes step. A tag that already exists is used as it is (the target is
+          # then ignored). The notes are set again from this run's own output.
+          printf '%s' "$NOTES" | gh release edit "$TAG" --target "$TARGET" --draft=false \
             --prerelease="$PRERELEASE" --latest="$latest" --title "$TAG" --notes-file -
           echo "Published $TAG"
 
@@ -373,7 +382,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || '' }}
+          ref: ${{ inputs.sha || (inputs.tag && format('refs/tags/{0}', inputs.tag)) || '' }}
           persist-credentials: false
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1

@@ -18,10 +18,9 @@ To force a different version than Release Drafter proposes, pass it as `tag`. Th
 The workflow then:
 
 1. refuses to run anywhere but `main`;
-2. works out the tag (the `tag` input, otherwise Release Drafter's version) and stops if a published **release** for it already exists (the draft Release Drafter keeps does not count);
-3. creates an annotated tag on the head of `main` and pushes it, unless the tag already exists (see *Retrying*);
-4. calls `release.yml` for that tag, which re-runs vet, tests and `govulncheck` (in a `checks` job beside the binary build, not before it), builds the binary, and publishes the
-   release (the draft Release Drafter wrote for that tag, with the assets attached) (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
+2. works out the version (the `tag` input, otherwise Release Drafter's) and stops if a git tag of that name already exists (see *Retrying* for an existing tag);
+3. calls `release.yml` with that version and the commit it started on (the head of `main`). That commit is built, and **no tag exists yet**: `release.yml` re-runs vet, tests and `govulncheck` (in a `checks` job beside the binary build, not before it), builds the binary, and publishes the
+   release (the draft Release Drafter wrote for that version, with the assets attached; publishing sets the release's target to the built commit and GitHub creates the tag there) (binary, tarball, signed `.deb` and `.rpm`, public key, CycloneDX SBOM, `SHA256SUMS`) and signed attestations. See [self-update](self-update.md) for why those assets
    have the names they do. The same run also pushes the headless container image to
    `ghcr.io/cthtrifork/trivy-dashboard-wail3` (tags `1.2.3`, `v1.2.3`, and `latest` for a final release) with a signed
    provenance attestation; see [headless](headless.md). The image is only pushed for a tagged release, never from a
@@ -89,26 +88,31 @@ WebKitGTK 6 and a glibc that new. Try it locally with a built binary: `make wail
 
 ## Retrying
 
-If the tag was created but the release failed (a flaky step, a vulnerability that needed fixing first), run
-**Tag and release** again with that **exact tag** in `tag` (not `auto`: the draft's version may have moved on). A tag that exists without a release is reused, not moved, so
-the run finishes the release for the commit that was tagged. If you instead need the fix in the release, delete the tag
-(`git push origin :refs/tags/v1.2.3`) and run again. That only works while no release was **published** for the tag.
+The tag is only created when the release is published, at the very end, so a release that failed (a flaky step, a
+vulnerability that needed fixing first) left **no tag** behind. Fix what broke, then run **Tag and release** again with
+the **exact version** in `tag` (leaving it empty takes whatever Release Drafter proposes now, which may have moved on). It
+builds the head of `main` as it is then, so a fix merged in between is in the release. The draft and any assets an earlier
+attempt left on it are reused and replaced.
+
+If the tag already exists, *Tag and release* refuses it: that is a tag pushed from a machine, or a release that was
+published. To finish a release for an existing tag, run **Release** (`release.yml`) from that tag's ref (Run workflow, "Use
+workflow from" the tag).
 
 ## Immutable releases
 
 The repository can turn on *immutable releases* (Settings, General; it only applies to releases published afterwards). The release flow is written for it: `release.yml` creates the release as a draft (Release Drafter), attaches every asset to the draft and only then publishes it, which is the order GitHub requires for the assets to be locked in. After publishing, the tag and the assets can no longer be changed or deleted; the title, notes, pre-release flag and *latest* flag still can (the publish step sets them in the same call). That has consequences:
 
 - **A published release cannot be fixed in place.** Cut a new version with the fix. Do not try to move the tag or replace an asset.
-- **A tag name is used up for good.** Even after the release is deleted the tag name cannot be reused. The *delete the tag and run again* advice under *Retrying* is only for a tag that never got a published release (a failed run leaves a draft, which is fine to retry or delete).
+- **A tag name is used up for good.** Even after the release is deleted the tag name cannot be reused. A failed run leaves no tag, only a draft, which is fine to retry or delete (see *Retrying*).
 - The release also gets GitHub's own release attestation, next to the build-provenance and SBOM attestations this workflow signs (below).
-- **Not yet run against an immutable release.** The docs do not say whether publishing a draft for a tag that already exists is allowed under immutability, or that uploading to a draft works through its upload URL; the first release after enabling it is the test.
+- **Not yet run against an immutable release.** The docs do not say that uploading to a draft works through its upload URL, or that publishing a draft whose tag is created at that moment is accepted; the first release after enabling it is the test.
 
 ## Why the release is called, not triggered
 
-Pushing a tag normally triggers `release.yml`, and still does when you push one from your own machine. A tag pushed by a
-workflow using its own `GITHUB_TOKEN` does **not** trigger other workflows (GitHub prevents workflows from starting each
-other that way). So *Tag and release* calls `release.yml` directly after creating the tag. The alternative is a personal
-access token or a GitHub App, which would work but adds a long-lived secret.
+Pushing a tag from your own machine still triggers `release.yml`. *Tag and release* does not push one: it calls
+`release.yml` directly with the commit to release, and the tag appears when the release is published. (A tag created by a
+workflow using its own `GITHUB_TOKEN` would not trigger other workflows anyway: GitHub prevents workflows from starting
+each other that way. The alternative is a personal access token or a GitHub App, which adds a long-lived secret.)
 
 ## Notes
 
