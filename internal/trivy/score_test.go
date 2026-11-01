@@ -3,12 +3,7 @@ package trivy
 import "testing"
 
 func TestPickScore(t *testing.T) {
-	type entry = struct {
-		V3Vector string
-		V2Vector string
-		V3Score  float64
-		V2Score  float64
-	}
+	type entry = cvssEntry
 	cases := []struct {
 		name string
 		in   map[string]entry
@@ -29,12 +24,7 @@ func TestPickScore(t *testing.T) {
 }
 
 func TestPickScoreSource(t *testing.T) {
-	type entry = struct {
-		V3Vector string
-		V2Vector string
-		V3Score  float64
-		V2Score  float64
-	}
+	type entry = cvssEntry
 	_, src := pickScore(map[string]entry{"bitnami": {V3Score: 9.1}, "redhat": {V3Score: 5.3}})
 	if src != "redhat" {
 		t.Errorf("preferred source: %q", src)
@@ -55,12 +45,7 @@ func TestPickScoreSource(t *testing.T) {
 }
 
 func TestPickVectorFollowsScoreSource(t *testing.T) {
-	type entry = struct {
-		V3Vector string
-		V2Vector string
-		V3Score  float64
-		V2Score  float64
-	}
+	type entry = cvssEntry
 	cvss := map[string]entry{
 		"nvd":    {V3Vector: "CVSS:3.1/AV:N/AC:L", V3Score: 9.1},
 		"redhat": {V3Vector: "CVSS:3.1/AV:L/AC:H", V3Score: 5.3},

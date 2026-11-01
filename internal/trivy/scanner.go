@@ -437,6 +437,14 @@ func checkIgnoreText(what, src string, validate func(string) error) (string, err
 
 var severityRank = map[string]int{"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}
 
+// cvssEntry is one source's CVSS block in Trivy's JSON.
+type cvssEntry struct {
+	V3Vector string
+	V2Vector string
+	V3Score  float64
+	V2Score  float64
+}
+
 func parseVulns(data []byte, res *ScanResult) error {
 	var rep struct {
 		Metadata struct {
@@ -458,12 +466,7 @@ func parseVulns(data []byte, res *ScanResult) error {
 				PrimaryURL       string
 				PkgIdentifier    struct{ PURL string }
 				VendorSeverity   map[string]int
-				CVSS             map[string]struct {
-					V3Vector string
-					V2Vector string
-					V3Score  float64
-					V2Score  float64
-				}
+				CVSS             map[string]cvssEntry
 			}
 		}
 	}
@@ -543,12 +546,7 @@ func alignSeverity(sev, class, scoreSource string, vendor map[string]int) string
 // pickScore prefers Red Hat's CVSS score (v3, else v2), then NVD's, then the highest score any source
 // published, and names the source it took it from. Sources disagree by several points (one CVE carries
 // 9.1 and 5.3), and the maximum alone would show 9.1 next to a MEDIUM rating.
-func pickScore(cvss map[string]struct {
-	V3Vector string
-	V2Vector string
-	V3Score  float64
-	V2Score  float64
-}) (float64, string) {
+func pickScore(cvss map[string]cvssEntry) (float64, string) {
 	for _, src := range []string{"redhat", "nvd"} {
 		if c, ok := cvss[src]; ok {
 			if c.V3Score > 0 {
@@ -582,12 +580,7 @@ var vendorSeverity = map[int]string{1: "LOW", 2: "MEDIUM", 3: "HIGH", 4: "CRITIC
 
 // ratings merges the per-source severities and CVSS scores into one list, Red Hat and NVD first (the
 // sources pickScore prefers), then the rest alphabetically.
-func ratings(sev map[string]int, cvss map[string]struct {
-	V3Vector string
-	V2Vector string
-	V3Score  float64
-	V2Score  float64
-}) []Rating {
+func ratings(sev map[string]int, cvss map[string]cvssEntry) []Rating {
 	byName := map[string]*Rating{}
 	get := func(src string) *Rating {
 		if r, ok := byName[src]; ok {
@@ -630,12 +623,7 @@ func ratings(sev map[string]int, cvss map[string]struct {
 // pickVector takes the vector of the source the score came from (v3, else v2), so the attack vector
 // and the CVSS shown describe the same assessment. Without one it prefers NVD's v3 vector, then any
 // v3, then v2.
-func pickVector(cvss map[string]struct {
-	V3Vector string
-	V2Vector string
-	V3Score  float64
-	V2Score  float64
-}, scoreSource string) string {
+func pickVector(cvss map[string]cvssEntry, scoreSource string) string {
 	if c, ok := cvss[scoreSource]; ok {
 		if c.V3Vector != "" {
 			return c.V3Vector

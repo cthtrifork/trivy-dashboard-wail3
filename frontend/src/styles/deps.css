@@ -170,15 +170,6 @@
 .vline a.copy-id {
   text-decoration: none;
 }
-/* Text for screen readers; the link itself is an icon. */
-.vlink-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
 button.vpick {
   flex: 1;
   min-width: 0;
