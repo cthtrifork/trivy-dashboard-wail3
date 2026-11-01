@@ -409,7 +409,7 @@ const links = (refs) => refs.slice(0, LIST_MAX).map((r) => [r, nodes.value[r]]);
             <CopyId :text="v.id" />
             <a v-if="detailUrl(v)" class="copy-id" :href="detailUrl(v)" title="Open CVE details" @click.prevent.stop="openUrl(detailUrl(v))">
               <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5L7.5 8.5M12 9v3.5a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H7" /></svg>
-              <!-- screen-reader text; the link itself is an icon --><span class="sr">Open {{ v.id }}</span>
+              <span class="vlink-label">Open {{ v.id }}</span>
             </a>
           </div>
           <div v-if="dep.vuln === vkey(v) && info(v)" class="vcard">

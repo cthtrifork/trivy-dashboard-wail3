@@ -1,4 +1,10 @@
-// Windowed list: rows are measured after renders, clicks, input and resizes; unseen rows assume the average height.
+// Windowed rendering for long lists: only the rows in (or near) the scroll viewport are in the DOM,
+// padded above and below by spacers, so memory stays flat however many rows there are.
+//
+// Rows may differ in height (wrapped text, an expanded detail, an open editor). Each rendered row
+// is measured and remembered; rows never seen yet are assumed to be as tall as the average one.
+// Row heights only change on interaction or resize, so measuring runs after renders, clicks, form
+// input, <details> toggles and container resizes instead of observing every row.
 import { computed, onBeforeUnmount, onUpdated, ref, watch } from "vue";
 
 export function useVirtualList(items, { key, estimate = 40, gap = 0, overscan = 6 } = {}) {

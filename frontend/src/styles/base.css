@@ -1,3 +1,4 @@
+/* Reset, page shell and unclassed element defaults (input, button, a, dialog...). Components override these with classes. */
 * {
   box-sizing: border-box;
 }

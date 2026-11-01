@@ -24,7 +24,7 @@ export default defineConfig({
         // Vue changes far less often than the app; its own chunk stays cached across releases
         // (assets are served immutable, see internal/app/assets.go). CodeMirror is split off by the
         // dynamic imports of the editor components.
-        manualChunks: (id) => (id.includes("node_modules/vue/") || id.includes("node_modules/@vue/") ? "vendor" : undefined),
+        manualChunks: (id) => (/node_modules\/(vue|@vue)\//.test(id) ? "vendor" : undefined),
       },
     },
   },

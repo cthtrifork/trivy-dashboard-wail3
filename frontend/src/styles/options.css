@@ -1,3 +1,5 @@
+/* Options popover: tabs, segmented control, status chips, form panes. */
+/* The button: an accent pill while the popover is open. */
 .opts-btn {
   padding: 8px 10px;
   background: none;

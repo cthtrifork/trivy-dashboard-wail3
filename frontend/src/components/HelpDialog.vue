@@ -134,8 +134,8 @@ const trivyFlags = [
 const everyScan = trivyFlags.slice(0, 5);
 // The leading "On by default." / "Off by default." sentence becomes a badge so the state reads first.
 const optionFlags = trivyFlags.slice(5).map(([flag, desc]) => {
-  const state = ["On", "Off"].find((s) => desc.startsWith(`${s} by default.`));
-  return { flag, on: state === "On", state: state ? `${state} by default` : "", text: state ? desc.slice(state.length + 12).trimStart() : desc };
+  const m = /^(On|Off) by default\.\s*(.*)$/.exec(desc);
+  return { flag, on: m?.[1] === "On", state: m ? `${m[1]} by default` : "", text: m ? m[2] : desc };
 });
 
 // The environment variables the Go side reports, grouped by what they control. Anything not listed lands in "Other".

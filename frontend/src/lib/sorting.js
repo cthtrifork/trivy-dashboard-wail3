@@ -1,3 +1,4 @@
+// Shared by the sortable tables: click a header to sort by it, again to reverse.
 export function sortRows(rows, state, key) {
   const val = (r) => {
     const v = key(r, state.sort);

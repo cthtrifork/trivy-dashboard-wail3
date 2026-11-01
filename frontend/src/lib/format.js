@@ -93,11 +93,7 @@ export function bytes(n) {
 
 // Details page for a finding: Trivy's primary URL, else NVD for CVE ids.
 export const detailUrl = (v) =>
-  v.url?.startsWith("https://") || v.url?.startsWith("http://")
-    ? v.url
-    : /^CVE-\d{4}-\d+$/i.test(v.id)
-      ? `https://nvd.nist.gov/vuln/detail/${v.id.toUpperCase()}`
-      : "";
+  /^https?:\/\//.test(v.url) ? v.url : /^CVE-\d{4}-\d+$/i.test(v.id) ? `https://nvd.nist.gov/vuln/detail/${v.id.toUpperCase()}` : "";
 export const openUrl = (url) => {
   try {
     Promise.resolve(Browser.OpenURL(url)).catch(() => window.open(url, "_blank", "noopener"));
