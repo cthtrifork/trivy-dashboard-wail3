@@ -425,24 +425,28 @@ func impactSentence(m map[string]string) string {
 	return ""
 }
 
+// keywordOutcomes lists advisory wording and the most severe outcome it implies, most severe first.
+var keywordOutcomes = []struct {
+	kw  []string
+	out string
+}{
+	{[]string{"remote code execution", "arbitrary code", "code execution", "command injection"}, "arbitrary code execution"},
+	{[]string{"sql injection"}, "database compromise through SQL injection"},
+	{[]string{"authentication bypass", "bypass authentication", "improper authentication"}, "authentication bypass"},
+	{[]string{"privilege escalation", "elevation of privilege", "escalate privileges"}, "privilege escalation"},
+	{[]string{"path traversal", "directory traversal", "arbitrary file"}, "reading or writing files outside the intended directory"},
+	{[]string{"ssrf", "server-side request forgery"}, "requests made from your server to internal systems"},
+	{[]string{"cross-site scripting", "xss"}, "script injection in users' browsers"},
+	{[]string{"information disclosure", "information leak", "sensitive information", "memory disclosure"}, "leakage of sensitive data"},
+	{[]string{"denial of service", "crash", "infinite loop", "resource exhaustion"}, "denial of service"},
+}
+
 // keywordOutcome maps advisory wording to the most severe likely outcome.
 func keywordOutcome(text string) string {
-	for _, k := range []struct {
-		kw  []string
-		out string
-	}{
-		{[]string{"remote code execution", "arbitrary code", "code execution", "command injection"}, "arbitrary code execution"},
-		{[]string{"sql injection"}, "database compromise through SQL injection"},
-		{[]string{"authentication bypass", "bypass authentication", "improper authentication"}, "authentication bypass"},
-		{[]string{"privilege escalation", "elevation of privilege", "escalate privileges"}, "privilege escalation"},
-		{[]string{"path traversal", "directory traversal", "arbitrary file"}, "reading or writing files outside the intended directory"},
-		{[]string{"ssrf", "server-side request forgery"}, "requests made from your server to internal systems"},
-		{[]string{"cross-site scripting", "xss"}, "script injection in users' browsers"},
-		{[]string{"information disclosure", "information leak", "sensitive information", "memory disclosure"}, "leakage of sensitive data"},
-		{[]string{"denial of service", "crash", "infinite loop", "resource exhaustion"}, "denial of service"},
-	} {
+	text += " " // so a keyword also matches at the very end
+	for _, k := range keywordOutcomes {
 		for _, w := range k.kw {
-			if strings.Contains(text+" ", w) {
+			if strings.Contains(text, w) {
 				return k.out
 			}
 		}
