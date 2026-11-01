@@ -3,6 +3,7 @@ package trivy
 import (
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -425,26 +426,31 @@ func impactSentence(m map[string]string) string {
 	return ""
 }
 
-// keywordOutcome maps advisory wording to the most severe likely outcome.
+// outcomeRule maps advisory wording to the outcome it implies.
+type outcomeRule struct {
+	keywords []string // lowercase substrings
+	outcome  string
+}
+
+// outcomeRules lists advisory wording and the most severe outcome it implies, most severe first;
+// the first matching rule wins.
+var outcomeRules = []outcomeRule{
+	{[]string{"remote code execution", "arbitrary code", "code execution", "command injection"}, "arbitrary code execution"},
+	{[]string{"sql injection"}, "database compromise through SQL injection"},
+	{[]string{"authentication bypass", "bypass authentication", "improper authentication"}, "authentication bypass"},
+	{[]string{"privilege escalation", "elevation of privilege", "escalate privileges"}, "privilege escalation"},
+	{[]string{"path traversal", "directory traversal", "arbitrary file"}, "reading or writing files outside the intended directory"},
+	{[]string{"ssrf", "server-side request forgery"}, "requests made from your server to internal systems"},
+	{[]string{"cross-site scripting", "xss"}, "script injection in users' browsers"},
+	{[]string{"information disclosure", "information leak", "sensitive information", "memory disclosure"}, "leakage of sensitive data"},
+	{[]string{"denial of service", "crash", "infinite loop", "resource exhaustion"}, "denial of service"},
+}
+
+// keywordOutcome maps lowercased advisory text to the most severe likely outcome.
 func keywordOutcome(text string) string {
-	for _, k := range []struct {
-		kw  []string
-		out string
-	}{
-		{[]string{"remote code execution", "arbitrary code", "code execution", "command injection"}, "arbitrary code execution"},
-		{[]string{"sql injection"}, "database compromise through SQL injection"},
-		{[]string{"authentication bypass", "bypass authentication", "improper authentication"}, "authentication bypass"},
-		{[]string{"privilege escalation", "elevation of privilege", "escalate privileges"}, "privilege escalation"},
-		{[]string{"path traversal", "directory traversal", "arbitrary file"}, "reading or writing files outside the intended directory"},
-		{[]string{"ssrf", "server-side request forgery"}, "requests made from your server to internal systems"},
-		{[]string{"cross-site scripting", "xss"}, "script injection in users' browsers"},
-		{[]string{"information disclosure", "information leak", "sensitive information", "memory disclosure"}, "leakage of sensitive data"},
-		{[]string{"denial of service", "crash", "infinite loop", "resource exhaustion"}, "denial of service"},
-	} {
-		for _, w := range k.kw {
-			if strings.Contains(text+" ", w) {
-				return k.out
-			}
+	for _, r := range outcomeRules {
+		if slices.ContainsFunc(r.keywords, func(kw string) bool { return strings.Contains(text, kw) }) {
+			return r.outcome
 		}
 	}
 	return ""
