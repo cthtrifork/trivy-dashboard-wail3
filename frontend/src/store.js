@@ -1,5 +1,3 @@
-// Shared state and the calls into the Go ScanService. A plain module of refs instead of a store
-// library: the app has one scan result and a handful of settings.
 import { computed, reactive, ref, shallowRef, watch } from "vue";
 import { Events } from "@wailsio/runtime";
 import { ScanService } from "./lib/api.js";
@@ -359,7 +357,7 @@ watch(image, (img) => {
   }, 500);
 });
 // looksLikeRef tells a pasted full image reference from a tag: tags never contain "/" or "@".
-export const looksLikeRef = (s) => /[/@]/.test(s.trim());
+export const looksLikeRef = (s) => s.includes("/") || s.includes("@");
 // Composing: the single image box is back while the old results stay on screen, so a new image can be
 // typed or pasted without losing them. Back returns to the split view of the shown scan.
 export const composing = computed(() => !split.value && !!result.value);

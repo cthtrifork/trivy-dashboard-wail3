@@ -1,7 +1,3 @@
-// Minimal force-directed graph on <canvas>: pan, zoom, drag, directed edges.
-// No dependencies. Nodes with a `depth` are pulled towards a horizontal band
-// so dependency graphs read top-down (image → packages → their dependencies).
-
 const LEVEL = 120;
 const MAX_SPEED = 40; // px per step: a safety net against runaway nodes
 const TWEEN_MS = 180; // matches --dur in motion.css

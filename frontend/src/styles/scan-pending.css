@@ -1,4 +1,3 @@
-/* ScanPending: skeleton shown in each view while the first scan is running. */
 .sp {
   display: flex;
   flex-direction: column;

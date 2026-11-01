@@ -1,4 +1,3 @@
-// Pairs every metric of a raw CVSS vector with plain words, so "AV:N" can be read next to "Attack vector: Network".
 const NHL = { N: "None", L: "Low", H: "High" };
 const AV = { N: "Network", A: "Adjacent network", L: "Local", P: "Physical" };
 const V3 = {

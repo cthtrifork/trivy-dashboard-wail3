@@ -1,4 +1,3 @@
-/* Design tokens: palette, severity colours, light-mode overrides. */
 :root {
   /* Lets native controls (select popups, scrollbars) follow the theme instead of the GTK one. */
   color-scheme: dark;
