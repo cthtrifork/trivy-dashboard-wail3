@@ -3,6 +3,7 @@ package trivy
 import (
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -425,11 +426,15 @@ func impactSentence(m map[string]string) string {
 	return ""
 }
 
-// keywordOutcomes lists advisory wording and the most severe outcome it implies, most severe first.
-var keywordOutcomes = []struct {
-	kw  []string
-	out string
-}{
+// outcomeRule maps advisory wording to the outcome it implies.
+type outcomeRule struct {
+	keywords []string // lowercase substrings
+	outcome  string
+}
+
+// outcomeRules lists advisory wording and the most severe outcome it implies, most severe first;
+// the first matching rule wins.
+var outcomeRules = []outcomeRule{
 	{[]string{"remote code execution", "arbitrary code", "code execution", "command injection"}, "arbitrary code execution"},
 	{[]string{"sql injection"}, "database compromise through SQL injection"},
 	{[]string{"authentication bypass", "bypass authentication", "improper authentication"}, "authentication bypass"},
@@ -441,14 +446,11 @@ var keywordOutcomes = []struct {
 	{[]string{"denial of service", "crash", "infinite loop", "resource exhaustion"}, "denial of service"},
 }
 
-// keywordOutcome maps advisory wording to the most severe likely outcome.
+// keywordOutcome maps lowercased advisory text to the most severe likely outcome.
 func keywordOutcome(text string) string {
-	text += " " // so a keyword also matches at the very end
-	for _, k := range keywordOutcomes {
-		for _, w := range k.kw {
-			if strings.Contains(text, w) {
-				return k.out
-			}
+	for _, r := range outcomeRules {
+		if slices.ContainsFunc(r.keywords, func(kw string) bool { return strings.Contains(text, kw) }) {
+			return r.outcome
 		}
 	}
 	return ""
