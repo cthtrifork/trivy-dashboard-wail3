@@ -180,8 +180,39 @@ func (s *Scanner) ListTags(ctx context.Context, repo string) ([]string, error) {
 			tags = append(tags, t)
 		}
 	}
-	sort.SliceStable(tags, func(i, j int) bool { return compareTags(tags[i], tags[j]) > 0 })
+	sortTags(tags)
 	return tags, nil
+}
+
+// sortTags orders tags newest first (see tagRank). Each tag is parsed once up front: a registry can
+// list hundreds of them, and parsing inside the comparator costs a regexp match per comparison.
+func sortTags(tags []string) {
+	type ranked struct {
+		tag  string
+		rank int
+		v    version.Version
+	}
+	r := make([]*ranked, len(tags))
+	for i, t := range tags {
+		r[i] = &ranked{tag: t}
+		if v, err := version.Parse(t); err == nil {
+			r[i].v = v
+			r[i].rank = tagRankOf(t)
+		}
+	}
+	sort.SliceStable(r, func(i, j int) bool {
+		a, b := r[i], r[j]
+		switch {
+		case a.rank != b.rank:
+			return a.rank > b.rank
+		case a.rank == 0:
+			return a.tag > b.tag // neither is a version: by name
+		}
+		return a.v.Compare(b.v) > 0
+	})
+	for i := range r {
+		tags[i] = r[i].tag
+	}
 }
 
 // tagRank groups tags for sorting: 2 for a plain version ("1.27.1"), 1 for a version with a
@@ -190,19 +221,15 @@ func tagRank(tag string) int {
 	if _, err := version.Parse(tag); err != nil {
 		return 0
 	}
+	return tagRankOf(tag)
+}
+
+// tagRankOf is tagRank for a tag already known to parse as a version.
+func tagRankOf(tag string) int {
 	if strings.ContainsAny(tag, "-+") {
 		return 1
 	}
 	return 2
-}
-
-// compareTags orders tags by best-effort semver: plain versions first, then suffixed ones,
-// then the rest; within a group by version, falling back to the name.
-func compareTags(a, b string) int {
-	if ra, rb := tagRank(a), tagRank(b); ra != rb {
-		return ra - rb
-	}
-	return compareVersions("", a, b)
 }
 
 // LatestTag returns the highest semantic version among repo's tags, or "" when none is one.

@@ -18,7 +18,7 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt format lint lint-go lint-frontend tools format-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server demo screenshots \
+.PHONY: help test check fmt format lint lint-go lint-frontend tools format-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server run-pprof-server demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -94,6 +94,9 @@ run-mcp: frontend ## Desktop app with Wails' MCP server on 127.0.0.1:9099 (dev o
 
 run-mcp-server: frontend ## Headless app with the MCP server; only app_info, windows_list, emit_event work (no webview)
 	CGO_ENABLED=0 go run -tags server,mcp .
+
+run-pprof-server: frontend ## Headless app with a pprof endpoint on 127.0.0.1:6060 (dev only; see docs/pprof.md)
+	CGO_ENABLED=0 go run -tags server,pprof .
 
 demo: frontend ## Run the desktop app on recorded data (dev build only)
 	TRIVY_SCANNER_FAKE_PODMAN=1 go run .

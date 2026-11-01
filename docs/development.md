@@ -25,6 +25,7 @@ Build and run from source, and the settings that apply to any build. To install 
 
 ## More
 - Wails MCP server (development only): [`mcp.md`](mcp.md)
+- Profiling with pprof (development only): [`pprof.md`](pprof.md)
 - Window lifecycle: [`lifecycle.md`](lifecycle.md)
 - UI conventions: [`ux-design-sheet.md`](ux-design-sheet.md)
 - CI, screenshots and releases: [`ci.md`](ci.md), [`releasing.md`](releasing.md)
