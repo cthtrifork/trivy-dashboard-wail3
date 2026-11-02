@@ -79,11 +79,12 @@ func newFakeGitHub(t *testing.T, tag string, files map[string][]byte, order []st
 			Name               string `json:"name"`
 			ContentType        string `json:"content_type"`
 			Size               int    `json:"size"`
+			URL                string `json:"url"` // the API asset URL the Wails v3.1 provider downloads from
 			BrowserDownloadURL string `json:"browser_download_url"`
 		}
 		var assets []asset
 		for i, name := range order {
-			assets = append(assets, asset{i + 1, name, "application/octet-stream", len(files[name]), srv.URL + "/dl/" + name})
+			assets = append(assets, asset{i + 1, name, "application/octet-stream", len(files[name]), srv.URL + "/dl/" + name, srv.URL + "/dl/" + name})
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"tag_name": tag, "name": tag, "body": "notes", "html_url": srv.URL, "assets": assets,

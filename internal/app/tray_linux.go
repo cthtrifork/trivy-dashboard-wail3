@@ -27,8 +27,8 @@ func AddTray(app *application.App, window application.Window) {
 	menu.AddSeparator()
 	menu.Add("Quit").OnClick(func(*application.Context) { app.Quit() })
 
-	app.SystemTray.New().
-		SetIcon(trayIcon).
-		SetMenu(menu).
-		OnClick(show)
+	tray := app.SystemTray.New()
+	tray.SetIcon(trayIcon).SetMenu(menu).OnClick(show)
+	// Hover text for the icon (implemented for the Linux tray since Wails v3.1).
+	tray.SetTooltip("Trivy Scanner")
 }
