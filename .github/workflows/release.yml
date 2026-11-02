@@ -104,7 +104,7 @@ jobs:
   checks:
     name: vet, test, govulncheck
     needs: meta
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -139,7 +139,7 @@ jobs:
     needs: meta
     # Pinned rather than "latest": the binary links dynamically against glibc,
     # so the runner image decides which distributions can run it.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -273,7 +273,7 @@ jobs:
     name: publish release
     needs: [meta, checks, build, image]
     if: needs.meta.outputs.publish == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write # update the draft release, upload assets and publish it
@@ -375,7 +375,7 @@ jobs:
     name: publish headless image
     needs: [meta, checks]
     if: needs.meta.outputs.publish == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read # check out the tag

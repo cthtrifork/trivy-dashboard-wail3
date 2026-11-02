@@ -41,7 +41,7 @@ jobs:
     name: dry run
     # A fork's token is read-only and cannot read this repository's Renovate state.
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read # check out the config; Renovate itself uses the GitHub App token below
@@ -113,7 +113,7 @@ jobs:
     # Scheduled runs are always on the default branch. A manual run from another branch would read
     # that branch's config but update the default branch, so it is not allowed.
     if: github.event_name != 'pull_request' && github.ref_name == github.event.repository.default_branch
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read # check out the config; Renovate itself uses the GitHub App token below
