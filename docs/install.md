@@ -62,7 +62,7 @@ trivy-scanner
 ```
 
 Install GTK 4 and WebKitGTK 6 from your distribution first (Arch: `gtk4 webkitgtk-6.0`). The tarball and raw binary
-do not install a launcher entry or icon. To add one, copy `build/linux/trivy-scanner.desktop` from the repository to
+do not install a launcher entry or icon. To add one, copy `build/linux/io.github.cthtrifork.trivy-scanner.desktop` from the repository to
 `~/.local/share/applications/`, with `Exec=` pointing at the binary. A binary in a writable directory can also update
 itself, see [self-update.md](self-update.md).
 
