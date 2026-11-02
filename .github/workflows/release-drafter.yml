@@ -20,7 +20,7 @@ concurrency:
 jobs:
   draft:
     name: update draft release
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions:
       contents: write # create and update the draft release
