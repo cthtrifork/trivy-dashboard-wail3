@@ -20,8 +20,8 @@ contents:
     dst: /usr/bin/trivy-scanner
     file_info:
       mode: 0755
-  - src: ./build/linux/trivy-scanner.desktop
-    dst: /usr/share/applications/trivy-scanner.desktop
+  - src: ./build/linux/io.github.cthtrifork.trivy-scanner.desktop
+    dst: /usr/share/applications/io.github.cthtrifork.trivy-scanner.desktop
   - src: ./build/appicon.png
     dst: /usr/share/icons/hicolor/256x256/apps/trivy-scanner.png
   - src: ./frontend/public/favicon.svg

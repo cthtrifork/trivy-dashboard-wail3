@@ -25,9 +25,10 @@ func main() {
 		Description: "Scan container images with Trivy running in Podman (" + app.Version() + ")",
 		Services:    []application.Service{application.NewService(svc)},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(frontend), Middleware: app.AssetMiddleware},
-		// Linux: the program name is the window's app_id/WM_CLASS, which the packaged
-		// trivy-scanner.desktop (StartupWMClass) matches for the launcher icon and grouping.
-		Linux: application.LinuxOptions{ProgramName: "trivy-scanner"},
+		// Linux: GTK4 reports the application id as the window's Wayland app_id and X11 class, and
+		// KDE/GNOME match it to the .desktop file of the same name (the launcher icon and grouping).
+		// Keep it equal to the desktop file name and its StartupWMClass in build/linux.
+		Linux: application.LinuxOptions{ApplicationID: "io.github.cthtrifork.trivy-scanner", ProgramName: "io.github.cthtrifork.trivy-scanner"},
 	})
 	// After New (an update restart re-launches this binary and New diverts it into the swap
 	// helper) and before Run, as the Wails self-update tutorial prescribes.
