@@ -10,5 +10,5 @@ Terminal=false
 Categories=Security;System;Utility;
 Keywords=trivy;vulnerability;cve;container;podman;sbom;security;
 StartupNotify=true
-# Matches the program name the app sets (main.go), so the window groups under this launcher.
-StartupWMClass=trivy-scanner
+# Matches the GTK application id the app sets (main.go), which is the Wayland app_id; the file name must be the same id.
+StartupWMClass=io.github.cthtrifork.trivy-scanner

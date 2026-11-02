@@ -79,8 +79,8 @@ is a good place). Rotating the key means updating the secrets; users import the 
 ## Packages
 
 `scripts/package-linux.sh` runs `wails3 tool package` (nfpm) with `build/linux/nfpm/nfpm.yaml`. They install the
-binary to `/usr/bin/trivy-scanner`, the launcher `build/linux/trivy-scanner.desktop` (category Security, startup
-notification, `StartupWMClass=trivy-scanner`, matching `ProgramName` in `main.go`) and the icon in hicolor (256px PNG
+binary to `/usr/bin/trivy-scanner`, the launcher `build/linux/io.github.cthtrifork.trivy-scanner.desktop` (category Security, startup
+notification, `StartupWMClass=io.github.cthtrifork.trivy-scanner`, matching `ApplicationID` in `main.go`) and the icon in hicolor (256px PNG
 and scalable SVG). Dependencies are `libgtk-4-1` and `libwebkitgtk-6.0-4` (`gtk4`, `webkitgtk6.0` for the rpm), and
 podman is recommended. The packages are built from the Ubuntu 24.04 binary, so the Fedora package needs a Fedora with
 WebKitGTK 6 and a glibc that new. Try it locally with a built binary: `make wails3-install` then
