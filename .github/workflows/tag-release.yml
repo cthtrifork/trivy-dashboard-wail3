@@ -28,7 +28,7 @@ concurrency:
 jobs:
   tag:
     name: work out the version
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions:
       contents: write # Release Drafter updates the draft release

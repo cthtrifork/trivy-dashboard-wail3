@@ -27,7 +27,7 @@ concurrency:
 jobs:
   update:
     name: update branches
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 10
     permissions: {} # everything below uses the App token
     steps:

@@ -160,7 +160,7 @@ jobs:
     name: comment on pull request
     needs: scan
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-slim
     timeout-minutes: 5
     permissions:
       pull-requests: write # create or update the report comment
