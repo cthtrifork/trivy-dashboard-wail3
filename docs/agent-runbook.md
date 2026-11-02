@@ -29,29 +29,31 @@ Commit messages and PR bodies end with the attribution lines from the session's 
 
 ## Dev container
 
-The sandbox has the Docker CLI but no daemon, no `wails3` and no podman. The dev container (`.devcontainer/`, see `docs/devcontainer.md`) has all of them plus Go, Node and rootless podman, so use it for `make bindings`, real scans and anything else that needs those. Checked end to end: `wails3 version` works, `make bindings` leaves `frontend/bindings` unchanged, and real scans run.
+The sandbox (the `claude-vm` bootc VM) runs as an unprivileged user with **rootless podman** and no Docker, no root, no `wails3` and no Go on the PATH beyond what the image ships. The dev container (`.devcontainer/`, see `docs/devcontainer.md`) has `wails3`, Go, Node and nested rootless podman, so use it for `make bindings`, real scans and anything else that needs those.
 
 ```sh
-dockerd >/tmp/dockerd.log 2>&1 &                    # no daemon by default; wait until `docker info` answers
-npm i -g @devcontainers/cli                         # once
-devcontainer up --workspace-folder .                # builds the image, runs post-create.sh (npm ci, wails3)
-devcontainer exec --workspace-folder . make bindings
+npm i -g @devcontainers/cli                                           # once
+export CONTAINERS_CONF=~/.config/containers-devc/containers.conf      # only if the image has no /etc/containers/containers.conf (see below)
+devcontainer up --docker-path podman --workspace-folder .             # builds the image, runs post-create.sh (npm ci, wails3)
+devcontainer exec --docker-path podman --workspace-folder . make bindings
 ```
 
-The sandbox needs two adjustments (neither belongs in the committed config):
+Notes for this sandbox:
 
-- **File ownership.** You are root, so `updateRemoteUserUID` does not remap the `vscode` user and `npm ci` fails with `EACCES` on the workspace. `chown -R 1000:1000 .` before `devcontainer up`, and `chown -R root:root .` when you are done (git also reports "dubious ownership" for the host while it is owned by 1000, which is harmless).
-- **The egress proxy.** The proxy listens on 127.0.0.1 and re-signs TLS, so the container needs host networking, the proxy variable and the CA bundle. Pass a throwaway override config (outside the repo, `--override-config <dir>/devcontainer.json`) that copies `.devcontainer/devcontainer.json` and adds `"runArgs": ["--network", "host"]`, the mount `source=/root/.ccr/ca-bundle.crt,target=/etc/ssl/certs/ca-certificates.crt,type=bind,readonly`, and `HTTPS_PROXY`, `SSL_CERT_FILE`, `NODE_EXTRA_CA_CERTS` in `containerEnv`. The override file must be named `devcontainer.json`, and `build.dockerfile`/`build.context` become absolute paths.
+- **cgroups.** The session's cgroup tree is read-only, so `podman build` fails with `create directory /sys/fs/cgroup/...: Read-only file system`. Podman needs `[engine] cgroup_manager = "cgroupfs"`. Newer `claude-vm` images ship that in `/etc/containers/containers.conf.d/50-claude-vm-cgroupfs.conf`; on older ones put it in a file outside the repo and point `CONTAINERS_CONF` at it. `cgroups = "disabled"` alone is not enough for builds.
+- **File ownership.** You are an unprivileged user and rootless podman maps it to root in the container, so no `chown` is needed.
+- **Egress allowlist.** Everything goes through an egress gateway that blocks unlisted hosts. The image build needs `mirror.gcr.io` and `mcr.microsoft.com`, and `go mod download` in the container needs `proxy.golang.org`, `sum.golang.org` and `storage.googleapis.com` (the proxy serves module zips from there). `GOPROXY=direct` does not help: it needs `golang.org`, `gitlab.com` and `go.yaml.in` too. A blocked host shows up as `lookup <host> ... server misbehaving`; name it to the user instead of retrying.
+- `/dev/net/tun` cannot be made world-writable from `post-create.sh` here (a harmless `Operation not permitted`), but rootless podman networking inside the container may need it for real scans.
 
 ### Real scans in the container
 
-The app forwards `HTTPS_PROXY`/`NO_PROXY` into the Trivy container (and uses the host network for a loopback proxy), and `TRIVY_SCANNER_CA_BUNDLE` mounts a CA bundle, so with the override config above a scan only needs the bundle named:
+The app forwards `HTTPS_PROXY`/`NO_PROXY` into the Trivy container (and uses the host network for a loopback proxy), and `TRIVY_SCANNER_CA_BUNDLE` mounts a CA bundle, so a scan only needs the bundle named (use the CA bundle path your sandbox provides):
 
 ```sh
 export TRIVY_SCANNER_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt PODMAN_IGNORE_CGROUPSV1_WARNING=1
 ```
 
-`mirror.gcr.io/library/<image>` names scan fine (the DB comes from `mirror.gcr.io/aquasec/trivy-db:2`). A failed DB download now shows up in the scan error. If podman says "current system boot ID differs from cached boot ID" after restarting dockerd, delete `/tmp/storage-run-1000/containers` and `/tmp/storage-run-1000/libpod/tmp` in the container (or recreate it).
+`mirror.gcr.io/library/<image>` names scan fine (the DB comes from `mirror.gcr.io/aquasec/trivy-db:2`). A failed DB download now shows up in the scan error. If podman says "current system boot ID differs from cached boot ID" after restarting the outer podman, delete `/tmp/storage-run-1000/containers` and `/tmp/storage-run-1000/libpod/tmp` in the container (or recreate it).
 
 Earlier scans (before the proxy passthrough) were verified with `alpine:3.18` (0 findings), `nginx:1.25` (810) and `python:3.9-slim` (468).
 
