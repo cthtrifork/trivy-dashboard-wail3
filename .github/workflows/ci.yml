@@ -169,6 +169,55 @@ jobs:
       - name: Test
         run: make test
 
+  # Trial of the Wails v3.1 CGO-free Linux backend (experimental upstream, so it cannot fail the build). The runner has no GTK
+  # or WebKitGTK dev packages: if this builds, the desktop code (tray, window) compiled without cgo. The release still ships
+  # the cgo build above; see docs/decisions.md.
+  build-purego:
+    name: build (purego, experimental)
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: .tool-versions
+          check-latest: true
+          cache: true
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .tool-versions
+          package-manager-cache: false
+
+      - name: Vet (purego)
+        run: make vet-purego
+
+      - name: Build (purego, production tags)
+        run: |
+          mkdir -p dist
+          make build-purego VERSION="ci-${GITHUB_SHA::7}" OUT=dist/trivy-scanner-purego
+          ls -l dist
+
+      # The point of the backend: no link-time dependency on GTK/WebKitGTK.
+      - name: Binary does not link GTK
+        run: |
+          if ldd dist/trivy-scanner-purego | grep -Ei 'gtk|webkit'; then
+            echo "::error::the purego binary links GTK or WebKitGTK"; exit 1
+          fi
+
+      - name: Production build contains no demo, MCP or pprof code
+        run: |
+          for marker in "[fixtures] replaying" "MCP server started" "pprof endpoint started"; do
+            if grep -aqF "$marker" dist/trivy-scanner-purego; then
+              echo "::error::'$marker' is present in a -tags production binary"; exit 1
+            fi
+          done
+
   build:
     name: build
     runs-on: ubuntu-24.04

@@ -18,7 +18,7 @@ SOCKET    ?= $(RUNTIME)/podman/podman.sock
 OUT       ?= trivy-scanner
 
 .DEFAULT_GOAL := help
-.PHONY: help test check fmt format lint lint-go lint-frontend tools format-frontend vet frontend bindings wails3-install dev dev-frontend build build-server run run-mcp run-mcp-server run-pprof-server demo screenshots \
+.PHONY: help test check fmt format lint lint-go lint-frontend tools format-frontend vet frontend bindings wails3-install dev dev-frontend build build-server build-purego vet-purego run run-mcp run-mcp-server run-pprof-server demo screenshots \
         headless headless-socket headless-image headless-up headless-down headless-update \
         headless-logs headless-status headless-tunnel
 
@@ -82,6 +82,13 @@ dev-frontend: ## Vite dev server with hot reload; then run: FRONTEND_DEVSERVER_U
 
 build: frontend ## Desktop release build (needs GTK4 + WebKitGTK 6)
 	go build -tags production -trimpath -buildvcs=false -ldflags "-w -s -X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=$(VERSION)" -o $(OUT) .
+
+build-purego: frontend ## EXPERIMENTAL desktop build without cgo or GTK headers (Wails v3.1 -tags purego); libraries load at run time
+	CGO_ENABLED=0 go build -tags purego,production -trimpath -buildvcs=false -ldflags "-w -s -X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=$(VERSION)" -o $(OUT) .
+
+vet-purego: ## go vet of the desktop code paths (tray, window) without GTK: CGO off, -tags purego
+	CGO_ENABLED=0 go vet -tags purego ./...
+	CGO_ENABLED=0 go vet -tags purego,production ./...
 
 build-server: frontend ## Headless server build, no GTK needed
 	CGO_ENABLED=0 go build -tags server,production -trimpath -buildvcs=false -ldflags "-w -s -X github.com/cthtrifork/trivy-dashboard-wail3/internal/app.version=$(VERSION)" -o $(OUT) .
