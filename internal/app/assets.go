@@ -13,13 +13,35 @@ import (
 // revalidated because it names the current hashes. Only plain GET/HEAD requests are touched:
 // bound-method calls, websocket upgrades and event streams pass through unchanged.
 //
-// Compression is for the headless server only (a real HTTP browser). The native window is fed by
-// the webview's asset scheme, where a Content-Encoding header may not be honoured, so it gets the
-// bytes as they are.
+// Compression and the security headers are for the headless server only (a real HTTP browser). The
+// native window is fed by the webview's asset scheme, where a Content-Encoding header may not be
+// honoured and a CSP is not needed (no other page can reach it), so it gets the bytes as they are.
 func AssetMiddleware(next http.Handler) http.Handler { return assetMiddleware(next, headless) }
+
+// contentSecurityPolicy is what the bundled frontend needs and nothing more: it loads only its own
+// scripts, talks only to its own origin (bound-method calls and the /wails/events WebSocket) and
+// cannot be framed. style-src keeps 'unsafe-inline' because Vue's :style bindings and CodeMirror
+// write inline styles; scripts stay strict, so an injected <script> or handler still cannot run.
+const contentSecurityPolicy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+	"img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; " +
+	"object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+
+// setSecurityHeaders adds the response headers of a browser-facing server. They go on every
+// response, including bound-method calls, so an error page cannot be sniffed into something else.
+func setSecurityHeaders(h http.Header) {
+	h.Set("Content-Security-Policy", contentSecurityPolicy)
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("X-Frame-Options", "DENY")
+	h.Set("Referrer-Policy", "no-referrer")
+	h.Set("Cross-Origin-Opener-Policy", "same-origin")
+	h.Set("Cross-Origin-Resource-Policy", "same-origin")
+}
 
 func assetMiddleware(next http.Handler, compress bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if compress {
+			setSecurityHeaders(w.Header())
+		}
 		if (r.Method != http.MethodGet && r.Method != http.MethodHead) || r.Header.Get("Upgrade") != "" {
 			next.ServeHTTP(w, r)
 			return

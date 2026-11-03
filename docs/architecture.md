@@ -82,6 +82,8 @@ Before the first scan of a session (and only then) the scanner runs `trivy image
 
 Wails rejects requests with a non-loopback `Host` header when bound to loopback (DNS-rebinding guard). Binding `0.0.0.0` is treated as a deliberate network deployment and is unguarded, hence principle 10. Events travel over a WebSocket at `/wails/events`.
 
+Wails 3.1 also refuses a cross-origin bound-method call (`POST /wails/runtime`, checked by `Origin` or `Sec-Fetch-Site`) and a cross-origin WebSocket upgrade, so a page open in the same browser cannot drive `ScanService` through the tunnel. On top of that the server build sends a strict `Content-Security-Policy` (own scripts only, own origin for `connect-src`, no framing, no `<object>`, no `<base>`) and `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and cross-origin isolation headers on every response (`internal/app/assets.go`). They limit what an injected script could do if a rendering bug ever let one in. `style-src` keeps `'unsafe-inline'` because Vue and CodeMirror write inline styles. The native window does not get them: it has no HTTP listener for another page to reach.
+
 ## Lifecycle
 
 `ServiceStartup` stores the app context and wires the log emitter; every scan derives from it. `ServiceShutdown` cancels and waits up to one second for the container to be removed. Details: [lifecycle.md](lifecycle.md).
