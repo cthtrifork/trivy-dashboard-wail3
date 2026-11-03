@@ -37,7 +37,7 @@ The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. U
 - **Do not watch CI or subscribe to PR activity** after opening a PR unless the user says to. Open it, report the link and what you verified, stop.
 - **Be honest about verification.** Say what you ran, and list what you could not test (see `docs/principles.md`).
 - Final answers to the user are in English.
-- **Wails' MCP server (`-tags mcp`) is development only** (`docs/mcp.md`). `internal/app/mcp_guard.go` rejects `mcp` + `production`, and CI checks the release binary. In headless mode only `app_info`, `windows_list` and `emit_event` work (no webview), so the DOM, input and `call_bound_method` tools need the desktop build; say in the PR if you could not test that.
+- **Wails' MCP server (`-tags mcp`) is development only** (`docs/mcp.md`). In headless mode only `app_info`, `windows_list` and `emit_event` work (no webview), so the DOM, input and `call_bound_method` tools need the desktop build; say in the PR if you could not test that.
 - Wails `application.New` must be called before `initUpdater`, which runs before `app.Run` (self-update tutorial order).
 - The Trivy scanner container is named `trivy-scanner-<random>` so cancel can `podman rm --force --ignore --time 0` it by name before signalling the client.
 - Pin GitHub Actions by commit SHA with a version comment, as the existing workflows do.
@@ -58,7 +58,7 @@ The GUI build links GTK4/WebKitGTK 6 and usually cannot be built in a sandbox. U
 | `internal/trivy/fixtures` | Recorded Trivy output used by tests and screenshots |
 | `frontend/` | Vue 3 + Vite app (`src/`), generated Wails bindings (`bindings/`, committed); `dist/` is build output embedded with `go:embed` |
 | `Taskfile.yml`, `build/config.yml`, `.devcontainer/`, `scripts/dev.sh` | `wails3 dev` config (server mode), dev container and the `make dev` hot-reload loop, see `docs/devcontainer.md` |
-| `internal/app/mcp_guard.go`, `.mcp.json` | Compile error for `mcp`+`production`; project MCP client entry for `make run-mcp` |
+| `.mcp.json` | Project MCP client entry for `make run-mcp` |
 | `build/docker/headless.Dockerfile` | Podman-only server deployment, see `docs/headless.md` |
 | `.github/workflows` | `ci`, `security`, `release`, `tag-release` |
 | `scripts/` | dev loop, release packaging, and the screenshot and Lighthouse drivers |

@@ -43,5 +43,5 @@ Run one throwaway scan first: it pulls the Trivy image and the vulnerability DB,
 Anyone who can reach the port can read goroutine stacks, heap contents and the command line, and can make the process burn CPU.
 
 - Binds to loopback only. A non-loopback `TRIVY_SCANNER_PPROF_ADDR` aborts start-up (principle 10).
-- **Never in releases.** `internal/app/pprof_guard.go` makes `-tags pprof,production` fail to compile, and CI greps the production binary for the start-up message (`Production build contains no pprof endpoint`).
+- **Never in releases.** Release builds do not use the `pprof` tag.
 - Not in the container image: `build/docker/headless.Dockerfile` builds with `server,production`.
