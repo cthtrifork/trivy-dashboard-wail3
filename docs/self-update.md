@@ -38,6 +38,7 @@ The updater picks assets by name, so the names are an interface. `release.yml` b
 | `trivy-scanner_linux_amd64` | the updater | the raw binary; the only asset it installs |
 | `trivy-scanner_<version>_linux_amd64.tar.gz` | people | binary + `README.md` + `LICENSE` |
 | `SHA256SUMS` | the updater and people | digests of both files above; the name must stay fixed |
+| `trivy-scanner_linux_amd64.sig` | the updater | base64 Ed25519 signature of the raw binary's SHA-256; published only once a key is pinned (see *Signed releases*) |
 
 The release also carries the `.deb`, the `.rpm` and the public key that signed them (see
 [releasing](releasing.md#packages)). `SHA256SUMS` lists those too, but the updater never installs them: it skips
@@ -55,14 +56,43 @@ The version is stamped into the binary with `-ldflags "-X github.com/cthtrifork/
 - **Fail closed.** The GitHub provider silently omits verification when `SHA256SUMS` is missing or has no line for the
   chosen asset, and the updater would then install unchecked bytes. `internal/selfupdate` wraps the provider and refuses
   such a release. The updater's own tests cannot catch this: it is a property of how the provider is configured.
-- **Integrity, not authenticity.** `SHA256SUMS` comes from the same release as the binary. It detects a corrupted or
-  truncated download, but someone who can publish to the repository can publish a matching pair. The tutorial's answer
-  is an Ed25519 signature checked against a public key embedded in the app. The built-in GitHub provider does not fetch
-  signatures, so that needs a custom provider (or keygen.sh) and is **not implemented here**. Releases do carry
-  signed attestations (build provenance, plus a CycloneDX SBOM bound to the binary); see
+- **Integrity, and authenticity once a key is pinned.** `SHA256SUMS` comes from the same release as the binary. It
+  detects a corrupted or truncated download, but someone who can publish to the repository can publish a matching pair.
+  The answer is an Ed25519 signature checked against a public key embedded in the app; see *Signed releases* below.
+  Until a key is pinned (`internal/selfupdate/update-key.pub` has no key line) the app checks the digest only. Releases
+  also carry signed attestations (build provenance, plus a CycloneDX SBOM bound to the binary); see
   [releasing](releasing.md#verifying-a-release).
 - **No redirecting the source.** Development builds read `TRIVY_SCANNER_UPDATE_API_URL` (for tests and GitHub
   Enterprise); production builds ignore it and only use `api.github.com`.
+
+## Signed releases
+
+The GitHub provider only reads `SHA256SUMS`, so `internal/selfupdate/signature.go` wraps it. When a public key is
+pinned, the wrapper fetches the release's `trivy-scanner_linux_amd64.sig` asset (looked up by the release tag) and hands
+the signature to the updater, which verifies it under `Config.PublicKey` (algorithm `ed25519`, message = the SHA-256 it
+computes while downloading). Two things make this a real trust anchor:
+
+- the key lives in the app (`update-key.pub`, embedded with `go:embed`); a release can never bring its own;
+- it fails closed: with a key pinned, a release without a valid-looking `.sig` is refused by the wrapper
+  (`ErrUnsigned`) and, independently, by the updater itself, so a stripped signature cannot downgrade to digest-only.
+
+A binary that pins a key accepts only releases signed with it, so turn it on in this order:
+
+1. `go run ./internal/selfupdate/updatesign keygen` prints a private seed and a public key. Store the seed as the
+   repository secret `RELEASE_UPDATE_SIGNING_KEY` (use a key made only for this) and keep a copy offline: lose it and
+   every installed app must be updated by hand.
+2. Add the public key as a line in `internal/selfupdate/update-key.pub`, in a PR. From the release built from that PR,
+   `release.yml` signs the binary (`updatesign sign`), immediately checks the signature against the committed key, and
+   fails the release if the secret is missing or does not match it. A dry run on a branch only warns.
+3. Apps built before that release have no key, so they still update to it on the digest alone; from then on updates
+   are signature-checked.
+
+To rotate the key, release a version signed with the old key that carries the new key, then switch the secret.
+`updatesign verify <binary> <sig> <key or update-key.pub>` checks a published release by hand.
+
+Not covered: the same people who can publish a release can also change `update-key.pub` and the secret in one go, so
+this protects against a hijacked release channel or a tampered download, not against a compromised maintainer. Branch
+protection and review on `update-key.pub` (and on `release.yml`) are the answer to that.
 
 ## How it differs from the tutorial
 

@@ -262,6 +262,29 @@ jobs:
             "${APP}_${VERSION}_amd64.deb" "${APP}_${VERSION}_x86_64.rpm" \
             "${APP}_${VERSION}.sbom.cdx.json" $(ls "${APP}-release-key.asc" 2>/dev/null) > SHA256SUMS)
 
+      # The in-app updater checks an Ed25519 signature over the raw binary's SHA-256 when
+      # internal/selfupdate/update-key.pub pins a public key (docs/self-update.md, "Signed
+      # releases"). Once a key is pinned a release fails without the secret, because the apps built
+      # from it would refuse every update; a dry run only warns. The signature is checked against
+      # the committed key straight away, so a secret that does not match it cannot be published.
+      - name: Sign the binary for the in-app updater
+        env:
+          PUBLISH: ${{ needs.meta.outputs.publish }}
+          UPDATE_SIGNING_KEY: ${{ secrets.RELEASE_UPDATE_SIGNING_KEY }}
+        run: |
+          if ! grep -qv '^[[:space:]]*\(#\|$\)' internal/selfupdate/update-key.pub; then
+            echo "No updater key is pinned in internal/selfupdate/update-key.pub: the binary is not signed."
+            exit 0
+          fi
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            if [ "$PUBLISH" = true ]; then
+              echo "::error::RELEASE_UPDATE_SIGNING_KEY is not set, but update-key.pub pins a key (see docs/self-update.md)"; exit 1
+            fi
+            echo "::warning::RELEASE_UPDATE_SIGNING_KEY is not set: this dry run does not sign the binary"; exit 0
+          fi
+          go run ./internal/selfupdate/updatesign sign "dist/${APP}_linux_amd64" "dist/${APP}_linux_amd64.sig"
+          go run ./internal/selfupdate/updatesign verify "dist/${APP}_linux_amd64" "dist/${APP}_linux_amd64.sig" internal/selfupdate/update-key.pub
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-files

@@ -47,7 +47,7 @@ func isArchive(name string) bool {
 }
 
 // MatchAsset picks the raw binary for the running platform. Archives and packages are
-// skipped on purpose: the release also ships a tarball (binary + README + LICENSE) and
+// skipped on purpose (signature files too: "<binary>.sig" would otherwise match the platform): the release also ships a tarball (binary + README + LICENSE) and
 // .deb/.rpm packages for people, but the updater can only install a single file or an archive with
 // exactly one top-level entry, and the default matcher would take whichever
 // matching asset GitHub lists first.
@@ -55,7 +55,7 @@ func MatchAsset(req updater.CheckRequest, assets []github.ReleaseAsset) int {
 	var plain []github.ReleaseAsset
 	var origin []int
 	for i, a := range assets {
-		if !isArchive(a.Name) {
+		if !isArchive(a.Name) && !strings.HasSuffix(a.Name, SignatureSuffix) {
 			plain = append(plain, a)
 			origin = append(origin, i)
 		}
@@ -99,7 +99,12 @@ func NewProvider(baseURL string) (updater.Provider, error) {
 	if err != nil {
 		return nil, err
 	}
-	return failClosed{gh}, nil
+	var p updater.Provider = failClosed{gh}
+	if PublicKey() != nil {
+		// A pinned key makes signatures mandatory: the updater itself rejects a release without one.
+		p = newSigned(p, baseURL)
+	}
+	return p, nil
 }
 
 // Installable reports whether the updater could replace the executable at exe. It stages

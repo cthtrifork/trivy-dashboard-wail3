@@ -1,0 +1,4 @@
+# Ed25519 public key (base64, 32 bytes) that release binaries must be signed with.
+# Leave it without a key line and the updater only checks the SHA-256 from SHA256SUMS.
+# Generate a pair with: go run ./internal/selfupdate/updatesign keygen
+# See docs/self-update.md ("Signed releases").

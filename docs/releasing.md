@@ -76,6 +76,13 @@ Use a key made only for this. The workflow exports the matching public key as `t
 release and prints its fingerprint in the log, so publish the fingerprint somewhere users can cross-check it (the README
 is a good place). Rotating the key means updating the secrets; users import the new public key.
 
+### The updater signing key (optional until you pin one)
+
+The in-app updater can verify an Ed25519 signature over the release binary. It is off until a public key is committed
+to `internal/selfupdate/update-key.pub`; from then on a release **fails without** the repository secret
+`RELEASE_UPDATE_SIGNING_KEY`. Setup, rotation and the trade-offs are in
+[self-update](self-update.md#signed-releases).
+
 ## Packages
 
 `scripts/package-linux.sh` runs `wails3 tool package` (nfpm) with `build/linux/nfpm/nfpm.yaml`. They install the

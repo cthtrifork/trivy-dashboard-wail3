@@ -38,6 +38,9 @@ func InitUpdater(s *ScanService, app *application.App) {
 			// The tutorial passes the version without the leading "v".
 			CurrentVersion: strings.TrimPrefix(version, "v"),
 			Providers:      []updater.Provider{provider},
+			// With a key pinned in internal/selfupdate/update-key.pub a release must carry a valid
+			// signature (the updater fails closed); without one only the SHA-256 is checked.
+			PublicKey: selfupdate.PublicKey(),
 			// The UI drives check, download and restart as separate clicks; the built-in
 			// window would download as soon as a check finds a release.
 			Window: updater.WindowNone,

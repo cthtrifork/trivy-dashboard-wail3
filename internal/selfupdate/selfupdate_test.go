@@ -73,7 +73,7 @@ func newFakeGitHub(t *testing.T, tag string, files map[string][]byte, order []st
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
-	mux.HandleFunc("/repos/"+Repository+"/releases/latest", func(w http.ResponseWriter, r *http.Request) {
+	releaseJSON := func(w http.ResponseWriter, r *http.Request) {
 		type asset struct {
 			ID                 int    `json:"id"`
 			Name               string `json:"name"`
@@ -89,7 +89,9 @@ func newFakeGitHub(t *testing.T, tag string, files map[string][]byte, order []st
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"tag_name": tag, "name": tag, "body": "notes", "html_url": srv.URL, "assets": assets,
 		})
-	})
+	}
+	mux.HandleFunc("/repos/"+Repository+"/releases/latest", releaseJSON)
+	mux.HandleFunc("/repos/"+Repository+"/releases/tags/"+tag, releaseJSON)
 	mux.HandleFunc("/dl/", func(w http.ResponseWriter, r *http.Request) {
 		b, ok := files[strings.TrimPrefix(r.URL.Path, "/dl/")]
 		if !ok {
