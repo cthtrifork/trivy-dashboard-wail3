@@ -49,7 +49,7 @@ The scanner always gets an explicit `--cache-dir /root/.cache/trivy`, backed by 
 
 | Value | Meaning | Works with |
 |---|---|---|
-| unset, local podman | `<user cache dir>/trivy-scanner/trivy` on the host (Linux `~/.cache/trivy-scanner/trivy`, macOS `~/Library/Caches/trivy-scanner/trivy`), created if missing, mounted with `label=disable` for SELinux | Linux, macOS (podman machine shares the home directory) |
+| unset, local podman | `<user cache dir>/trivy-scanner/trivy` on the host (Linux `~/.cache/trivy-scanner/trivy`, macOS `~/Library/Caches/trivy-scanner/trivy`), created if missing, mounted with `label=disable` for SELinux (the scanner container is then not confined by SELinux, decision 23) | Linux, macOS (podman machine shares the home directory) |
 | unset, remote podman (`CONTAINER_HOST`/`DOCKER_HOST` set, as in the containerised headless deployment) or Windows | podman named volume `trivy-cache`, which lives wherever podman runs | any |
 | `my-volume` | another named volume | any |
 | `/abs/path` | a directory **on the machine running podman**; with a remote socket it must already exist (the app cannot create it) | local podman; remote with an existing path |
