@@ -114,3 +114,34 @@ func TestAssetMiddlewareNativeWindowIsNotCompressed(t *testing.T) {
 		t.Error("cache headers still apply without compression")
 	}
 }
+
+func TestAssetMiddlewareSecurityHeaders(t *testing.T) {
+	for _, path := range []string{"/", "/assets/a-1.js", "/missing.js"} {
+		h := get(t, path, nil).Header()
+		if csp := h.Get("Content-Security-Policy"); !strings.Contains(csp, "script-src 'self'") || !strings.Contains(csp, "frame-ancestors 'none'") {
+			t.Errorf("%s: Content-Security-Policy = %q", path, csp)
+		}
+		for k, want := range map[string]string{"X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer"} {
+			if got := h.Get(k); got != want {
+				t.Errorf("%s: %s = %q, want %q", path, k, got, want)
+			}
+		}
+	}
+
+	// A bound-method call and a WebSocket upgrade pass through, but still carry the headers.
+	h := assetMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), true)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/wails/runtime", nil))
+	if rec.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Error("a POST must carry the security headers too")
+	}
+}
+
+func TestAssetMiddlewareNativeWindowHasNoCSP(t *testing.T) {
+	h := assetMiddleware(http.FileServerFS(fstest.MapFS{"index.html": {Data: []byte("x")}}), false)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if rec.Header().Get("Content-Security-Policy") != "" {
+		t.Error("the native window build must not set a CSP")
+	}
+}
