@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cthtrifork/trivy-dashboard-wail3/internal/selfupdate"
@@ -19,6 +20,25 @@ type UpdateInfo struct {
 	Reason string `json:"reason"`
 }
 
+// executablePath is the running binary; a variable so tests can point it elsewhere.
+var executablePath = os.Executable
+
+// readOnlyReason explains why this copy cannot replace itself, or returns "" when it can. A
+// copy the updater cannot write beside (a package in /usr/bin, the image of an immutable OS
+// such as bootc) is updated by whatever installed it, so say so up front, as the tooltip,
+// instead of letting the user download a release that cannot be applied.
+func readOnlyReason() string {
+	exe, err := executablePath()
+	if err != nil {
+		return ""
+	}
+	if selfupdate.Installable(exe) == nil {
+		return ""
+	}
+	return "This copy is installed in a read-only location (" + filepath.Dir(exe) +
+		"), so it cannot replace itself. Update it with your package manager or OS image (for example bootc upgrade)."
+}
+
 // InitUpdater enables in-app updates for release builds. Development builds, CI builds
 // and headless server mode stay disabled: see selfupdate.Enabled for why a development
 // build must never be allowed to "update" itself.
@@ -30,6 +50,10 @@ func InitUpdater(s *ScanService, app *application.App) {
 		return
 	case headless:
 		s.update.Reason = "The updater needs a native window, which headless server mode doesn't have."
+		return
+	}
+	if reason := readOnlyReason(); reason != "" {
+		s.update.Reason = reason
 		return
 	}
 	provider, err := selfupdate.NewProvider(updateAPIBase())

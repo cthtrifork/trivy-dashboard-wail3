@@ -23,10 +23,12 @@ The button is disabled, with the reason as its tooltip, when:
 - the build is not a release (`dev`, or the `ci-<sha>` binaries CI uploads): the updater compares versions with
   `x/mod/semver`, where an invalid string such as `dev` sorts *below every release*, so such a build would otherwise
   offer to replace itself with the newest release;
-- the app runs in headless server mode (the updater restarts the native app).
+- the app runs in headless server mode (the updater restarts the native app);
+- the directory holding the executable is not writable (a package in `/usr/bin`, or the image of an immutable OS such
+  as bootc): the tooltip says to update it with the package manager or OS image (for example `bootc upgrade`).
 
-Clicking it also refuses, before downloading anything, when the directory holding the executable is not writable.
-The new binary is staged beside the old one, so a copy installed by a package manager (`/usr/bin`) should be updated
+The writable check runs at startup, so the button is already disabled in that case; clicking it still refuses before
+downloading anything if the directory has become read-only since. The new binary is staged beside the old one, so a copy installed by a package manager (`/usr/bin`) should be updated
 by that package manager instead. Inside an AppImage the updater replaces the `.AppImage` file itself.
 
 ## The release contract
