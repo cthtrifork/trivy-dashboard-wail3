@@ -169,10 +169,10 @@ func TestVEX(t *testing.T) {
 	s0 := doc.Statements[0]
 	if s0.Vulnerability.Name != "CVE-1" || s0.Status != "not_affected" || s0.Justification != "vulnerable_code_not_in_execute_path" ||
 		s0.Products[0].ID != "pkg:oci/app" ||
-		s0.Products[0].Subcomponents[0].ID != base.PURL {
+		s0.Products[0].Subcomponents[0].ID != "pkg:deb/debian/libssl3" {
 		t.Fatalf("stmt: %+v", s0)
 	}
-	if !strings.Contains(string(raw), "pkg:generic/lodash@4") {
+	if !strings.Contains(string(raw), "pkg:generic/lodash\"") {
 		t.Error("fallback subcomponent id missing")
 	}
 	ph, err := ExportOpenVEX(got, product, DocMeta{ID: "https://example.com/vex.json", Author: " "})

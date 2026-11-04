@@ -297,9 +297,13 @@ func ExportOpenVEX(entries []VEXEntry, product string, meta DocMeta) ([]byte, er
 		if err := e.Validate(); err != nil {
 			return nil, fmt.Errorf("%s: %w", e.Vulnerability, err)
 		}
-		sub := e.PURL
-		if sub == "" && e.Package != "" {
-			sub = "pkg:generic/" + url.PathEscape(e.Package) + "@" + url.PathEscape(e.Version)
+		// The subcomponent id is versionless (no "@version"), so the statement
+		// covers every version of the package.
+		sub := ""
+		if e.PURL != "" {
+			sub, _ = splitPURL(e.PURL)
+		} else if e.Package != "" {
+			sub = "pkg:generic/" + url.PathEscape(e.Package)
 		}
 		st := e.statement()
 		if ts, err := time.Parse(time.RFC3339, e.Updated); err == nil {
@@ -602,10 +606,11 @@ func (s *VEXStore) MarkUnassessed(image string, findings []Vulnerability, author
 // ("pkg:apk/alpine/zlib"), which apply to every version; qualifiers
 // (arch, distro) are ignored on both sides.
 func anyPURLMatches(subs []string, v Vulnerability) bool {
-	generic := "pkg:generic/" + url.PathEscape(v.Package) + "@" + url.PathEscape(v.Installed)
+	genericName := "pkg:generic/" + url.PathEscape(v.Package)
+	generic := genericName + "@" + url.PathEscape(v.Installed)
 	fname, fver := splitPURL(v.PURL)
 	for _, sub := range subs {
-		if sub == generic {
+		if sub == generic || sub == genericName {
 			return true
 		}
 		name, ver := splitPURL(sub)
