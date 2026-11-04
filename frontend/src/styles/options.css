@@ -19,6 +19,9 @@
   overflow: visible;
   color: inherit;
 }
+.opts-pop::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
 .opts-pop::before {
   content: "";
   position: absolute;
@@ -217,6 +220,10 @@
 .ignore-acts button {
   padding: 5px 12px;
   font-size: 12px;
+  border: 1px solid var(--line);
+}
+.ignore-acts button:hover {
+  border-color: var(--accent);
 }
 /* The ignore rules editor: wider than the default dialog, like the code it holds. */
 #ignore-dialog {
