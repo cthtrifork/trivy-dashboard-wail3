@@ -1,6 +1,8 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -29,5 +31,34 @@ func TestNonReleaseBuildsCannotUpdate(t *testing.T) {
 				t.Errorf("version %q: %s() = %v, want the reason it is disabled", v, name, err)
 			}
 		}
+	}
+}
+
+// A release build in a directory the updater cannot write to (a package in /usr/bin, the
+// image of an immutable OS) explains itself up front, with the way to update it.
+func TestReadOnlyInstallExplainsItself(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	t.Setenv("APPIMAGE", "")
+	oldExe := executablePath
+	t.Cleanup(func() { executablePath = oldExe })
+
+	ro := t.TempDir()
+	if err := os.Chmod(ro, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(ro, 0o755) })
+	executablePath = func() (string, error) { return filepath.Join(ro, "trivy-scanner"), nil }
+
+	reason := readOnlyReason()
+	if !strings.Contains(reason, "read-only") || !strings.Contains(reason, "bootc upgrade") || !strings.Contains(reason, ro) {
+		t.Errorf("read-only install: %q", reason)
+	}
+
+	writable := t.TempDir()
+	executablePath = func() (string, error) { return filepath.Join(writable, "trivy-scanner"), nil }
+	if reason := readOnlyReason(); reason != "" {
+		t.Errorf("writable install reported as read-only: %q", reason)
 	}
 }
