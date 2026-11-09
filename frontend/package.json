@@ -28,7 +28,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.6.6",
     "@vitejs/plugin-vue": "^6.0.0",
-    "knip": "6.44.1",
+    "knip": "6.44.2",
     "playwright-core": "1.65.0",
     "vite": "^8.0.0"
   }
