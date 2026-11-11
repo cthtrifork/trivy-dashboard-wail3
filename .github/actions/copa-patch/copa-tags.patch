@@ -1,0 +1,20 @@
+diff --git a/pkg/provenance/detector.go b/pkg/provenance/detector.go
+index 6bfc18e..5d1641b 100644
+--- a/pkg/provenance/detector.go
++++ b/pkg/provenance/detector.go
+@@ -359,6 +359,15 @@ func (d *Detector) ConvertBinaryInfoToBuildInfoWithLabels(bi *BinaryInfo, imageL
+ 		buildInfo.BuildFlags = append(buildInfo.BuildFlags, "-trimpath")
+ 	}
+ 
++	// Preserve -tags: build constraints decide which files are compiled, so a rebuild without the
++	// original tags can fail (e.g. cgo-only packages that the tags exclude) or produce a different
++	// program. `go version -m` prints the value as a comma-separated list, sometimes quoted.
++	if tags, ok := bi.BuildSettings["-tags"]; ok {
++		if tags = stripOuterQuotes(tags); tags != "" {
++			buildInfo.BuildFlags = append(buildInfo.BuildFlags, "-tags="+tags)
++		}
++	}
++
+ 	// If the original binary had no VCS info, add -buildvcs=false to prevent
+ 	// Go from embedding pseudo-versions from the cloned git repo
+ 	if _, hasVCS := bi.VCS["vcs.revision"]; !hasVCS {
