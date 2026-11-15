@@ -29,7 +29,7 @@
     "@biomejs/biome": "2.6.7",
     "@vitejs/plugin-vue": "^6.0.0",
     "knip": "6.44.2",
-    "playwright-core": "1.65.0",
+    "playwright-core": "1.65.1",
     "vite": "^8.0.0"
   }
 }
