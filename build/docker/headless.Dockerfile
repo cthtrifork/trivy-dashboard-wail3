@@ -22,12 +22,12 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 # PODMAN_VERSION close to the host's podman; Renovate bumps it.
 FROM mirror.gcr.io/library/alpine:3.24 AS podman
 # renovate: datasource=github-releases depName=containers/podman
-ARG PODMAN_VERSION=v6.1.4
+ARG PODMAN_VERSION=v6.2.0
 # SHA-256 of the release tarballs for PODMAN_VERSION. Renovate rewrites them with the version
 # (postUpgradeTasks in .github/renovate.json5 runs scripts/podman-checksums.sh); to do it by hand,
 # run that script. A mismatch fails the build instead of shipping an unchecked binary.
-ARG PODMAN_SHA256_amd64=af1f85c22214088a0a9986b9c82b4c9b5b74eda8ecaa6c8cca82b1a63f339b4a
-ARG PODMAN_SHA256_arm64=1d7c2a3241b56effa68c724359fb30e603a802699b2b7b20fe2fae5ff6819601
+ARG PODMAN_SHA256_amd64=a8a9a1896fe0836e2d58105259667a6b8d48440a05b07eff19e96d774b6a35cf
+ARG PODMAN_SHA256_arm64=ef4822634ec82eb1cf62b900e1280429a48dd797b3bf7aac756992987442a584
 ARG TARGETARCH
 RUN file="podman-remote-static-linux_${TARGETARCH}.tar.gz" \
  && wget -q -O "/tmp/${file}" "https://github.com/containers/podman/releases/download/${PODMAN_VERSION}/${file}" \
