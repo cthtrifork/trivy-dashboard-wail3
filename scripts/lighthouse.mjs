@@ -35,6 +35,19 @@ mkdirSync(out, { recursive: true });
 const npx = (...args) => execFileSync("npx", ["--yes", pkg, ...args], { stdio: ["ignore", "inherit", "inherit"] });
 npx("--version"); // installs it once, so the runs below only measure the page
 
+// Chrome occasionally fails to record the trace (NO_NAVSTART) on a cold CI runner; a retry is enough.
+const ATTEMPTS = 3;
+const npxRetry = (...args) => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return npx(...args);
+    } catch (err) {
+      if (attempt >= ATTEMPTS) throw err;
+      console.error(`Lighthouse run failed (attempt ${attempt}/${ATTEMPTS}), retrying`);
+    }
+  }
+};
+
 const score = (r, id) => Math.round((r.categories[id]?.score ?? 0) * 100);
 const emoji = (n) => (n >= 90 ? "🟢" : n >= 50 ? "🟠" : "🔴"); // Lighthouse's own good/average/poor bands
 
@@ -43,7 +56,7 @@ for (const [mode, flags] of Object.entries(MODES)) {
   const all = [];
   for (let i = 1; i <= runs; i++) {
     const base = join(out, `${mode}-${i}`);
-    npx(
+    npxRetry(
       url,
       "--quiet",
       "--output=json",
