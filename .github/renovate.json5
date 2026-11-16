@@ -78,6 +78,7 @@
       matchManagers: ["github-actions"],
       matchUpdateTypes: ["minor"],
       groupName: "actions",
+      automerge: true,
     },
     {
       matchManagers: ["gomod"],
