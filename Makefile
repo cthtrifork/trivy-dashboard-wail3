@@ -39,7 +39,7 @@ format: fmt format-frontend ## Format the Go code and the Vue app (mkpm's test, 
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 GOLANGCI_LINT_VERSION := v2.15.0
 # renovate: datasource=go depName=golang.org/x/tools
-GOIMPORTS_VERSION := v0.52.0
+GOIMPORTS_VERSION := v0.53.0
 
 lint: lint-go lint-frontend ## golangci-lint plus the frontend's Biome lint and format check (as CI runs them)
 
